@@ -1,0 +1,13 @@
+{
+  "name": "yamaha_pro_audio",
+  "version": "1.0.0",
+  "description": "Control module for Yamaha Pro Audio equipment ",
+  "main": "yamaha_pro_audio.js",
+  "scripts": { "test": "echo \"Error: no test specified\" && exit 1"},
+  "keywords": ["Audio"],
+  "manufacturer": "Yamaha",
+  "product": "Pro Audio",
+  "shortname": "Pro Audio",
+  "author": "Jack Longden <Jack@atov.co.uk>",
+  "license": "MIT"
+}
