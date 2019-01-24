@@ -229,11 +229,11 @@ instance.prototype.actions = function(system) {
 			},
 
 			'TFRecall': {
-					label: 'Recall Preset',
+					label: 'Recall Scene',
 					options: [{type: 'dropdown', label: 'Bank', id: 'Bank', default: 'a', choices: [
 					{ id: 'a',  label: 'A'  },
 					{ id: 'b',  label: 'B'  }]},
-					{type: 'dropdown', label: 'Preset', id: 'Preset', default: '0', choices: [
+					{type: 'dropdown', label: 'Preset', id: 'Scene', default: '0', choices: [
 						{ id: 0,  label: '00' },
 						{ id: 1,  label: '01' },
 						{ id: 2,  label: '02' },
@@ -386,6 +386,11 @@ instance.prototype.actions = function(system) {
 						{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt},
 						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
 			},
+
+			'CLQLRecall': {
+					label: 'Recall Scene',
+					options: [{type: 'textinput',label: 'Scene (0 to 300)',id: 'Scene',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+			}
 			};
 	}
 
@@ -447,7 +452,11 @@ instance.prototype.action = function(action) {
 			break;
 
 		case 'TFRecall':
-			cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Preset
+			cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene
+			break;
+
+		case 'CLQLRecall':
+			cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene
 			break;
 		}
 
