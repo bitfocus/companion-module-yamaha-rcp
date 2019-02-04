@@ -5,7 +5,7 @@ var instance_skel = require('../../instance_skel');
 var debug;
 var log;
 var line 			= '';
-var productnm 	= '';
+var productnm = '';
 var inputch 	= 0;
 var auxbus 		= 0;
 var mixbus 		= 0;
@@ -72,7 +72,6 @@ instance.prototype.init_tcp = function() {
 			debug("Connected");
 			self.log('',"Connected");
 			self.socket.send('devinfo productname' + "\n");
-
 		});
 
 		self.socket.on('data', function (chunk) {
@@ -120,7 +119,6 @@ instance.prototype.init_tcp = function() {
 			};
 			receivebuffer = '';
 		});
-
 	}
 };
 
@@ -128,16 +126,14 @@ instance.prototype.init_tcp = function() {
 instance.prototype.config_fields = function () {
 	var self = this;
 
-	return [
-		{
+	return [{
 			type: 'textinput',
 			id: 'host',
 			label: 'IP Address of Console',
 			width: 6,
 			default: '192.168.0.100',
 			regex: self.REGEX_IP
-		}
-	]
+		}]
 };
 
 // Module deletion
@@ -154,20 +150,20 @@ instance.prototype.destroy = function() {
 // Module actions
 instance.prototype.actions = function(system) {
 	var self = this;
-	var inputchopt = [];
-	var auxbusopt = [];
-	var mixbusopt = [];
-	var matrixbusopt = [];
+	var inputchopt 		= [];
+	var auxbusopt 		= [];
+	var mixbusopt 		= [];
+	var matrixbusopt 	= [];
 
 	if(inputch>0){
 		for (var i = 0; i < inputch; i++){
-		inputchopt.push({ id: i,  label: i+1 });
-	}
+			inputchopt.push({ id: i,  label: i+1 });
+		}
 	};
 	if(auxbus>0){
 		for (var i = 0; i < auxbus; i++){
-		auxbusopt.push({ id: i,  label: i+1 });
-	}
+			auxbusopt.push({ id: i,  label: i+1 });
+		}
 	};
 	if(mixbus>0){
 		for (var i = 0; i < mixbus; i++){
