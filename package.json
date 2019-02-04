@@ -1,13 +1,13 @@
 {
-  "name": "yamaha_pro_audio",
+  "name": "yamaha_scp",
   "version": "1.0.0",
   "description": "Control module for Yamaha Pro Audio equipment ",
-  "main": "yamaha_pro_audio.js",
+  "main": "yamaha_scp.js",
   "scripts": { "test": "echo \"Error: no test specified\" && exit 1"},
   "keywords": ["Audio"],
   "manufacturer": "Yamaha",
-  "product": "Pro Audio",
-  "shortname": "Yamaha Pro Audio",
+  "product": "SCP",
+  "shortname": "Yamaha SCP",
   "author": "Jack Longden <Jack@atov.co.uk>",
   "license": "MIT"
 }

@@ -7,7 +7,7 @@
 * TF1/3/5
 * TF-Rack (TF Firmware V3.0 or Later)
 
-**Available commands for Yamaha Pro Audio Devices**
+**Available commands**
 
 * Input Channel ON
 * Input Channel OFF
