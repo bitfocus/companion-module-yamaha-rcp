@@ -4,11 +4,11 @@ var tcp = require('../../tcp');
 var instance_skel = require('../../instance_skel');
 var debug;
 var log;
-var line 			= '';
+var line      = '';
 var productnm = '';
-var inputch 	= 0;
-var auxbus 		= 0;
-var mixbus 		= 0;
+var inputch   = 0;
+var auxbus    = 0;
+var mixbus    = 0;
 var matrixbus = 0;
 
 // Instance Setup & Connect
@@ -18,7 +18,7 @@ function instance(system, id, config) {
 	// super-constructor
 	instance_skel.apply(this, arguments);
 
-  // export actions
+	// export actions
 	self.actions();
 
 	return self;
@@ -30,7 +30,7 @@ instance.prototype.updateConfig = function(config) {
 	self.config = config;
 
 	self.init_tcp();
-};
+}
 
 instance.prototype.init = function() {
 	var self = this;
@@ -41,7 +41,7 @@ instance.prototype.init = function() {
 	self.status(1,'Connecting'); // status ok!
 
 	self.init_tcp();
-};
+}
 
 // Initialise TCP and if good, query device info
 instance.prototype.init_tcp = function() {
@@ -77,9 +77,11 @@ instance.prototype.init_tcp = function() {
 		self.socket.on('data', function (chunk) {
 			receivebuffer += chunk;
 			line = receivebuffer.substr(0, receivebuffer.length);
+
 			if (receivebuffer.indexOf('NOTIFY') == '-1'){
 				debug("Recieved from device: "+ line.toString());
-			};
+			}
+
 			if (receivebuffer.indexOf('productname') != '-1'){
 				if (receivebuffer.indexOf('CL') != '-1'){
 					productnm = 'CL/QL';
@@ -89,38 +91,44 @@ instance.prototype.init_tcp = function() {
 				}
 				else if (receivebuffer.indexOf('TF') != '-1') {
 					productnm = 'TF'
-				};
+				}
+
 				self.socket.send('devinfo inputch' + "\n");
 				self.log('',"Type: " + productnm);
-			};
+			}
+
 			if (receivebuffer.indexOf('inputch') != '-1'){
 				linestring = line.toString();
 				inputch = linestring.match(/\d+/g).map(Number);;
 				self.log('',"Input Count: " + inputch);
 				self.socket.send('devinfo auxbus' + "\n");
-			};
+			}
+
 			if (receivebuffer.indexOf('auxbus') != '-1'){
 				linestring = line.toString();
 				auxbus = linestring.match(/\d+/g).map(Number);;
 				self.log('',"Aux Bus Count: " + auxbus);
 				self.socket.send('devinfo mixbus' + "\n");
-			};
+			}
+
 			if (receivebuffer.indexOf('mixbus') != '-1'){
 				linestring = line.toString();
 				mixbus = linestring.match(/\d+/g).map(Number);;
 				self.log('',"Mix Bus Count: " + mixbus);
 				self.socket.send('devinfo matrixbus' + "\n");
-			};
+			}
+
 			if (receivebuffer.indexOf('matrixbus') != '-1'){
 				linestring = line.toString();
 				matrixbus = linestring.match(/\d+/g).map(Number);;
 				self.log('',"Matrix Bus Count: " + matrixbus);
 				self.actions();
-			};
+			}
+
 			receivebuffer = '';
 		});
 	}
-};
+}
 
 // Web config fields
 instance.prototype.config_fields = function () {
@@ -134,7 +142,7 @@ instance.prototype.config_fields = function () {
 			default: '192.168.0.100',
 			regex: self.REGEX_IP
 		}]
-};
+}
 
 // Module deletion
 instance.prototype.destroy = function() {
@@ -145,91 +153,99 @@ instance.prototype.destroy = function() {
 	}
 
 	debug("destroy", self.id);;
-};
+}
 
 // Module actions
 instance.prototype.actions = function(system) {
 	var self = this;
-	var inputchopt 		= [];
-	var auxbusopt 		= [];
-	var mixbusopt 		= [];
-	var matrixbusopt 	= [];
+	var inputchopt   = [];
+	var auxbusopt    = [];
+	var mixbusopt    = [];
+	var matrixbusopt = [];
 
 	if(inputch>0){
 		for (var i = 0; i < inputch; i++){
 			inputchopt.push({ id: i,  label: i+1 });
 		}
-	};
+	}
+
 	if(auxbus>0){
 		for (var i = 0; i < auxbus; i++){
 			auxbusopt.push({ id: i,  label: i+1 });
 		}
-	};
+	}
+
 	if(mixbus>0){
 		for (var i = 0; i < mixbus; i++){
 			mixbusopt.push({ id: i,  label: i+1 })
 		}
-	};
+	}
+
 	if(matrixbus>0){
 		for (var i = 0; i < matrixbus; i++){
 			matrixbusopt.push({ id: i,  label: i+1 })
 		}
-	};
+	}
 
 	if(productnm = 'TF'){
-		var commands = {
 
+		var commands = {
 			'InChOn': {
-			 		label: 'Input On',
-			 		options: [{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt}]
+				label: 'Input On',
+				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
 			},
 			'InChOff': {
-			 		label: 'Input Off',
-			 		options: [{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt}]
+				label: 'Input Off',
+				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
 			},
 			'InChLevel': {
-					label: 'Input Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Input Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt},
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
 			},
 
 			'AuxOn': {
-			 		label: 'Aux On',
-			 		options: [{type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt}]
+				label: 'Aux On',
+				options: [{type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt}]
 			},
 			'AuxOff': {
-			 		label: 'Aux Off',
-			 		options: [{type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt}]
+				label: 'Aux Off',
+				options: [{ type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt }]
 			},
 			'AuxLevel': {
-					label: 'Aux Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
-				},
+				label: 'Aux Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt },
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
+			},
 
 			'MtrxOn': {
-					label: 'Matrix On',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt}]
+				label: 'Matrix On',
+				options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
 			},
 			'MtrxOff': {
-					label: 'Matrix Off',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt}]
+				label: 'Matrix Off',
+				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
 			},
 			'MtrxLevel': {
-					label: 'Matrix Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Matrix Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt },
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
 			},
 
 			'TFRecall': {
-					label: 'Recall Scene',
-					options: [{type: 'dropdown', label: 'Bank', id: 'Bank', default: 'a', choices: [
-					{ id: 'a',  label: 'A'  },
-					{ id: 'b',  label: 'B'  }]},
-					{type: 'dropdown', label: 'Preset', id: 'Scene', default: '0', choices: [
+				label: 'Recall Scene',
+				options: [
+					{ type: 'dropdown', label: 'Bank', id: 'Bank', default: 'a', choices: [
+						{ id: 'a',  label: 'A'  },
+						{ id: 'b',  label: 'B'  }]
+					},
+					{ type: 'dropdown', label: 'Preset', id: 'Scene', default: '0', choices: [
 						{ id: 0,  label: '00' },
 						{ id: 1,  label: '01' },
 						{ id: 2,  label: '02' },
@@ -330,68 +346,72 @@ instance.prototype.actions = function(system) {
 						{ id: 97, label: '97' },
 						{ id: 98, label: '98' },
 						{ id: 99, label: '99' }]
-					}]
-				}
-			};
+					}
+				]
+			}
+		};
 	}
 
 	else if(productnm = 'CL/QL'){
 		var commands = {
 
 			'InChOn': {
-			 		label: 'Input On',
-			 		options: [{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt}]
+				label: 'Input On',
+				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
 			},
 			'InChOff': {
-			 		label: 'Input Off',
-			 		options: [{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt}]
+				label: 'Input Off',
+				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
 			},
 			'InChLevel': {
-					label: 'Input Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Input Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt },
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
 			},
 
 			'MixOn': {
-					label: 'Mix On',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt}]
+				label: 'Mix On',
+				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt }]
 			},
 			'MixOff': {
-					label: 'Mix Off',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt}]
+				label: 'Mix Off',
+				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt }]
 			},
 			'MixLevel': {
-					label: 'Mix Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Mix Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt },
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
 			},
 
 			'MtrxOn': {
-					label: 'Matrix On',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt}]
+				label: 'Matrix On',
+				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
 			},
 			'MtrxOff': {
-					label: 'Matrix Off',
-					options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt}]
+				label: 'Matrix Off',
+				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
 			},
 			'MtrxLevel': {
-					label: 'Matrix Level Adjust',
-					options: [
-						{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt},
-						{type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Matrix Level Adjust',
+				options: [
+					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt },
+					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
+				]
 			},
 
 			'CLQLRecall': {
-					label: 'Recall Scene',
-					options: [{type: 'textinput',label: 'Scene (0 to 300)',id: 'Scene',default: '0',regex: self.REGEX_SIGNED_NUMBER}]
+				label: 'Recall Scene',
+				options: [{ type: 'textinput',label: 'Scene (0 to 300)',id: 'Scene',default: '0',regex: self.REGEX_SIGNED_NUMBER }]
 			}
-			};
+		};
 	}
 
-			self.system.emit('instance_actions', self.id, commands);
-};
+	self.system.emit('instance_actions', self.id, commands);
+}
 
 instance.prototype.action = function(action) {
 	var self = this;
@@ -400,76 +420,74 @@ instance.prototype.action = function(action) {
 	switch (action.action) {
 
 		case 'InChOn':
-			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1'
+			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
 			break;
 
 		case 'InChOff':
-			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0'
+			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
 			break;
 
-	  case 'InChLevel':
-			cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct
+		case 'InChLevel':
+			cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
 			break;
 
 		case 'AuxOn':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1'
+			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
 			break;
 
 		case 'AuxOff':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0'
+			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
 			break;
 
 		case 'AuxLevel':
-			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct
+			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
 			break;
 
 		case 'MixOn':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1'
+			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
 			break;
 
 		case 'MixOff':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0'
+			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
 			break;
 
 		case 'MixLevel':
-			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct
+			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
 			break;
 
 		case 'MtrxOn':
-			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1'
+			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
 			break;
 
 		case 'MtrxOff':
-			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0'
+			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
 			break;
 
 		case 'MtrxLevel':
-			cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct
+			cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
 			break;
 
 		case 'TFRecall':
-			cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene
+			cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
 			break;
 
 		case 'CLQLRecall':
-			cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene
+			cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
 			break;
+	}
+
+	if (cmd !== undefined) {
+
+		debug('sending ',cmd,"to",self.config.host);
+
+		if (self.socket !== undefined && self.socket.connected) {
+			self.socket.send(cmd + "\n");
 		}
-
-		if (cmd !== undefined) {
-
-				debug('sending ',cmd,"to",self.config.host);
-
-				if (self.socket !== undefined && self.socket.connected) {
-					self.socket.send(cmd + "\n");
-				}
-				else {
-					debug('Socket not connected :(');
-				}
-
-			}
-
-	};
+		else {
+			debug('Socket not connected :(');
+		}
+	}
+}
 
 instance_skel.extendedBy(instance);
 exports = module.exports = instance;
