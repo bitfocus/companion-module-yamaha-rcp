@@ -1,13 +1,24 @@
 {
-  "name": "yamaha_scp",
-  "version": "1.0.0",
-  "description": "Control module for Yamaha Pro Audio equipment ",
-  "main": "yamaha_scp.js",
-  "scripts": { "test": "echo \"Error: no test specified\" && exit 1"},
-  "keywords": ["Audio"],
-  "manufacturer": "Yamaha",
-  "product": "SCP",
-  "shortname": "Yamaha SCP",
-  "author": "Jack Longden <Jack@atov.co.uk>",
-  "license": "MIT"
+	"name": "yamaha-scp",
+	"version": "1.0.0",
+	"api_version": "1.0.0",
+	"description": "Control module for Yamaha Pro Audio equipment ",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": ["Audio"],
+	"manufacturer": "Yamaha",
+	"product": ["TF Console","QL/CL Console","TF-Rack"],
+	"shortname": "yamaha-scp",
+	"homepage": "https://github.com/bitfocus/companion-module-yamaha-scp#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-yamaha-scp.git"
+	},
+	"author": "Jack Longden <Jack@atov.co.uk>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-yamaha-scp/issues"
+	}
 }
