@@ -1,4 +1,4 @@
-## Yamaha Pro Audio
+## Yamaha Simple Control Protocol
 
 **Available for the following Yamaha Pro Audio Device**
 
