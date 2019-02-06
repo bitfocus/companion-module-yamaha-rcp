@@ -49,6 +49,26 @@ instance.prototype.init_tcp = function() {
 	var receivebuffer = '';
 	var linestring = '';
 
+	function getproductnm(){
+		self.socket.send('devinfo productname' + "\n");
+	}
+
+	function getinputch(){
+		self.socket.send('devinfo inputch' + "\n");
+	}
+
+	function getauxbus(){
+		self.socket.send('devinfo auxbus' + "\n");
+	}
+
+	function getmixbus(){
+		self.socket.send('devinfo mixbus' + "\n");
+	}
+
+	function getmatixbus(){
+		self.socket.send('devinfo matrixbus' + "\n");
+	}
+
 	if (self.socket !== undefined) {
 		self.socket.destroy();
 		delete self.socket;
@@ -71,7 +91,11 @@ instance.prototype.init_tcp = function() {
 			self.status(self.STATE_OK);
 			debug("Connected");
 			self.log('',"Connected");
-			self.socket.send('devinfo productname' + "\n");
+			getproductnm();
+			setTimeout(getinputch,  500 );
+			setTimeout(getauxbus,   1000);
+			setTimeout(getmixbus,   1500);
+			setTimeout(getmatixbus, 2000);
 		});
 
 		self.socket.on('data', function (chunk) {
@@ -92,35 +116,41 @@ instance.prototype.init_tcp = function() {
 				else if (receivebuffer.indexOf('TF') != '-1') {
 					productnm = 'TF'
 				}
-
-				self.socket.send('devinfo inputch' + "\n");
 				self.log('',"Type: " + productnm);
+				receivebuffer = '';
+				self.actions();
 			}
 
 			if (receivebuffer.indexOf('inputch') != '-1'){
 				linestring = line.toString();
 				inputch = linestring.match(/\d+/g).map(Number);;
+				receivebuffer = '';
 				self.log('',"Input Count: " + inputch);
-				self.socket.send('devinfo auxbus' + "\n");
+				self.actions();
 			}
 
 			if (receivebuffer.indexOf('auxbus') != '-1'){
 				linestring = line.toString();
 				auxbus = linestring.match(/\d+/g).map(Number);;
+				receivebuffer = '';
 				self.log('',"Aux Bus Count: " + auxbus);
-				self.socket.send('devinfo mixbus' + "\n");
+				self.actions();
 			}
 
 			if (receivebuffer.indexOf('mixbus') != '-1'){
 				linestring = line.toString();
 				mixbus = linestring.match(/\d+/g).map(Number);;
-				self.log('',"Mix Bus Count: " + mixbus);
-				self.socket.send('devinfo matrixbus' + "\n");
+				receivebuffer = '';
+				if (mixbus > '0'){
+					self.log('',"Mix Bus Count: " + mixbus);
+				}
+				self.actions();
 			}
 
 			if (receivebuffer.indexOf('matrixbus') != '-1'){
 				linestring = line.toString();
 				matrixbus = linestring.match(/\d+/g).map(Number);;
+				receivebuffer = '';
 				self.log('',"Matrix Bus Count: " + matrixbus);
 				self.actions();
 			}
