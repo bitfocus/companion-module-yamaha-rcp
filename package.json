@@ -1,6 +1,6 @@
 {
 	"name": "yamaha-scp",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"api_version": "1.0.0",
 	"description": "Control module for Yamaha Pro Audio equipment ",
 	"main": "index.js",
