@@ -217,7 +217,7 @@ instance.prototype.actions = function(system) {
 		}
 	}
 
-	if(productnm = 'TF'){
+	if(productnm == 'TF'){
 
 		var commands = {
 			'InChOn': {
@@ -382,7 +382,7 @@ instance.prototype.actions = function(system) {
 		};
 	}
 
-	else if(productnm = 'CL/QL'){
+	else if(productnm == 'CL/QL'){
 		var commands = {
 
 			'InChOn': {
