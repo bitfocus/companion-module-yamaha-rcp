@@ -1,15 +1,15 @@
-// Control module for Yamaha Pro Audio
+// Control module for Yamaha Pro Audio, using SCP communication
 // Jack Longden <Jack@atov.co.uk> 2019
+// updated by Andrew Broughton <andy@checkcheckonetwo.com> Feb 2020
+
 var tcp = require('../../tcp');
 var instance_skel = require('../../instance_skel');
-var debug;
-var log;
-var line      = '';
-var productnm = '';
-var inputch   = 0;
-var auxbus    = 0;
-var mixbus    = 0;
-var matrixbus = 0;
+var SCPcommands = [];
+var SCPVal = {};
+var bankState = {};
+const SCPParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
+const SCPVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
+
 
 // Instance Setup & Connect
 function instance(system, id, config) {
@@ -18,56 +18,101 @@ function instance(system, id, config) {
 	// super-constructor
 	instance_skel.apply(this, arguments);
 
-	// export actions
-	self.actions();
-
 	return self;
 }
 
-instance.prototype.updateConfig = function(config) {
+// Web config fields
+instance.prototype.config_fields = function () {
 	var self = this;
 
-	self.config = config;
-
-	self.init_tcp();
+	return [{
+				type: 'textinput',
+				id: 'host',
+				label: 'IP Address of Console',
+				width: 6,
+				default: '192.168.0.128',
+				regex: self.REGEX_IP
+			},
+			{
+				type: 'dropdown',
+				id: 'model',
+				label: 'Console Type',
+				width: 6,
+				default: 'CL/QL',
+				choices: [
+					{id: 'CL/QL', label: 'CL/QL Console'},
+					{id: 'TF', label: 'TF Console'}
+				]
+			}
+	]
 }
 
+// Change in Configuration
+instance.prototype.updateConfig = function(config) {
+	var self  = this;
+	let fname = '';
+	const fs  = require("fs");
+	
+	self.config = config;
+	if(self.config.model == 'CL/QL'){
+		fname = 'CL5 SCP Parameters-1.txt';
+	}
+	else{
+		fname = 'TF5 SCP Parameters-1.txt';
+	}
+
+	// Read the DataFile
+	var data = fs.readFileSync(`${__dirname}/${fname}`);
+	SCPcommands = ParseData(data, SCPParams);
+	NewConsole(self);
+}
+
+// Startup
 instance.prototype.init = function() {
 	var self = this;
 
-	debug = self.debug;
-	log = self.log;
-
-	self.status(1,'Connecting'); // status ok!
-
-	self.init_tcp();
+	self.updateConfig(self.config);
 }
+
+// Make each command line into an object that can be used to create the commands
+function ParseData(data, params){
+	var self    = this;
+	let cmds    = [];
+	let line    = [];
+	const lines = data.toString().split("\x0A");
+	
+	for (let i = 0; i < lines.length; i++){
+		// I'm not going to even try to explain this next line,
+		// but it basically pulls out the space-separated values, except for spaces those that are inside quotes!
+		line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
+		if(line !== null && (['OK','NOTIFY'].indexOf(line[0].toUpperCase()) !== -1)){
+			let SCPcommand = new Object();
+			
+			for (var j = 0; j < line.length; j++){
+				SCPcommand[params[j]] = line[j].replace(/"/g,'');  // Get rid of any double quotes around the strings
+			}
+			cmds.push(SCPcommand);
+		}		
+	}
+	return cmds
+}
+
+
+// Whenever the console type changes, update the info
+function NewConsole(self){
+	self.log('info', `Device model= ${self.config.model}`);		
+	
+	self.init_tcp();
+	self.actions(); // Re-do the actions once the console is chosen
+}
+
 
 // Initialise TCP and if good, query device info
 instance.prototype.init_tcp = function() {
-	var self = this;
-	var receivebuffer = '';
-	var linestring = '';
-
-	function getproductnm(){
-		self.socket.send('devinfo productname' + "\n");
-	}
-
-	function getinputch(){
-		self.socket.send('devinfo inputch' + "\n");
-	}
-
-	function getauxbus(){
-		self.socket.send('devinfo auxbus' + "\n");
-	}
-
-	function getmixbus(){
-		self.socket.send('devinfo mixbus' + "\n");
-	}
-
-	function getmatixbus(){
-		self.socket.send('devinfo matrixbus' + "\n");
-	}
+	var self          = this;
+	let receivebuffer = '';
+	let receivedcmd   = [];
+	let cmdindex      = -1;
 
 	if (self.socket !== undefined) {
 		self.socket.destroy();
@@ -82,96 +127,35 @@ instance.prototype.init_tcp = function() {
 		});
 
 		self.socket.on('error', function (err) {
-			debug("Network error", err);
 			self.status(self.STATE_ERROR, err);
-			self.log('error',"Network error: " + err.message);
+			self.log('error', `Network error: ${err.message}`);
 		});
 
 		self.socket.on('connect', function () {
 			self.status(self.STATE_OK);
-			debug("Connected");
-			self.log('',"Connected");
-			getproductnm();
-			setTimeout(getinputch,  500 );
-			setTimeout(getauxbus,   1000);
-			setTimeout(getmixbus,   1500);
-			setTimeout(getmatixbus, 2000);
+			self.log('info', `Connected`);
 		});
 
 		self.socket.on('data', function (chunk) {
 			receivebuffer += chunk;
-			line = receivebuffer.substr(0, receivebuffer.length);
-
-			if (receivebuffer.indexOf('NOTIFY') == '-1'){
-				debug("Recieved from device: "+ line.toString());
-			}
-
-			if (receivebuffer.indexOf('productname') != '-1'){
-				if (receivebuffer.indexOf('CL') != '-1'){
-					productnm = 'CL/QL';
-				}
-				else if (receivebuffer.indexOf('QL') != '-1') {
-					productnm = 'CL/QL'
-				}
-				else if (receivebuffer.indexOf('TF') != '-1') {
-					productnm = 'TF'
-				}
-				self.log('',"Type: " + productnm);
-				receivebuffer = '';
-				self.actions();
-			}
-
-			if (receivebuffer.indexOf('inputch') != '-1'){
-				linestring = line.toString();
-				inputch = linestring.match(/\d+/g).map(Number);;
-				receivebuffer = '';
-				self.log('',"Input Count: " + inputch);
-				self.actions();
-			}
-
-			if (receivebuffer.indexOf('auxbus') != '-1'){
-				linestring = line.toString();
-				auxbus = linestring.match(/\d+/g).map(Number);;
-				receivebuffer = '';
-				self.log('',"Aux Bus Count: " + auxbus);
-				self.actions();
-			}
-
-			if (receivebuffer.indexOf('mixbus') != '-1'){
-				linestring = line.toString();
-				mixbus = linestring.match(/\d+/g).map(Number);;
-				receivebuffer = '';
-				if (mixbus > '0'){
-					self.log('',"Mix Bus Count: " + mixbus);
-				}
-				self.actions();
-			}
-
-			if (receivebuffer.indexOf('matrixbus') != '-1'){
-				linestring = line.toString();
-				matrixbus = linestring.match(/\d+/g).map(Number);;
-				receivebuffer = '';
-				self.log('',"Matrix Bus Count: " + matrixbus);
-				self.actions();
-			}
-
-			receivebuffer = '';
+			
+			self.log('info', `Received from device: ${receivebuffer}`);
+			
+			receivedcmd = ParseData(receivebuffer, SCPVals); // Break out the parameters
+			for(let i=0; i < receivedcmd.length; i++){
+				cmdindex = SCPcommands.find(cmd => cmd.Address == receivedcmd[i].Address).Index; // Find which command
+				
+				if(cmdindex != -1){
+					SCPVal = receivedcmd[i];
+					self.checkFeedbacks(cmdindex);
+				};
+			};
+			
+			SCPVal = {};
+			receivebuffer = '';	// Clear the buffer
+		
 		});
 	}
-}
-
-// Web config fields
-instance.prototype.config_fields = function () {
-	var self = this;
-
-	return [{
-			type: 'textinput',
-			id: 'host',
-			label: 'IP Address of Console',
-			width: 6,
-			default: '192.168.0.100',
-			regex: self.REGEX_IP
-		}]
 }
 
 // Module deletion
@@ -182,341 +166,149 @@ instance.prototype.destroy = function() {
 		self.socket.destroy();
 	}
 
-	debug("destroy", self.id);;
+	self.log('debug', `destroyed ${self.id}`);
 }
 
 // Module actions
 instance.prototype.actions = function(system) {
-	var self = this;
-	var inputchopt   = [];
-	var auxbusopt    = [];
-	var mixbusopt    = [];
-	var matrixbusopt = [];
+	var self      = this;
+	var commands  = {};
+	var feedbacks = {};
+	let SCPcmd    = '';
+	let ValParams = {};
 
-	if(inputch>0){
-		for (var i = 0; i < inputch; i++){
-			inputchopt.push({ id: i,  label: i+1 });
+	for (let i = 0; i < SCPcommands.length; i++){
+		
+		SCPcmd = SCPcommands[i]
+
+		if(self.config.model == 'TF' && SCPcmd.Type == 'scene'){
+			SCPLabel = 'Scene/Bank'
 		}
-	}
-
-	if(auxbus>0){
-		for (var i = 0; i < auxbus; i++){
-			auxbusopt.push({ id: i,  label: i+1 });
+		else{
+			SCPLabel = SCPcmd.Address.slice(SCPcmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
 		}
-	}
-
-	if(mixbus>0){
-		for (var i = 0; i < mixbus; i++){
-			mixbusopt.push({ id: i,  label: i+1 })
+		
+		// Add the commands from the data file
+		commands[SCPcmd.Index] = {
+			label: `${SCPcmd.Index}: ${SCPLabel}`, 
+			options: [
+				{type: 'number', label: SCPLabel.split("/")[0], id: 'X', min: 1, max: SCPcmd.X, default: 1, required: true, range: false}]
 		}
-	}
-
-	if(matrixbus>0){
-		for (var i = 0; i < matrixbus; i++){
-			matrixbusopt.push({ id: i,  label: i+1 })
+		if(SCPcmd.Y > 1){
+			if(self.config.model == "TF" && SCPcmd.Type == 'scene'){
+				ValParams = {type: 'dropdown', label: SCPLabel.split("/")[1], id: 'Y', default: 'A', choices:[
+					{id: 'A', label: 'A'},
+					{id: 'B', label: 'B'}
+				]}
+			}
+			else{
+				ValParams = {type: 'number', label: SCPLabel.split("/")[1], id: 'Y', min: 1, max: SCPcmd.Y, default: 1, required: true, range: false}
+			}
+			commands[SCPcmd.Index].options.push(ValParams);
 		}
-	}
-
-	if(productnm == 'TF'){
-
-		var commands = {
-			'InChOn': {
-				label: 'Input On',
-				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
-			},
-			'InChOff': {
-				label: 'Input Off',
-				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
-			},
-			'InChLevel': {
-				label: 'Input Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt},
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'AuxOn': {
-				label: 'Aux On',
-				options: [{type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt}]
-			},
-			'AuxOff': {
-				label: 'Aux Off',
-				options: [{ type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt }]
-			},
-			'AuxLevel': {
-				label: 'Aux Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Aux', id: 'Ch', default: '0', choices: auxbusopt },
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'MtrxOn': {
-				label: 'Matrix On',
-				options: [{type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
-			},
-			'MtrxOff': {
-				label: 'Matrix Off',
-				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
-			},
-			'MtrxLevel': {
-				label: 'Matrix Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt },
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'TFRecall': {
-				label: 'Recall Scene',
-				options: [
-					{ type: 'dropdown', label: 'Bank', id: 'Bank', default: 'a', choices: [
-						{ id: 'a',  label: 'A'  },
-						{ id: 'b',  label: 'B'  }]
-					},
-					{ type: 'dropdown', label: 'Preset', id: 'Scene', default: '0', choices: [
-						{ id: 0,  label: '00' },
-						{ id: 1,  label: '01' },
-						{ id: 2,  label: '02' },
-						{ id: 3,  label: '03' },
-						{ id: 4,  label: '04' },
-						{ id: 5,  label: '05' },
-						{ id: 6,  label: '06' },
-						{ id: 7,  label: '07' },
-						{ id: 8,  label: '08' },
-						{ id: 9,  label: '09' },
-						{ id: 10, label: '10' },
-						{ id: 11, label: '11' },
-						{ id: 12, label: '12' },
-						{ id: 13, label: '13' },
-						{ id: 14, label: '14' },
-						{ id: 15, label: '15' },
-						{ id: 16, label: '16' },
-						{ id: 17, label: '17' },
-						{ id: 18, label: '18' },
-						{ id: 19, label: '19' },
-						{ id: 20, label: '20' },
-						{ id: 21, label: '21' },
-						{ id: 22, label: '22' },
-						{ id: 23, label: '23' },
-						{ id: 24, label: '24' },
-						{ id: 25, label: '25' },
-						{ id: 26, label: '26' },
-						{ id: 27, label: '27' },
-						{ id: 28, label: '28' },
-						{ id: 29, label: '29' },
-						{ id: 30, label: '30' },
-						{ id: 31, label: '31' },
-						{ id: 32, label: '32' },
-						{ id: 33, label: '33' },
-						{ id: 34, label: '34' },
-						{ id: 35, label: '35' },
-						{ id: 36, label: '36' },
-						{ id: 37, label: '37' },
-						{ id: 38, label: '38' },
-						{ id: 39, label: '39' },
-						{ id: 40, label: '40' },
-						{ id: 41, label: '41' },
-						{ id: 42, label: '42' },
-						{ id: 43, label: '43' },
-						{ id: 44, label: '44' },
-						{ id: 45, label: '45' },
-						{ id: 46, label: '46' },
-						{ id: 47, label: '47' },
-						{ id: 48, label: '48' },
-						{ id: 49, label: '49' },
-						{ id: 50, label: '50' },
-						{ id: 51, label: '51' },
-						{ id: 52, label: '52' },
-						{ id: 53, label: '53' },
-						{ id: 54, label: '54' },
-						{ id: 55, label: '55' },
-						{ id: 56, label: '56' },
-						{ id: 57, label: '57' },
-						{ id: 58, label: '58' },
-						{ id: 59, label: '59' },
-						{ id: 60, label: '60' },
-						{ id: 61, label: '61' },
-						{ id: 62, label: '62' },
-						{ id: 63, label: '63' },
-						{ id: 64, label: '64' },
-						{ id: 65, label: '65' },
-						{ id: 66, label: '66' },
-						{ id: 67, label: '67' },
-						{ id: 68, label: '68' },
-						{ id: 69, label: '69' },
-						{ id: 70, label: '70' },
-						{ id: 71, label: '71' },
-						{ id: 72, label: '72' },
-						{ id: 73, label: '73' },
-						{ id: 74, label: '74' },
-						{ id: 75, label: '75' },
-						{ id: 76, label: '76' },
-						{ id: 77, label: '77' },
-						{ id: 78, label: '78' },
-						{ id: 79, label: '79' },
-						{ id: 80, label: '80' },
-						{ id: 81, label: '81' },
-						{ id: 82, label: '82' },
-						{ id: 83, label: '83' },
-						{ id: 84, label: '84' },
-						{ id: 85, label: '85' },
-						{ id: 86, label: '86' },
-						{ id: 87, label: '87' },
-						{ id: 88, label: '88' },
-						{ id: 89, label: '89' },
-						{ id: 90, label: '90' },
-						{ id: 91, label: '91' },
-						{ id: 92, label: '92' },
-						{ id: 93, label: '93' },
-						{ id: 94, label: '94' },
-						{ id: 95, label: '95' },
-						{ id: 96, label: '96' },
-						{ id: 97, label: '97' },
-						{ id: 98, label: '98' },
-						{ id: 99, label: '99' }]
+		switch(SCPcmd.Type){
+			case 'integer':
+				if(SCPcmd.Max == 1){
+					ValParams = {type: 'checkbox', label: 'On', id: 'Val', default: SCPcmd.Default}
+				}
+				else{
+					ValParams = {
+						type: 'number', label: SCPLabel.split("/")[2], id: 'Val', min: SCPcmd.Min, max: SCPcmd.Max, default: parseInt(SCPcmd.Default), required: true, range: false
 					}
-				]
-			}
-		};
-	}
+				}
+				break;
+			case 'string':
+				ValParams = {type: 'textinput', label: SCPLabel.split("/")[2], id: 'Val', default: SCPcmd.Default, regex: ''}
+				break;
+			default:
+				feedbacks[SCPcmd.Index] = JSON.parse(JSON.stringify(commands[SCPcmd.Index])); // Clone
+				feedbacks[SCPcmd.Index].options.push(
+					{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
+					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+				)
+				continue; // Don't push another parameter - In the case of a Scene message
+		}
+		
+		commands[SCPcmd.Index].options.push(ValParams);
 
-	else if(productnm == 'CL/QL'){
-		var commands = {
-
-			'InChOn': {
-				label: 'Input On',
-				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
-			},
-			'InChOff': {
-				label: 'Input Off',
-				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
-			},
-			'InChLevel': {
-				label: 'Input Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt },
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'MixOn': {
-				label: 'Mix On',
-				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt }]
-			},
-			'MixOff': {
-				label: 'Mix Off',
-				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt }]
-			},
-			'MixLevel': {
-				label: 'Mix Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: mixbusopt },
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'MtrxOn': {
-				label: 'Matrix On',
-				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
-			},
-			'MtrxOff': {
-				label: 'Matrix Off',
-				options: [{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt }]
-			},
-			'MtrxLevel': {
-				label: 'Matrix Level Adjust',
-				options: [
-					{ type: 'dropdown', label: 'Matrix', id: 'Ch', default: '0', choices: matrixbusopt },
-					{ type: 'textinput',label: 'Value (-32768 to 1000)',id: 'ChAct',default: '0',regex: self.REGEX_SIGNED_NUMBER }
-				]
-			},
-
-			'CLQLRecall': {
-				label: 'Recall Scene',
-				options: [{ type: 'textinput',label: 'Scene (0 to 300)',id: 'Scene',default: '0',regex: self.REGEX_SIGNED_NUMBER }]
-			}
-		};
+		feedbacks[SCPcmd.Index] = JSON.parse(JSON.stringify(commands[SCPcmd.Index])); // Clone
+		feedbacks[SCPcmd.Index].options.push(
+				{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
+				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+		)
 	}
 
 	self.system.emit('instance_actions', self.id, commands);
+	self.setFeedbackDefinitions(feedbacks);
 }
 
 instance.prototype.action = function(action) {
-	var self = this;
-	var opt = action.options
-
-	switch (action.action) {
-
-		case 'InChOn':
-			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
+	var self       = this;
+	var opt        = action.options;
+	let Xopt       = opt.X
+	let Yopt       = ((opt.Y === undefined) ? 0 : opt.Y);
+	let Valopt     = ''
+	let SCPcommand = SCPcommands.find(cmd => cmd.Index == action.action); // Find which command
+	
+	if(SCPcommand == undefined) return;
+	let cmdname = SCPcommand.Address; // Should this use a "find" to find the matching cmd.Index intead of the name?
+	
+	switch(SCPcommand.Type){
+		case 'integer':
+			cmdname = `set ${cmdname}`
+			Xopt--; 				// ch #'s are 1 higher than the parameter
+			Valopt = 0 + opt.Val; 	// Changes true/false to 1 0
+			break;
+		
+		case 'string':
+			cmdname = `set ${cmdname}`
+			Xopt--; 				// ch #'s are 1 higher than the parameter
+			Valopt = `"${opt.Val}"` // quotes around the string
 			break;
 
-		case 'InChOff':
-			cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
-			break;
-
-		case 'InChLevel':
-			cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-			break;
-
-		case 'AuxOn':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-			break;
-
-		case 'AuxOff':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-			break;
-
-		case 'AuxLevel':
-			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-			break;
-
-		case 'MixOn':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-			break;
-
-		case 'MixOff':
-			cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-			break;
-
-		case 'MixLevel':
-			cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-			break;
-
-		case 'MtrxOn':
-			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
-			break;
-
-		case 'MtrxOff':
-			cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
-			break;
-
-		case 'MtrxLevel':
-			cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-			break;
-
-		case 'TFRecall':
-			cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-			break;
-
-		case 'CLQLRecall':
-			cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-			break;
-	}
-
+		case 'scene':
+			Yopt = '';
+			Valopt = '';
+			if(self.config.model == 'CL/QL'){
+				cmdname = `ssrecall_ex ${cmdname}`  		// Recall Scene for CL/QL
+			}
+			else{
+				cmdname = `ssrecall_ex ${cmdname}${opt.Y}` 	// Recall Scene for TF
+			}
+	}		
+	
+	cmd = `${cmdname} ${Xopt} ${Yopt} ${Valopt}`.trim(); 	// Command string to send to console
+	
 	if (cmd !== undefined) {
-
-		debug('sending ',cmd,"to",self.config.host);
+		self.log('info', `sending ${cmd} to ${self.config.host}`);
 
 		if (self.socket !== undefined && self.socket.connected) {
-			self.socket.send(cmd + "\n");
+			self.socket.send(cmd + "\n"); 					// send it, but add a CR to the end
 		}
 		else {
-			debug('Socket not connected :(');
+			self.log('info', 'Socket not connected :(');
 		}
 	}
+}
+
+instance.prototype.feedback = function(feedback, bank){
+	var self       = this;
+	let options    = feedback.options;
+	let SCPcommand = SCPcommands.find(cmd => cmd.Index == feedback.type);
+	
+	if((SCPVal != undefined) && (SCPcommand != undefined)){
+		let Valopt = ((SCPcommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) // 0 + value turns true/false into 1 0
+		let ofs = ((SCPcommand.Type == 'scene') ? 0 : 1); 								// Scenes are equal, channels are 1 higher
+		
+		if(bankState[feedback.type] == undefined) bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
+		if(options.X == parseInt(SCPVal.X) + ofs)
+			if((options.Y == undefined) || (options.Y == SCPVal.Y))
+				if((SCPVal.Val == undefined) || (Valopt == SCPVal.Val)){
+					bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
+		}
+	} 
+	
+	return bankState[feedback.type]; // no match
 }
 
 instance_skel.extendedBy(instance);
