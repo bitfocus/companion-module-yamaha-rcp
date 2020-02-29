@@ -123,7 +123,7 @@ instance.prototype.init_tcp = function() {
 
 			if (receivebuffer.indexOf('inputch') != '-1'){
 				linestring = line.toString();
-				inputch = linestring.match(/\d+/g).map(Number);;
+				inputch = linestring.match(/\d+/g).map(Number);
 				receivebuffer = '';
 				self.log('',"Input Count: " + inputch);
 				self.actions();
@@ -131,7 +131,7 @@ instance.prototype.init_tcp = function() {
 
 			if (receivebuffer.indexOf('auxbus') != '-1'){
 				linestring = line.toString();
-				auxbus = linestring.match(/\d+/g).map(Number);;
+				auxbus = linestring.match(/\d+/g).map(Number);
 				receivebuffer = '';
 				self.log('',"Aux Bus Count: " + auxbus);
 				self.actions();
@@ -139,7 +139,7 @@ instance.prototype.init_tcp = function() {
 
 			if (receivebuffer.indexOf('mixbus') != '-1'){
 				linestring = line.toString();
-				mixbus = linestring.match(/\d+/g).map(Number);;
+				mixbus = linestring.match(/\d+/g).map(Number);
 				receivebuffer = '';
 				if (mixbus > '0'){
 					self.log('',"Mix Bus Count: " + mixbus);
@@ -149,7 +149,7 @@ instance.prototype.init_tcp = function() {
 
 			if (receivebuffer.indexOf('matrixbus') != '-1'){
 				linestring = line.toString();
-				matrixbus = linestring.match(/\d+/g).map(Number);;
+				matrixbus = linestring.match(/\d+/g).map(Number);
 				receivebuffer = '';
 				self.log('',"Matrix Bus Count: " + matrixbus);
 				self.actions();
@@ -182,7 +182,7 @@ instance.prototype.destroy = function() {
 		self.socket.destroy();
 	}
 
-	debug("destroy", self.id);;
+	debug("destroy", self.id);
 }
 
 // Module actions
@@ -192,6 +192,7 @@ instance.prototype.actions = function(system) {
 	var auxbusopt    = [];
 	var mixbusopt    = [];
 	var matrixbusopt = [];
+	var commands;
 
 	if(inputch>0){
 		for (var i = 0; i < inputch; i++){
@@ -219,7 +220,7 @@ instance.prototype.actions = function(system) {
 
 	if(productnm == 'TF'){
 
-		var commands = {
+		commands = {
 			'InChOn': {
 				label: 'Input On',
 				options: [{ type: 'dropdown', label: 'Input', id: 'Ch', default: '0', choices: inputchopt }]
@@ -383,7 +384,7 @@ instance.prototype.actions = function(system) {
 	}
 
 	else if(productnm == 'CL/QL'){
-		var commands = {
+		commands = {
 
 			'InChOn': {
 				label: 'Input On',
@@ -445,7 +446,8 @@ instance.prototype.actions = function(system) {
 
 instance.prototype.action = function(action) {
 	var self = this;
-	var opt = action.options
+	var opt = action.options;
+	var cmd;
 
 	switch (action.action) {
 
