@@ -9,16 +9,13 @@
 
 **Available commands**
 
-* Input Channel ON
-* Input Channel OFF
-* Input Channel Level
-* Aux Bus ON
-* Aux Bus OFF
-* Aux Bus Level
-* Mix Bus ON
-* Mix Bus OFF
-* Mix Bus Level
-* Matrix Bus ON  
-* Matrix Bus OFF    
-* Matrix Bus Level                           
+* All available SCP "set" commands                        
 * Recall Presets
+
+Looking to add other functions such as macros and USB playback and whatever else!
+
+Many thanks to Jack Longden for starting this off and inspiring me to continue.
+
+Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
+
+Andrew Broughton
