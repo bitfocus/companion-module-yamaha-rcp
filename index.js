@@ -35,7 +35,7 @@ function instance(system, id, config) {
 					break;
 		
 				case 'InChOff':
-					// 		cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
+					// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
 					action.action = 186;
 					action.options.X = actions.options.Ch;
 					action.options.Val = 0;
@@ -203,7 +203,7 @@ function newConsole(self){
 }
 
 
-// Initialise TCP and if good, query device info
+// Initialise TCP
 instance.prototype.init_tcp = function() {
 	var self          = this;
 	
