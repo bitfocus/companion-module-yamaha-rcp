@@ -251,7 +251,7 @@ instance.prototype.init_tcp = function() {
 			scpVal = {};
 			receivebuffer = '';	// Clear the buffer
 		
-		});
+    });
 	}
 }
 
@@ -292,6 +292,7 @@ instance.prototype.actions = function(system) {
 			options: [
 				{type: 'number', label: scpLabel.split("/")[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
 		}
+
 		if(scpCmd.Y > 1){
 			if(self.config.model == "TF" && scpCmd.Type == 'scene'){
 				valParams = {type: 'dropdown', label: scpLabel.split("/")[1], id: 'Y', default: 'A', choices:[
@@ -301,7 +302,8 @@ instance.prototype.actions = function(system) {
 			}
 			else{
 				valParams = {type: 'number', label: scpLabel.split("/")[1], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
-			}
+      }
+      
 			commands[scpCmd.Index].options.push(valParams);
 		}
 		switch(scpCmd.Type){
@@ -357,6 +359,7 @@ instance.prototype.action = function(action) {
 			cmdName = `set ${cmdName}`
 			optX--; 				// ch #'s are 1 higher than the parameter
 			optVal = 0 + opt.Val; 	// Changes true/false to 1 0
+
 			break;
 		
 		case 'string':
