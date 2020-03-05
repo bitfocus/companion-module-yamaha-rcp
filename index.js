@@ -4,6 +4,7 @@
 
 var tcp = require('../../tcp');
 var instance_skel = require('../../instance_skel');
+var scpNames = require('./scpNames.json');
 var scpCommands = [];
 var scpVal = {};
 var bankState = {};
@@ -35,7 +36,7 @@ function instance(system, id, config) {
 					break;
 		
 				case 'InChOff':
-					// 		cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
+					// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
 					action.action = 186;
 					action.options.X = actions.options.Ch;
 					action.options.Val = 0;
@@ -196,14 +197,14 @@ function parseData(data, params){
 
 // Whenever the console type changes, update the info
 function newConsole(self){
-	self.log('info', `Device model= ${self.config.model}`);		
+	self.log('info', `Device model= ${self.config.model}`);
 	
 	self.init_tcp();
 	self.actions(); // Re-do the actions once the console is chosen
 }
 
 
-// Initialise TCP and if good, query device info
+// Initialise TCP
 instance.prototype.init_tcp = function() {
 	var self          = this;
 	
@@ -318,7 +319,13 @@ instance.prototype.actions = function(system) {
 				}
 				break;
 			case 'string':
-				valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
+				if(scpLabel.startsWith("CustomFaderBank")){
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
+				} else if(scpLabel.endsWith("Color")){
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
+				} else {
+					valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
+				}
 				break;
 			default:
 				feedbacks[scpCmd.Index] = JSON.parse(JSON.stringify(commands[scpCmd.Index])); // Clone
@@ -352,7 +359,7 @@ instance.prototype.action = function(action) {
 	let scpCommand = scpCommands.find(cmd => cmd.Index == action.action); // Find which command
 	
 	if(scpCommand == undefined) return;
-	let cmdName = scpCommand.Address; // Should this use a "find" to find the matching cmd.Index intead of the name?
+	let cmdName = scpCommand.Address;
 	
 	switch(scpCommand.Type){
 		case 'integer':
@@ -364,7 +371,8 @@ instance.prototype.action = function(action) {
 		
 		case 'string':
 			cmdName = `set ${cmdName}`
-			optX--; 				// ch #'s are 1 higher than the parameter
+			optX--; 				// ch #'s are 1 higher than the parameter except with Custom Banks
+			if(scpCommand.Address.split(':')[0] !== 'MIXER') optY--;	// Custom Bank Faders (CL:Current or QL:Current commands) are 0-based
 			optVal = `"${opt.Val}"` // quotes around the string
 			break;
 

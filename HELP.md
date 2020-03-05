@@ -1,6 +1,6 @@
 ## Yamaha Simple Control Protocol
 
-**Available for the following Yamaha Pro Audio Device**
+**Available for the following Yamaha Pro Audio Devices**
 
 * CL1/3/5
 * QL1/3/5
@@ -19,3 +19,13 @@ Many thanks to Jack Longden for starting this off and inspiring me to continue.
 Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
 Andrew Broughton
+
+** REVISION HISTORY **
+
+v1.1.0  Initial Commit
+        ToDo: QL/TF testing
+        
+v1.1.1  Bug Fixes
+        Fix: Custom Fader Bank values corrected
+        Enhancement: Custom Fader Bank dropdown for channel names
+        Enhancement: Dropdown for channel colors
