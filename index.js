@@ -495,12 +495,12 @@ instance.prototype.feedback = function(feedback, bank){
 		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 								// Scenes are equal, channels are 1 higher
 		
 		if (self.bankState[feedback.type] == undefined) {
-			self.bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor
+			self.bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
 		}
 
 		if (options.X == parseInt(self.scpVal.X) + ofs) {
-			if((options.Y == undefined) || (options.Y == self.scpVal.Y)) {
-				if((self.scpVal.Val == undefined) || (Valopt == self.scpVal.Val)) {
+			if ((options.Y == undefined) || (options.Y == self.scpVal.Y)) {
+				if ((self.scpVal.Val == undefined) || (Valopt == self.scpVal.Val)) {
 					self.bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
 				}
 			}
