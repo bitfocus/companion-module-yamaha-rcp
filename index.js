@@ -299,7 +299,7 @@ instance.prototype.actions = function(system) {
 
 	for (let i = 0; i < self.scpCommands.length; i++) {
 		
-		lets scpLabel = '';
+		let scpLabel = '';
 		scpCmd = self.scpCommands[i];
 
 		if(self.config.model == 'TF' && scpCmd.Type == 'scene') {
