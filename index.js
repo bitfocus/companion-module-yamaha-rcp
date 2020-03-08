@@ -8,6 +8,7 @@ var scpNames = require('./scpNames.json');
 var scpCommands = [];
 var scpVal = {};
 var bankState = {};
+var productName = '';
 const scpParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
 const scpVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
@@ -93,14 +94,14 @@ function instance(system, id, config) {
 		
 				case 'TFRecall':
 					// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-					action.action = 262;
+					action.action = 1000;
 					action.options.X = action.options.Scene;
 					action.options.Y = action.options.Bank;
 					break;
 		
 				case 'CLQLRecall':
 					// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-					action.action = 262;
+					action.action = 1000;
 					action.options.X = action.options.Scene;
 					break;
 
@@ -204,12 +205,18 @@ function newConsole(self){
 }
 
 
+// Get info from a connected console
+function getConsoleInfo(self) {
+	self.socket.send(`devinfo productname`);
+}
+
 // Initialise TCP
 instance.prototype.init_tcp = function() {
 	var self          = this;
 	
 	let receivebuffer = '';
 	let receivedcmd   = [];
+	let foundCmd	  = {};
 	let cmdIndex      = -1;
 
 	if (self.socket !== undefined) {
@@ -232,22 +239,31 @@ instance.prototype.init_tcp = function() {
 		self.socket.on('connect', function () {
 			self.status(self.STATE_OK);
 			self.log('info', `Connected`);
+			getConsoleInfo(self);
 		});
 
 		self.socket.on('data', function (chunk) {
 			receivebuffer += chunk;
 			
-			self.log('info', `Received from device: ${receivebuffer}`);
-			
-			receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
-			for(let i=0; i < receivedcmd.length; i++){
-				cmdIndex = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address).Index; // Find which command
-				
-				if(cmdIndex != -1){
-					scpVal = receivedcmd[i];
-					self.checkFeedbacks(cmdIndex);
-				};
-			};
+			self.log('debug', `Received from device: ${receivebuffer}`);
+
+			if(receivebuffer.indexOf('OK devinfo productname') !== -1){
+				productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
+				self.log('info', `Device found: ${productName}`);
+			} else {
+				receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
+				for(let i=0; i < receivedcmd.length; i++){
+					cmdIndex = -1;
+					foundCmd = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
+					if(foundCmd !== undefined){
+						cmdIndex = foundCmd.Index; // Find which command
+						scpVal = receivedcmd[i];
+						self.checkFeedbacks(cmdIndex);
+					} else {
+						self.log('debug', `Unknown command received: ${receivedcmd[i].Address}`);
+					}
+				}
+			}
 			
 			scpVal = {};
 			receivebuffer = '';	// Clear the buffer
@@ -390,7 +406,7 @@ instance.prototype.action = function(action) {
 	cmd = `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
 	
 	if (cmd !== undefined) {
-		self.log('info', `sending ${cmd} to ${self.config.host}`);
+		self.log('debug', `sending ${cmd} to ${self.config.host}`);
 
 		if (self.socket !== undefined && self.socket.connected) {
 			self.socket.send(cmd + "\n"); 					// send it, but add a CR to the end

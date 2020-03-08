@@ -9,7 +9,7 @@
 
 **Available commands**
 
-* All available SCP "set" commands                        
+* All available SCP "set" commands
 * Recall Presets
 
 Looking to add other functions such as macros and USB playback and whatever else!
@@ -18,14 +18,23 @@ Many thanks to Jack Longden for starting this off and inspiring me to continue.
 
 Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
-Andrew Broughton
+*Andrew Broughton*
 
-** REVISION HISTORY **
+---
+
+**REVISION HISTORY**
 
 v1.1.0  Initial Commit
-        ToDo: QL/TF testing
+
+        To Do:          QL/TF testing
         
 v1.1.1  Bug Fixes
-        Fix: Custom Fader Bank values corrected
-        Enhancement: Custom Fader Bank dropdown for channel names
-        Enhancement: Dropdown for channel colors
+        
+        Fix:            Custom Fader Bank values corrected
+        Enhancement:    Custom Fader Bank dropdown for channel names
+        Enhancement:    Dropdown for channel colors
+
+v1.1.2  Bug Fix
+
+        Fix:            Crash on unknown command in QL
+        Enhancement:    Add QL-specific commands
