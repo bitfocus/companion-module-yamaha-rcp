@@ -162,7 +162,7 @@ instance.prototype.updateConfig = function(config) {
 
 	// Read the DataFile
 	var data = fs.readFileSync(`${__dirname}/${fname}`);
-	self.scpCommands = parseData(data, SCP_PARAMS);
+	self.scpCommands = self.parseData(data, SCP_PARAMS);
 	self.newConsole();
 }
 
