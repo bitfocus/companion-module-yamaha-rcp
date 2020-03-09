@@ -4,19 +4,18 @@
 
 var tcp = require('../../tcp');
 var instance_skel = require('../../instance_skel');
+var scpNames = require('./scpNames.json');
+var scpCommands = [];
+var scpVal = {};
+var bankState = {};
+var productName = '';
+const scpParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
+const scpVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
-const SCP_PARAMS = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
-const SCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
 // Instance Setup
 function instance(system, id, config) {
 	var self = this;
-	
-	var scpNames = require('./scpNames.json');
-	var scpCommands = [];
-	var scpVal = {};
-	var bankState = {};
-	var productName = '';
 
 	// super-constructor
 	instance_skel.apply(this, arguments);
@@ -109,6 +108,7 @@ function instance(system, id, config) {
 				default:
 					changed = false;
 			}
+
 		}
 
 		return changed;
@@ -121,26 +121,25 @@ function instance(system, id, config) {
 instance.prototype.config_fields = function () {
 	var self = this;
 
-	return [
-		{
-			type: 'textinput',
-			id: 'host',
-			label: 'IP Address of Console',
-			width: 6,
-			default: '192.168.0.128',
-			regex: self.REGEX_IP
-		},
-		{
-			type: 'dropdown',
-			id: 'model',
-			label: 'Console Type',
-			width: 6,
-			default: 'CL/QL',
-			choices: [
-				{id: 'CL/QL', label: 'CL/QL Console'},
-				{id: 'TF', label: 'TF Console'}
-			]
-		}
+	return [{
+				type: 'textinput',
+				id: 'host',
+				label: 'IP Address of Console',
+				width: 6,
+				default: '192.168.0.128',
+				regex: self.REGEX_IP
+			},
+			{
+				type: 'dropdown',
+				id: 'model',
+				label: 'Console Type',
+				width: 6,
+				default: 'CL/QL',
+				choices: [
+					{id: 'CL/QL', label: 'CL/QL Console'},
+					{id: 'TF', label: 'TF Console'}
+				]
+			}
 	]
 }
 
@@ -152,18 +151,17 @@ instance.prototype.updateConfig = function(config) {
 	const fs  = require("fs");
 	
 	self.config = config;
-
-	if(self.config.model == 'CL/QL') {
+	if(self.config.model == 'CL/QL'){
 		fname = 'CL5 SCP Parameters-1.txt';
 	}
-	else {
+	else{
 		fname = 'TF5 SCP Parameters-1.txt';
 	}
 
 	// Read the DataFile
 	var data = fs.readFileSync(`${__dirname}/${fname}`);
-	self.scpCommands = self.parseData(data, SCP_PARAMS);
-	self.newConsole();
+	scpCommands = parseData(data, scpParams);
+	newConsole(self);
 }
 
 // Startup
@@ -174,35 +172,32 @@ instance.prototype.init = function() {
 }
 
 // Make each command line into an object that can be used to create the commands
-instance.prototype.parseData = function(data, params) {
+function parseData(data, params){
 	var self    = this;
 	
 	let cmds    = [];
 	let line    = [];
 	const lines = data.toString().split("\x0A");
 	
-	for (let i = 0; i < lines.length; i++) {
+	for (let i = 0; i < lines.length; i++){
 		// I'm not going to even try to explain this next line,
 		// but it basically pulls out the space-separated values, except for spaces those that are inside quotes!
-		line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g);
-
-		if (line !== null && (['OK','NOTIFY'].indexOf(line[0].toUpperCase()) !== -1)) {
+		line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
+		if(line !== null && (['OK','NOTIFY'].indexOf(line[0].toUpperCase()) !== -1)){
 			let scpCommand = new Object();
 			
-			for (var j = 0; j < line.length; j++) {
+			for (var j = 0; j < line.length; j++){
 				scpCommand[params[j]] = line[j].replace(/"/g,'');  // Get rid of any double quotes around the strings
 			}
 			cmds.push(scpCommand);
 		}		
 	}
-
 	return cmds
 }
 
 
 // Whenever the console type changes, update the info
-instance.prototype.newConsole = function() {
-	var self = this;
+function newConsole(self){
 	self.log('info', `Device model= ${self.config.model}`);
 	
 	self.init_tcp();
@@ -211,8 +206,7 @@ instance.prototype.newConsole = function() {
 
 
 // Get info from a connected console
-instance.prototype.getConsoleInfo = function() {
-	var self = this;
+function getConsoleInfo(self) {
 	self.socket.send(`devinfo productname`);
 }
 
@@ -245,7 +239,7 @@ instance.prototype.init_tcp = function() {
 		self.socket.on('connect', function () {
 			self.status(self.STATE_OK);
 			self.log('info', `Connected`);
-			self.getConsoleInfo();
+			getConsoleInfo(self);
 		});
 
 		self.socket.on('data', function (chunk) {
@@ -253,17 +247,17 @@ instance.prototype.init_tcp = function() {
 			
 			self.log('debug', `Received from device: ${receivebuffer}`);
 
-			if (receivebuffer.indexOf('OK devinfo productname') !== -1) {
-				self.productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
-				self.log('info', `Device found: ${self.productName}`);
+			if(receivebuffer.indexOf('OK devinfo productname') !== -1){
+				productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
+				self.log('info', `Device found: ${productName}`);
 			} else {
-				receivedcmd = self.parseData(receivebuffer, SCP_VALS); // Break out the parameters
-				for (let i=0; i < receivedcmd.length; i++) {
+				receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
+				for(let i=0; i < receivedcmd.length; i++){
 					cmdIndex = -1;
-					foundCmd = self.scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
-					if (foundCmd !== undefined) {
+					foundCmd = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
+					if(foundCmd !== undefined){
 						cmdIndex = foundCmd.Index; // Find which command
-						self.scpVal = receivedcmd[i];
+						scpVal = receivedcmd[i];
 						self.checkFeedbacks(cmdIndex);
 					} else {
 						self.log('debug', `Unknown command received: ${receivedcmd[i].Address}`);
@@ -271,9 +265,10 @@ instance.prototype.init_tcp = function() {
 				}
 			}
 			
-			self.scpVal = {};
+			scpVal = {};
 			receivebuffer = '';	// Clear the buffer
-		});
+		
+    });
 	}
 }
 
@@ -297,15 +292,14 @@ instance.prototype.actions = function(system) {
 	let scpCmd    = '';
 	let valParams = {};
 
-	for (let i = 0; i < self.scpCommands.length; i++) {
+	for (let i = 0; i < scpCommands.length; i++){
 		
-		let scpLabel = '';
-		scpCmd = self.scpCommands[i];
+		scpCmd = scpCommands[i]
 
-		if(self.config.model == 'TF' && scpCmd.Type == 'scene') {
+		if(self.config.model == 'TF' && scpCmd.Type == 'scene'){
 			scpLabel = 'Scene/Bank'
 		}
-		else {
+		else{
 			scpLabel = scpCmd.Address.slice(scpCmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
 		}
 		
@@ -313,97 +307,40 @@ instance.prototype.actions = function(system) {
 		commands[scpCmd.Index] = {
 			label: `${scpCmd.Index}: ${scpLabel}`, 
 			options: [
-				{
-					type: 'number',
-					label: scpLabel.split("/")[0],
-					id: 'X',
-					min: 1,
-					max: scpCmd.X,
-					default: 1,
-					required: true,
-					range: false
-				}
-			]
+				{type: 'number', label: scpLabel.split("/")[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
 		}
 
-		if (scpCmd.Y > 1) {
-			if (self.config.model == "TF" && scpCmd.Type == 'scene') {
-				valParams = {
-					type: 'dropdown',
-					label: scpLabel.split("/")[1],
-					id: 'Y',
-					default: 'A',
-					choices: [
-						{id: 'A', label: 'A'},
-						{id: 'B', label: 'B'}
-					]
-				}
+		if(scpCmd.Y > 1){
+			if(self.config.model == "TF" && scpCmd.Type == 'scene'){
+				valParams = {type: 'dropdown', label: scpLabel.split("/")[1], id: 'Y', default: 'A', choices:[
+					{id: 'A', label: 'A'},
+					{id: 'B', label: 'B'}
+				]}
 			}
-			else {
-				valParams = {
-					type: 'number',
-					label: scpLabel.split("/")[1],
-					id: 'Y',
-					min: 1,
-					max: scpCmd.Y,
-					default: 1,
-					required: true,
-					range: false
-				}
-			}
+			else{
+				valParams = {type: 'number', label: scpLabel.split("/")[1], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
+      }
       
 			commands[scpCmd.Index].options.push(valParams);
 		}
-		switch(scpCmd.Type) {
+		switch(scpCmd.Type){
 			case 'integer':
 				if(scpCmd.Max == 1){
-					valParams = {
-						type: 'checkbox',
-						label: 'On',
-						id: 'Val',
-						default: scpCmd.Default
-					}
+					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
 				}
 				else{
 					valParams = {
-						type: 'number',
-						label: scpLabel.split("/")[2],
-						id: 'Val',
-						min: scpCmd.Min,
-						max: scpCmd.Max,
-						default: parseInt(scpCmd.Default),
-						required: true,
-						range: false
+						type: 'number', label: scpLabel.split("/")[2], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
 					}
 				}
 				break;
 			case 'string':
-				if(scpLabel.startsWith("CustomFaderBank")) {
-					valParams = {
-						type: 'dropdown',
-						label: scpLabel.split("/")[2],
-						id: 'Val',
-						default: scpCmd.Default,
-						choices: self.scpNames.chNames
-					}
-				}
-				else if(scpLabel.endsWith("Color")) {
-					valParams = {
-						type: 'dropdown',
-						label: scpLabel.split("/")[2],
-						id: 'Val',
-						default: scpCmd.Default,
-						choices: self.scpNames.chColors
-					}
-				}
-				else {
-					valParams = {
-						type: 'textinput',
-						label: scpLabel.split("/")[2],
-						id: 'Val',
-						default: scpCmd.Default,
-						regex: ''
-					}
+				if(scpLabel.startsWith("CustomFaderBank")){
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
+				} else if(scpLabel.endsWith("Color")){
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
+				} else {
+					valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
 				}
 				break;
 			default:
@@ -419,8 +356,8 @@ instance.prototype.actions = function(system) {
 
 		feedbacks[scpCmd.Index] = JSON.parse(JSON.stringify(commands[scpCmd.Index])); // Clone
 		feedbacks[scpCmd.Index].options.push(
-			{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
-			{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+				{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
+				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 		)
 	}
 
@@ -435,37 +372,33 @@ instance.prototype.action = function(action) {
 	let optX       = opt.X
 	let optY       = ((opt.Y === undefined) ? 0 : opt.Y);
 	let optVal     = ''
-	let scpCommand = self.scpCommands.find(cmd => cmd.Index == action.action); // Find which command
+	let scpCommand = scpCommands.find(cmd => cmd.Index == action.action); // Find which command
 	
-	if (scpCommand == undefined) {
-		return;
-	}
-
+	if(scpCommand == undefined) return;
 	let cmdName = scpCommand.Address;
 	
-	switch (scpCommand.Type) {
+	switch(scpCommand.Type){
 		case 'integer':
 			cmdName = `set ${cmdName}`
 			optX--; 				// ch #'s are 1 higher than the parameter
 			optVal = 0 + opt.Val; 	// Changes true/false to 1 0
+
 			break;
 		
 		case 'string':
 			cmdName = `set ${cmdName}`
 			optX--; 				// ch #'s are 1 higher than the parameter except with Custom Banks
-			if(scpCommand.Address.split(':')[0] !== 'MIXER') {
-				optY--;	// Custom Bank Faders (CL:Current or QL:Current commands) are 0-based
-			}
+			if(scpCommand.Address.split(':')[0] !== 'MIXER') optY--;	// Custom Bank Faders (CL:Current or QL:Current commands) are 0-based
 			optVal = `"${opt.Val}"` // quotes around the string
 			break;
 
 		case 'scene':
 			optY = '';
 			optVal = '';
-			if(self.config.model == 'CL/QL') {
+			if(self.config.model == 'CL/QL'){
 				cmdName = `ssrecall_ex ${cmdName}`  		// Recall Scene for CL/QL
 			}
-			else {
+			else{
 				cmdName = `ssrecall_ex ${cmdName}${opt.Y}` 	// Recall Scene for TF
 			}
 	}		
@@ -488,26 +421,21 @@ instance.prototype.feedback = function(feedback, bank){
 	var self       = this;
 	
 	let options    = feedback.options;
-	let scpCommand = self.scpCommands.find(cmd => cmd.Index == feedback.type);
+	let scpCommand = scpCommands.find(cmd => cmd.Index == feedback.type);
 	
-	if ((self.scpVal != undefined) && (scpCommand != undefined)) {
+	if((scpVal != undefined) && (scpCommand != undefined)){
 		let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) // 0 + value turns true/false into 1 0
 		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 								// Scenes are equal, channels are 1 higher
 		
-		if (self.bankState[feedback.type] == undefined) {
-			self.bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
-		}
-
-		if (options.X == parseInt(self.scpVal.X) + ofs) {
-			if ((options.Y == undefined) || (options.Y == self.scpVal.Y)) {
-				if ((self.scpVal.Val == undefined) || (Valopt == self.scpVal.Val)) {
-					self.bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
-				}
-			}
+		if(bankState[feedback.type] == undefined) bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
+		if(options.X == parseInt(scpVal.X) + ofs)
+			if((options.Y == undefined) || (options.Y == scpVal.Y))
+				if((scpVal.Val == undefined) || (Valopt == scpVal.Val)){
+					bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
 		}
 	} 
 	
-	return self.bankState[feedback.type]; // no match
+	return bankState[feedback.type]; // no match
 }
 
 instance_skel.extendedBy(instance);
