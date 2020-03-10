@@ -9,8 +9,8 @@ var scpCommands = [];
 var scpVal = {};
 var bankState = {};
 var productName = '';
-const scpParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
-const scpVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
+const SCP_PARAMS = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
+const SCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
 
 // Instance Setup
@@ -160,7 +160,7 @@ instance.prototype.updateConfig = function(config) {
 
 	// Read the DataFile
 	var data = fs.readFileSync(`${__dirname}/${fname}`);
-	scpCommands = parseData(data, scpParams);
+	scpCommands = parseData(data, SCP_PARAMS);
 	newConsole(self);
 }
 
@@ -177,12 +177,12 @@ function parseData(data, params){
 	
 	let cmds    = [];
 	let line    = [];
-	const lines = data.toString().split("\x0A");
+	const LINES = data.toString().split("\x0A");
 	
-	for (let i = 0; i < lines.length; i++){
+	for (let i = 0; i < LINES.length; i++){
 		// I'm not going to even try to explain this next line,
 		// but it basically pulls out the space-separated values, except for spaces those that are inside quotes!
-		line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
+		line = LINES[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 		if(line !== null && (['OK','NOTIFY'].indexOf(line[0].toUpperCase()) !== -1)){
 			let scpCommand = new Object();
 			
@@ -251,7 +251,7 @@ instance.prototype.init_tcp = function() {
 				productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
 				self.log('info', `Device found: ${productName}`);
 			} else {
-				receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
+				receivedcmd = parseData(receivebuffer, SCP_VALS); // Break out the parameters
 				for(let i=0; i < receivedcmd.length; i++){
 					cmdIndex = -1;
 					foundCmd = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
