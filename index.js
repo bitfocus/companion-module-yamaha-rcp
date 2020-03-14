@@ -301,7 +301,8 @@ instance.prototype.actions = function(system) {
 	for (let i = 0; i < scpCommands.length; i++){
 		
 		scpCmd = scpCommands[i]
-
+		console.log(`scpCmd #${i}: ${scpCmd.Index}`)
+	
 		if(self.config.model == 'TF' && scpCmd.Type == 'scene'){
 			scpLabel = 'Scene/Bank'
 		}
@@ -366,7 +367,7 @@ instance.prototype.actions = function(system) {
 				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 		)
 	}
-	console.log(`commands: ${Object.entries(commands)}`);
+	console.log(`commands: ${JSON.stringify(commands)}`);
 
 	self.system.emit('instance_actions', self.id, commands);
 	self.setFeedbackDefinitions(feedbacks);
