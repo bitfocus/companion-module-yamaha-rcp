@@ -9,8 +9,8 @@ var scpCommands = [];
 var scpVal = {};
 var bankState = {};
 var productName = '';
-const SCP_PARAMS = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
-const SCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
+const scpParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
+const scpVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
 
 // Instance Setup
@@ -160,7 +160,13 @@ instance.prototype.updateConfig = function(config) {
 
 	// Read the DataFile
 	var data = fs.readFileSync(`${__dirname}/${fname}`);
-	scpCommands = parseData(data, SCP_PARAMS);
+	scpCommands = parseData(data, scpParams);
+
+	scpCommands.sort((a, b) => {
+		if(a.Address > b.Address) {return 1};
+		if(a.Address < b.Address) {return -1};
+		return 0;
+	})
 	newConsole(self);
 }
 
@@ -177,12 +183,12 @@ function parseData(data, params){
 	
 	let cmds    = [];
 	let line    = [];
-	const LINES = data.toString().split("\x0A");
+	const lines = data.toString().split("\x0A");
 	
-	for (let i = 0; i < LINES.length; i++){
+	for (let i = 0; i < lines.length; i++){
 		// I'm not going to even try to explain this next line,
 		// but it basically pulls out the space-separated values, except for spaces those that are inside quotes!
-		line = LINES[i].match(/(?:[^\s"]+|"[^"]*")+/g)
+		line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 		if(line !== null && (['OK','NOTIFY'].indexOf(line[0].toUpperCase()) !== -1)){
 			let scpCommand = new Object();
 			
@@ -251,7 +257,7 @@ instance.prototype.init_tcp = function() {
 				productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
 				self.log('info', `Device found: ${productName}`);
 			} else {
-				receivedcmd = parseData(receivebuffer, SCP_VALS); // Break out the parameters
+				receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
 				for(let i=0; i < receivedcmd.length; i++){
 					cmdIndex = -1;
 					foundCmd = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
@@ -353,13 +359,14 @@ instance.prototype.actions = function(system) {
 		}
 		
 		commands[scpCmd.Index].options.push(valParams);
-
+		
 		feedbacks[scpCmd.Index] = JSON.parse(JSON.stringify(commands[scpCmd.Index])); // Clone
 		feedbacks[scpCmd.Index].options.push(
 				{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
 				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 		)
 	}
+	console.log(`commands: ${Object.entries(commands)}`);
 
 	self.system.emit('instance_actions', self.id, commands);
 	self.setFeedbackDefinitions(feedbacks);
