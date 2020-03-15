@@ -2,20 +2,22 @@
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com> Feb 2020
 
-var tcp = require('../../tcp');
-var instance_skel = require('../../instance_skel');
-var scpNames = require('./scpNames.json');
-var scpCommands = [];
-var scpVal = {};
-var bankState = {};
-var productName = '';
-const scpParams = ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
-const scpVals = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
+var tcp 			= require('../../tcp');
+var instance_skel 	= require('../../instance_skel');
+var scpNames 		= require('./scpNames.json');
+var bankState 		= {};
+var scpVal 			= [];	// Keeps track of values returned for Feedback purposes
+var curScpVal		= {};
+
+const SCP_PARAMS 	= ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
+const SCP_VALS 		= ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 
 
 // Instance Setup
 function instance(system, id, config) {
-	var self = this;
+	var self 		= this;
+	var scpCommands = [];
+	var productName = '';
 
 	// super-constructor
 	instance_skel.apply(this, arguments);
@@ -27,88 +29,93 @@ function instance(system, id, config) {
 			var action = actions[k];
 			
 			// update the old action names to the new ones
-			switch (action.action) {
 
-				case 'InChOn':
-					// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
-					action.action = 186;
-					action.options.X = actions.options.Ch;
-					action.options.Val = 1;
-					break;
-		
-				case 'InChOff':
-					// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
-					action.action = 186;
-					action.options.X = actions.options.Ch;
-					action.options.Val = 0;
-					break;
-		
-				case 'InChLevel':
-					// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					action.action = 184;
-					action.options.X = action.options.Ch;
-					action.options.Val = action.options.ChAct;
-					break;
-		
-				case 'AuxOn', 'MixOn':
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-					action.action = 187;
-					action.options.X = action.options.Ch;
-					action.options.Val = 1;
-					break;
-		
-				case 'AuxOff', 'MixOff':
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-					action.action = 187;
-					action.options.X = action.options.Ch;
-					action.options.Val = 0;
-					break;
-		
-				case 'AuxLevel', 'MixLevel':
-					// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					action.action = 185;
-					action.options.X = action.options.Ch;
-					action.options.Val = action.options.ChAct;
-					break;
-		
-				case 'MtrxOn':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
-					action.action = 7;
-					action.options.X = action.options.Ch;
-					action.options.Val = 1;
-					break;
-		
-				case 'MtrxOff':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
-					action.action = 7;
-					action.options.X = action.options.Ch;
-					action.options.Val = 0;
-					break;
-		
-				case 'MtrxLevel':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					action.action = 2;
-					action.options.X = action.options.Ch;
-					action.options.Val = action.options.ChAct;
-					break;
-		
-				case 'TFRecall':
-					// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-					action.action = 1000;
-					action.options.X = action.options.Scene;
-					action.options.Y = action.options.Bank;
-					break;
-		
-				case 'CLQLRecall':
-					// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-					action.action = 1000;
-					action.options.X = action.options.Scene;
-					break;
+			if(action.action.left(4) != 'scp_'){
+				action.action = 'scp_' + action.action;
+			} else {
 
-				default:
-					changed = false;
+				switch (action.action) {
+
+					case 'InChOn':
+						// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
+						action.action 		= 186;
+						action.options.X 	= actions.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'InChOff':
+						// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
+						action.action 		= 186;
+						action.options.X 	= actions.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'InChLevel':
+						// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						action.action 		= 184;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'AuxOn', 'MixOn':
+						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
+						action.action 		= 187;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'AuxOff', 'MixOff':
+						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
+						action.action 		= 187;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'AuxLevel', 'MixLevel':
+						// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						action.action 		= 185;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'MtrxOn':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
+						action.action 		= 7;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'MtrxOff':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
+						action.action 		= 7;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'MtrxLevel':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						action.action 		= 2;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'TFRecall':
+						// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
+						action.action 		= 1000;
+						action.options.X 	= action.options.Scene;
+						action.options.Y 	= action.options.Bank;
+						break;
+			
+					case 'CLQLRecall':
+						// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
+						action.action 		= 1000;
+						action.options.X 	= action.options.Scene;
+						break;
+
+					default:
+						changed = false;
+				}
 			}
-
 		}
 
 		return changed;
@@ -122,19 +129,19 @@ instance.prototype.config_fields = function () {
 	var self = this;
 
 	return [{
-				type: 'textinput',
-				id: 'host',
-				label: 'IP Address of Console',
-				width: 6,
-				default: '192.168.0.128',
-				regex: self.REGEX_IP
+				type: 		'textinput',
+				id: 		'host',
+				label: 		'IP Address of Console',
+				width: 		6,
+				default: 	'192.168.0.128',
+				regex: 		self.REGEX_IP
 			},
 			{
-				type: 'dropdown',
-				id: 'model',
-				label: 'Console Type',
-				width: 6,
-				default: 'CL/QL',
+				type: 		'dropdown',
+				id: 		'model',
+				label: 		'Console Type',
+				width: 		6,
+				default: 	'CL/QL',
 				choices: [
 					{id: 'CL/QL', label: 'CL/QL Console'},
 					{id: 'TF', label: 'TF Console'}
@@ -148,26 +155,28 @@ instance.prototype.updateConfig = function(config) {
 	var self  = this;
 	
 	let fname = '';
-	const fs  = require("fs");
+	const FS  = require("fs");
 	
 	self.config = config;
-	if(self.config.model == 'CL/QL'){
+
+	if(self.config.model == 'CL/QL') {
 		fname = 'CL5 SCP Parameters-1.txt';
 	}
-	else{
+	else {
 		fname = 'TF5 SCP Parameters-1.txt';
 	}
 
 	// Read the DataFile
-	var data = fs.readFileSync(`${__dirname}/${fname}`);
-	scpCommands = parseData(data, scpParams);
+	var data = FS.readFileSync(`${__dirname}/${fname}`);
+	self.scpCommands = self.parseData(data, SCP_PARAMS);
 
-	scpCommands.sort((a, b) => {
+	self.scpCommands.sort((a, b) => {
 		if(a.Address > b.Address) {return 1};
 		if(a.Address < b.Address) {return -1};
 		return 0;
 	})
-	newConsole(self);
+	
+	self.newConsole();
 }
 
 // Startup
@@ -178,7 +187,7 @@ instance.prototype.init = function() {
 }
 
 // Make each command line into an object that can be used to create the commands
-function parseData(data, params){
+instance.prototype.parseData = function(data, params) {
 	var self    = this;
 	
 	let cmds    = [];
@@ -203,7 +212,9 @@ function parseData(data, params){
 
 
 // Whenever the console type changes, update the info
-function newConsole(self){
+instance.prototype.newConsole = function() {
+	var self = this;
+
 	self.log('info', `Device model= ${self.config.model}`);
 	
 	self.init_tcp();
@@ -212,7 +223,9 @@ function newConsole(self){
 
 
 // Get info from a connected console
-function getConsoleInfo(self) {
+instance.prototype.getConsoleInfo = function() {
+	var self = this;
+
 	self.socket.send(`devinfo productname`);
 }
 
@@ -245,7 +258,7 @@ instance.prototype.init_tcp = function() {
 		self.socket.on('connect', function () {
 			self.status(self.STATE_OK);
 			self.log('info', `Connected`);
-			getConsoleInfo(self);
+			self.getConsoleInfo();
 		});
 
 		self.socket.on('data', function (chunk) {
@@ -253,25 +266,26 @@ instance.prototype.init_tcp = function() {
 			
 			self.log('debug', `Received from device: ${receivebuffer}`);
 
-			if(receivebuffer.indexOf('OK devinfo productname') !== -1){
-				productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
-				self.log('info', `Device found: ${productName}`);
+			if(receivebuffer.indexOf('OK devinfo productname') !== -1) {
+				self.productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
+				self.log('info', `Device found: ${self.productName}`);
 			} else {
-				receivedcmd = parseData(receivebuffer, scpVals); // Break out the parameters
+				receivedcmd = self.parseData(receivebuffer, SCP_VALS); // Break out the parameters
 				for(let i=0; i < receivedcmd.length; i++){
-					cmdIndex = -1;
-					foundCmd = scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
+					foundCmd = self.scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
 					if(foundCmd !== undefined){
 						cmdIndex = foundCmd.Index; // Find which command
-						scpVal = receivedcmd[i];
-						self.checkFeedbacks(cmdIndex);
+						scpVal.push({i: cmdIndex, cmd: receivedcmd[i]});
+						do{
+							curScpVal = scpVal.shift();
+							self.checkFeedbacks(curScpVal.i);
+						} while(scpVal.length > 0);
 					} else {
 						self.log('debug', `Unknown command received: ${receivedcmd[i].Address}`);
 					}
 				}
 			}
 			
-			scpVal = {};
 			receivebuffer = '';	// Clear the buffer
 		
     });
@@ -295,44 +309,45 @@ instance.prototype.actions = function(system) {
 	
 	var commands  = {};
 	var feedbacks = {};
-	let scpCmd    = '';
+	let scpCmd    = {};
 	let valParams = {};
 
-	for (let i = 0; i < scpCommands.length; i++){
+	for (let i = 0; i < self.scpCommands.length; i++){
 		
-		scpCmd = scpCommands[i]
-		console.log(`scpCmd #${i}: ${scpCmd.Index}`)
+		scpCmd = self.scpCommands[i]
 	
 		if(self.config.model == 'TF' && scpCmd.Type == 'scene'){
 			scpLabel = 'Scene/Bank'
-		}
-		else{
+		} else {
 			scpLabel = scpCmd.Address.slice(scpCmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
 		}
 		
 		// Add the commands from the data file. Action id's (action.action) are the SCP command number
-		commands[scpCmd.Index] = {
-			label: `${scpCmd.Index}: ${scpLabel}`, 
+		let scpAction = 'scp_' + scpCmd.Index
+		
+		commands[scpAction] = {
+			label: scpLabel, 
 			options: [
 				{type: 'number', label: scpLabel.split("/")[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
 		}
 
-		if(scpCmd.Y > 1){
+		if(scpCmd.Y > 1) {
 			if(self.config.model == "TF" && scpCmd.Type == 'scene'){
 				valParams = {type: 'dropdown', label: scpLabel.split("/")[1], id: 'Y', default: 'A', choices:[
 					{id: 'A', label: 'A'},
 					{id: 'B', label: 'B'}
 				]}
 			}
-			else{
-				valParams = {type: 'number', label: scpLabel.split("/")[1], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
-      }
-      
-			commands[scpCmd.Index].options.push(valParams);
+			else {
+				valParams = {type: 'number', label: scpLabel.split("/")[1], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false
+			}
 		}
-		switch(scpCmd.Type){
+      
+			commands[scpAction].options.push(valParams);
+		}
+		switch(scpCmd.Type) {
 			case 'integer':
-				if(scpCmd.Max == 1){
+				if(scpCmd.Max == 1) {
 					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
 				}
 				else{
@@ -342,34 +357,33 @@ instance.prototype.actions = function(system) {
 				}
 				break;
 			case 'string':
-				if(scpLabel.startsWith("CustomFaderBank")){
+				if(scpLabel.startsWith("CustomFaderBank")) {
 					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
-				} else if(scpLabel.endsWith("Color")){
+				} else if(scpLabel.endsWith("Color")) {
 					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
 				} else {
 					valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
 				}
 				break;
 			default:
-				feedbacks[scpCmd.Index] = JSON.parse(JSON.stringify(commands[scpCmd.Index])); // Clone
-				feedbacks[scpCmd.Index].options.push(
+				feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
+				feedbacks[scpAction].options.push(
 					{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
 					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 				)
 				continue; // Don't push another parameter - In the case of a Scene message
 		}
 		
-		commands[scpCmd.Index].options.push(valParams);
+		commands[scpAction].options.push(valParams);
 		
-		feedbacks[scpCmd.Index] = JSON.parse(JSON.stringify(commands[scpCmd.Index])); // Clone
-		feedbacks[scpCmd.Index].options.push(
+		feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
+		feedbacks[scpAction].options.push(
 				{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
 				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 		)
 	}
-	console.log(`commands: ${JSON.stringify(commands)}`);
-
-	self.system.emit('instance_actions', self.id, commands);
+	
+	self.setActions(commands);
 	self.setFeedbackDefinitions(feedbacks);
 }
 
@@ -378,14 +392,14 @@ instance.prototype.action = function(action) {
 	
 	var opt        = action.options;
 	let optX       = opt.X
-	let optY       = ((opt.Y === undefined) ? 0 : opt.Y);
+	let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
 	let optVal     = ''
-	let scpCommand = scpCommands.find(cmd => cmd.Index == action.action); // Find which command
+	let scpCommand = self.scpCommands.find(cmd => cmd.Index == action.action); // Find which command
 	
 	if(scpCommand == undefined) return;
 	let cmdName = scpCommand.Address;
 	
-	switch(scpCommand.Type){
+	switch(scpCommand.Type) {
 		case 'integer':
 			cmdName = `set ${cmdName}`
 			optX--; 				// ch #'s are 1 higher than the parameter
@@ -396,14 +410,13 @@ instance.prototype.action = function(action) {
 		case 'string':
 			cmdName = `set ${cmdName}`
 			optX--; 				// ch #'s are 1 higher than the parameter except with Custom Banks
-			if(scpCommand.Address.split(':')[0] !== 'MIXER') optY--;	// Custom Bank Faders (CL:Current or QL:Current commands) are 0-based
 			optVal = `"${opt.Val}"` // quotes around the string
 			break;
 
 		case 'scene':
 			optY = '';
 			optVal = '';
-			if(self.config.model == 'CL/QL'){
+			if(self.config.model == 'CL/QL') {
 				cmdName = `ssrecall_ex ${cmdName}`  		// Recall Scene for CL/QL
 			}
 			else{
@@ -429,21 +442,29 @@ instance.prototype.feedback = function(feedback, bank){
 	var self       = this;
 	
 	let options    = feedback.options;
-	let scpCommand = scpCommands.find(cmd => cmd.Index == feedback.type);
+	let scpCommand = self.scpCommands.find(cmd => cmd.Index == feedback.type);
 	
-	if((scpVal != undefined) && (scpCommand != undefined)){
-		let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) // 0 + value turns true/false into 1 0
-		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 								// Scenes are equal, channels are 1 higher
+	if((curScpVal != undefined) && (scpCommand != undefined)) {
+		let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
+		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 		
-		if(bankState[feedback.type] == undefined) bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
-		if(options.X == parseInt(scpVal.X) + ofs)
-			if((options.Y == undefined) || (options.Y == scpVal.Y))
-				if((scpVal.Val == undefined) || (Valopt == scpVal.Val)){
+		if(bankState[feedback.type] == undefined) {
+			bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
+		} 		
+	/*	
+		console.log(`Feedback: ${curScpVal.cmd.Index}:${curScpVal.cmd.Address}`);
+		console.log(`options.X: ${options.X}, curScpVal.X: ${parseInt(curScpVal.cmd.X) + ofs}`);
+		console.log(`options.Y: ${options.Y}, curScpVal.Y: ${curScpVal.cmd.Y}`);
+		console.log(`Valopt: ${Valopt}, curScpVal.Val: ${curScpVal.cmd.Val}\n`);
+	*/
+		if(options.X == parseInt(curScpVal.cmd.X) + ofs)
+			if((options.Y == undefined) || (options.Y == curScpVal.cmd.Y))
+				if((curScpVal.cmd.Val == undefined) || (Valopt == curScpVal.cmd.Val)) {
 					bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
 		}
 	} 
 	
-	return bankState[feedback.type]; // no match
+	return bankState[feedback.type]; // only return if there's a match
 }
 
 instance_skel.extendedBy(instance);

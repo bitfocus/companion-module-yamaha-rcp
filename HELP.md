@@ -38,3 +38,10 @@ v1.1.2  Bug Fix
 
         Fix:            Crash on unknown command in QL
         Enhancement:    Add QL-specific commands
+
+v1.1.3  Bug Fixes and Enhancements
+
+        Fix:            Values for certain parameters off by 1
+                        Feedback could get out of sync
+                        Code fixups
+        Enhancements:   Sorted actions so they're grouped together
