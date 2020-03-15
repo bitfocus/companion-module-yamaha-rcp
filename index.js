@@ -23,98 +23,104 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.addUpgradeScript(function (config, actions) {
-		var changed = true;
+		var changed = false;
+
+		console.log('Running upgrade script.');
 
 		for (var k in actions) {
 			var action = actions[k];
+			let newAction = '';
 			
 			// update the old action names to the new ones
 
 			if(action.action.left(4) != 'scp_'){
-				action.action = 'scp_' + action.action;
+				newAction = action.action;
 			} else {
 
 				switch (action.action) {
 
 					case 'InChOn':
 						// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
-						action.action 		= 186;
+						newAction 			= 186;
 						action.options.X 	= actions.options.Ch;
 						action.options.Val 	= 1;
 						break;
 			
 					case 'InChOff':
 						// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
-						action.action 		= 186;
+						newAction 			= 186;
 						action.options.X 	= actions.options.Ch;
 						action.options.Val 	= 0;
 						break;
 			
 					case 'InChLevel':
 						// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-						action.action 		= 184;
+						newAction 			= 184;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= action.options.ChAct;
 						break;
 			
 					case 'AuxOn', 'MixOn':
 						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-						action.action 		= 187;
+						newAction 			= 187;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= 1;
 						break;
 			
 					case 'AuxOff', 'MixOff':
 						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-						action.action 		= 187;
+						newAction 			= 187;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= 0;
 						break;
 			
 					case 'AuxLevel', 'MixLevel':
 						// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-						action.action 		= 185;
+						newAction 			= 185;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= action.options.ChAct;
 						break;
 			
 					case 'MtrxOn':
 						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
-						action.action 		= 7;
+						newAction 			= 7;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= 1;
 						break;
 			
 					case 'MtrxOff':
 						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
-						action.action 		= 7;
+						newAction 			= 7;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= 0;
 						break;
 			
 					case 'MtrxLevel':
 						// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-						action.action 		= 2;
+						newAction 			= 2;
 						action.options.X 	= action.options.Ch;
 						action.options.Val 	= action.options.ChAct;
 						break;
 			
 					case 'TFRecall':
 						// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-						action.action 		= 1000;
+						newAction 			= 1000;
 						action.options.X 	= action.options.Scene;
 						action.options.Y 	= action.options.Bank;
 						break;
 			
 					case 'CLQLRecall':
 						// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-						action.action 		= 1000;
+						newAction 			= 1000;
 						action.options.X 	= action.options.Scene;
 						break;
-
-					default:
-						changed = false;
 				}
+			}
+
+			if(newAction != '') {
+				self.log('info',`Action ${action.action} updated to => scp_${newAction}`)
+				action.action = 'scp_' + newAction
+				changed = true;
 			}
 		}
 
@@ -158,7 +164,7 @@ instance.prototype.updateConfig = function(config) {
 	const FS  = require("fs");
 	
 	self.config = config;
-
+	
 	if(self.config.model == 'CL/QL') {
 		fname = 'CL5 SCP Parameters-1.txt';
 	}
@@ -171,9 +177,9 @@ instance.prototype.updateConfig = function(config) {
 	self.scpCommands = self.parseData(data, SCP_PARAMS);
 
 	self.scpCommands.sort((a, b) => {
-		if(a.Address > b.Address) {return 1};
-		if(a.Address < b.Address) {return -1};
-		return 0;
+		let acmd = a.Address.slice(a.Address.indexOf("/") + 1);
+		let bcmd = b.Address.slice(b.Address.indexOf("/") + 1);
+		return acmd.toLowerCase().localeCompare(bcmd.toLowerCase());
 	})
 	
 	self.newConsole();
