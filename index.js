@@ -25,7 +25,7 @@ function instance(system, id, config) {
 	self.addUpgradeScript(function (config, actions, releaseActions) {
 		var changed = false;
 
-		console.log('Running upgrade script.');
+		self.log('info','Running upgrade script.');
 
 		let checkUpgrade = function(action) {
 			let newAction = '';
@@ -120,7 +120,9 @@ function instance(system, id, config) {
 			if(newAction != '') {
 				self.log('info',`Action ${action.action} updated to => scp_${newAction}`)
 				action.action = 'scp_' + newAction
-				changed = true;
+				return(true);
+			} else {
+				return(false);
 			}
 		}
 
@@ -411,7 +413,7 @@ instance.prototype.action = function(action) {
 	let scpCommand = self.scpCommands.find(cmd => 'scp_' + cmd.Index == action.action); // Find which command
 	
 	if(scpCommand == undefined) {
-		console.log(`invalid command: ${action.action}`)
+		self.log('debug',`Invalid command: ${action.action}`)
 		return;
 	} 
 	let cmdName = scpCommand.Address;
@@ -465,23 +467,18 @@ instance.prototype.feedback = function(feedback, bank){
 		let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 		
-		if(bankState[feedback.type] == undefined) {
-			bankState[feedback.type] = {color: bank.color, bgcolor: bank.bgcolor}
-		} 		
-	/*	
-		console.log(`Feedback: ${curScpVal.cmd.Index}:${curScpVal.cmd.Address}`);
-		console.log(`options.X: ${options.X}, curScpVal.X: ${parseInt(curScpVal.cmd.X) + ofs}`);
-		console.log(`options.Y: ${options.Y}, curScpVal.Y: ${curScpVal.cmd.Y}`);
-		console.log(`Valopt: ${Valopt}, curScpVal.Val: ${curScpVal.cmd.Val}\n`);
-	*/
+		if(bankState[bank.text] == undefined) {
+			bankState[bank.text] = {color: bank.color, bgcolor: bank.bgcolor}
+		} 
+	
 		if(options.X == parseInt(curScpVal.cmd.X) + ofs)
 			if((options.Y == undefined) || (options.Y == curScpVal.cmd.Y))
 				if((curScpVal.cmd.Val == undefined) || (Valopt == curScpVal.cmd.Val)) {
-					bankState[feedback.type] = {color: options.fg, bgcolor: options.bg};
+					bankState[bank.text] = {color: options.fg, bgcolor: options.bg};
 		}
 	} 
 	
-	return bankState[feedback.type]; // only return if there's a match
+	return bankState[bank.text]; // return the old value if no match, but the new value if there is a match
 }
 
 instance_skel.extendedBy(instance);
