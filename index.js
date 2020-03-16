@@ -289,7 +289,7 @@ instance.prototype.init_tcp = function() {
 					foundCmd = self.scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
 					if(foundCmd !== undefined){
 						cmdIndex = foundCmd.Index; // Find which command
-						scpVal.push({i: cmdIndex, cmd: receivedcmd[i]});
+						scpVal.push({i: 'scp_' + cmdIndex, cmd: receivedcmd[i]});
 						do{
 							curScpVal = scpVal.shift();
 							self.checkFeedbacks(curScpVal.i);
@@ -408,9 +408,12 @@ instance.prototype.action = function(action) {
 	let optX       = opt.X
 	let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
 	let optVal     = ''
-	let scpCommand = self.scpCommands.find(cmd => cmd.Index == action.action); // Find which command
+	let scpCommand = self.scpCommands.find(cmd => 'scp_' + cmd.Index == action.action); // Find which command
 	
-	if(scpCommand == undefined) return;
+	if(scpCommand == undefined) {
+		console.log(`invalid command: ${action.action}`)
+		return;
+	} 
 	let cmdName = scpCommand.Address;
 	
 	switch(scpCommand.Type) {
@@ -456,9 +459,9 @@ instance.prototype.feedback = function(feedback, bank){
 	var self       = this;
 	
 	let options    = feedback.options;
-	let scpCommand = self.scpCommands.find(cmd => cmd.Index == feedback.type);
-	
-	if((curScpVal != undefined) && (scpCommand != undefined)) {
+	let scpCommand = self.scpCommands.find(cmd => 'scp_' + cmd.Index == feedback.type);
+		
+	if((curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
 		let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 		let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 		
