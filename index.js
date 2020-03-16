@@ -22,99 +22,98 @@ function instance(system, id, config) {
 	// super-constructor
 	instance_skel.apply(this, arguments);
 
-	self.addUpgradeScript(function (config, actions) {
+	self.addUpgradeScript(function (config, actions, releaseActions) {
 		var changed = false;
 
 		console.log('Running upgrade script.');
 
-		for (var k in actions) {
-			var action = actions[k];
+		let checkUpgrade = function(action) {
 			let newAction = '';
 			
 			// update the old action names to the new ones
 
-			switch (action.action) {
+			if(action.action.left(4) != 'scp_'){
+				newAction = action.action;
 
-				case 'InChOn':
-					// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
-					newAction 			= 186;
-					action.options.X 	= actions.options.Ch;
-					action.options.Val 	= 1;
-					break;
-		
-				case 'InChOff':
-					// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
-					newAction 			= 186;
-					action.options.X 	= actions.options.Ch;
-					action.options.Val 	= 0;
-					break;
-		
-				case 'InChLevel':
-					// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction 			= 184;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= action.options.ChAct;
-					break;
-		
-				case 'AuxOn', 'MixOn':
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-					newAction 			= 187;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= 1;
-					break;
-		
-				case 'AuxOff', 'MixOff':
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-					newAction 			= 187;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= 0;
-					break;
-		
-				case 'AuxLevel', 'MixLevel':
-					// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction 			= 185;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= action.options.ChAct;
-					break;
-		
-				case 'MtrxOn':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
-					newAction 			= 7;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= 1;
-					break;
-		
-				case 'MtrxOff':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
-					newAction 			= 7;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= 0;
-					break;
-		
-				case 'MtrxLevel':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction 			= 2;
-					action.options.X 	= action.options.Ch;
-					action.options.Val 	= action.options.ChAct;
-					break;
-		
-				case 'TFRecall':
-					// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-					newAction 			= 1000;
-					action.options.X 	= action.options.Scene;
-					action.options.Y 	= action.options.Bank;
-					break;
-		
-				case 'CLQLRecall':
-					// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-					newAction 			= 1000;
-					action.options.X 	= action.options.Scene;
-					break;
-					
-				default:
-					if(action.action.left(4) != 'scp_') {
-						newAction = action.action;
-					} 
+			} else {
+
+				switch (action.action) {
+
+					case 'InChOn':
+						// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
+						newAction 			= 186;
+						action.options.X 	= actions.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'InChOff':
+						// 	cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
+						newAction 			= 186;
+						action.options.X 	= actions.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'InChLevel':
+						// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						newAction 			= 184;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'AuxOn', 'MixOn':
+						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
+						newAction 			= 187;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'AuxOff', 'MixOff':
+						// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
+						newAction 			= 187;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'AuxLevel', 'MixLevel':
+						// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						newAction 			= 185;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'MtrxOn':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
+						newAction 			= 7;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 1;
+						break;
+			
+					case 'MtrxOff':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
+						newAction 			= 7;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= 0;
+						break;
+			
+					case 'MtrxLevel':
+						// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
+						newAction 			= 2;
+						action.options.X 	= action.options.Ch;
+						action.options.Val 	= action.options.ChAct;
+						break;
+			
+					case 'TFRecall':
+						// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
+						newAction 			= 1000;
+						action.options.X 	= action.options.Scene;
+						action.options.Y 	= action.options.Bank;
+						break;
+			
+					case 'CLQLRecall':
+						// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
+						newAction 			= 1000;
+						action.options.X 	= action.options.Scene;
+						break;
 				}
 			}
 
@@ -123,6 +122,14 @@ function instance(system, id, config) {
 				action.action = 'scp_' + newAction
 				changed = true;
 			}
+		}
+
+		for (var k in actions) {
+			changed = checkUpgrade(actions[k]);
+		}
+
+		for (var k in releaseActions) {
+			changed = checkUpgrade(actions[k]);
 		}
 
 		return changed;
