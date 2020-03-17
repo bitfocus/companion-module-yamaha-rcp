@@ -39,9 +39,9 @@ OK prminfo 36 "MIXER:Current/StIn/Port/HA/Gain" 16 1 -600 6600 -600 "" integer a
 OK prminfo 38 "MIXER:Current/StIn/Dyna1/Threshold" 16 1 -720 0 -260 "" integer any rw 1
 -- prminfo 39 "MIXER:Current/StIn/Dyna2/Type" 16 1 0 11 "Compressor" "" string any rw 1
 OK prminfo 40 "MIXER:Current/StIn/Dyna2/Threshold" 16 1 -540 0 -80 "" integer any rw 1
-OK prminfo 41 "MIXER:Current/StInCh/Surr/LRPan" 16 1 -63 63 0 "" integer any rw 1
-OK prminfo 42 "MIXER:Current/StInCh/Surr/FRPan" 16 1 -63 63 0 "" integer any rw 1
-OK prminfo 43 "MIXER:Current/StInCh/Surr/FRPanRev" 16 1 -63 63 0 "" integer any rw 1
+-- prminfo 41 "MIXER:Current/StInCh/Surr/LRPan" 16 1 -63 63 0 "" integer any rw 1
+-- prminfo 42 "MIXER:Current/StInCh/Surr/FRPan" 16 1 -63 63 0 "" integer any rw 1
+-- prminfo 43 "MIXER:Current/StInCh/Surr/FRPanRev" 16 1 -63 63 0 "" integer any rw 1
 -- prminfo 44 "MIXER:Current/StInCh/Surr/Div" 16 1 0 100 100 "" integer any rw 1
 -- prminfo 45 "MIXER:Current/StInCh/Surr/LOn" 16 1 0 1 1 "" integer any rw 1
 -- prminfo 46 "MIXER:Current/StInCh/Surr/ROn" 16 1 0 1 1 "" integer any rw 1
@@ -94,7 +94,7 @@ OK prminfo 86 "MIXER:Current/Monitor/Fader/Level" 1 1 -32768 1000 0 "" integer a
 -- prminfo 93 "MIXER:Current/Monitor/St/MonoMonitor" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 94 "MIXER:Current/Monitor/Surr/SourceSelect" 1 1 0 11 "Mix1-6" "" string any rw 1
 -- prminfo 95 "MIXER:Current/Monitor/Surr/SourceCh" 1 1 0 9 "EXT ST1" "" string any rw 1
-OK prminfo 96 "MIXER:Current/Monitor/Surr/SoloMode" 1 1 0 1 0 "" integer any rw 1
+-- prminfo 96 "MIXER:Current/Monitor/Surr/SoloMode" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 97 "MIXER:Current/Monitor/Surr/LOn" 1 1 0 1 1 "" integer any rw 1
 -- prminfo 98 "MIXER:Current/Monitor/Surr/ROn" 1 1 0 1 1 "" integer any rw 1
 -- prminfo 99 "MIXER:Current/Monitor/Surr/COn" 1 1 0 1 1 "" integer any rw 1
@@ -123,7 +123,7 @@ OK prminfo 96 "MIXER:Current/Monitor/Surr/SoloMode" 1 1 0 1 0 "" integer any rw 
 -- prminfo 122 "MIXER:Current/Monitor/DownMix/MasterLevel" 1 1 -32768 0 -300 "" integer any rw 1
 OK prminfo 123 "MIXER:Current/Cue/Output" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 124 "MIXER:Current/Cue/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
-OK prminfo 125 "MIXER:Current/Cue/Surr/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
+-- prminfo 125 "MIXER:Current/Cue/Surr/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
 OK prminfo 126 "MIXER:Current/Cue/FaderCueRelease" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 127 "MIXER:Current/Cue/InCh/Point" 1 1 0 8 "PFL" "" string any rw 1
 -- prminfo 128 "MIXER:Current/Cue/OutCh/Point" 1 1 0 3 "PFL" "" string any rw 1
@@ -257,8 +257,8 @@ OK prminfo 255 "MIXER:Current/Mix/Label/Icon" 24 1 0 12 "Blank" "" string any rw
 -- prminfo 256 "MIXER:Current/Mix/PanLink" 24 1 0 1 0 "" integer any rw 1
 OK prminfo 257 "MIXER:Current/Mix/ToMtrx/Pan" 24 8 -63 63 0 "" integer any rw 1
 OK prminfo 258 "MIXER:Current/Mix/ToMtrx/PrePost" 24 8 0 1 0 "" integer any rw 1
-OK prminfo 259 "MIXER:Current/InputChLink/InCh/Assign" 72 1 0 40 0 "" integer any r 1
-OK prminfo 260 "MIXER:Current/InputChLink/SendParams/ToMix" 40 24 0 1 1 "" integer any r 1
+-- prminfo 259 "MIXER:Current/InputChLink/InCh/Assign" 72 1 0 40 0 "" integer any r 1
+-- prminfo 260 "MIXER:Current/InputChLink/SendParams/ToMix" 40 24 0 1 1 "" integer any r 1
 OK prminfo 261 "MIXER:Current/OutputChLink/Mix/Assign" 24 1 0 17 0 "" integer any r 1
 OK prminfo 262 "QL:Current/CustomFaderBank/SourceCh" 4 32 0 11 "NO ASSIGN" "" string any rw 1
 OK prminfo 263 "QL:Current/CustomFaderBank/Master/SourceCh" 4 2 0 11 "NO ASSIGN" "" string any rw 1
