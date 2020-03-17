@@ -16,8 +16,11 @@ const SCP_VALS 		= ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
 // Instance Setup
 function instance(system, id, config) {
 	var self 		= this;
+	
 	var scpCommands = [];
 	var productName = '';
+
+	// config._configIdx = undefined;
 
 	// super-constructor
 	instance_skel.apply(this, arguments);
@@ -98,7 +101,7 @@ function instance(system, id, config) {
 			}
 
 			if(newAction != '') {
-
+				console.log(`Action ${action.action} => scp_${newAction}`);
 				action.action = 'scp_' + newAction;
 				action.label = self.id + ':' + action.action;
 				changed = true;
@@ -120,6 +123,7 @@ function instance(system, id, config) {
 
 	// Upgrade  1.1.2 > 1.1.3
 	self.addUpgradeScript(function (config, actions, releaseActions, feedbacks) {
+		console.log('Running 1.1.2 -> 1.1.3 Upgrade.')
 		var changed = false;
 
 		let checkUpgrade = function(action, changed) {
@@ -130,7 +134,7 @@ function instance(system, id, config) {
 			} 
 
 			if(newAction != '') {
-
+				console.log(`Action ${action.action} => scp_${newAction}`);
 				action.action = 'scp_' + newAction;
 				action.label = self.id + ':' + action.action;
 				changed = true;
@@ -156,6 +160,7 @@ function instance(system, id, config) {
 
 	return self;
 }
+
 
 // Web config fields
 instance.prototype.config_fields = function () {
@@ -486,10 +491,17 @@ instance.prototype.feedback = function(feedback, bank){
 		
 		if(bankState[bank.text] == undefined) {
 			bankState[bank.text] = {color: bank.color, bgcolor: bank.bgcolor}
-		} 
-	
+		}
+
+		/*
+		console.log(`Feedback: ${feedback.type}:${curScpVal.cmd.Address}`);
+		console.log(`options.X: ${options.X}, curScpVal.X: ${parseInt(curScpVal.cmd.X) + ofs}`);
+		console.log(`options.Y: ${options.Y}, curScpVal.Y: ${parseInt(curScpVal.cmd.Y) + ofs}`);
+		console.log(`Valopt: ${Valopt}, curScpVal.Val: ${curScpVal.cmd.Val}\n`);
+		*/
+
 		if(options.X == parseInt(curScpVal.cmd.X) + ofs)
-			if((options.Y == undefined) || (options.Y == curScpVal.cmd.Y))
+			if((options.Y == undefined) || (options.Y == parseInt(curScpVal.cmd.Y) + ofs))
 				if((curScpVal.cmd.Val == undefined) || (Valopt == curScpVal.cmd.Val)) {
 					bankState[bank.text] = {color: options.fg, bgcolor: options.bg};
 		}
