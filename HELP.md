@@ -3,14 +3,14 @@
 **Available for the following Yamaha Pro Audio Devices**
 
 * CL1/3/5
-* QL1/3/5
+* QL1/5
 * TF1/3/5
 * TF-Rack (TF Firmware V3.0 or Later)
 
 **Available commands**
 
 * All available SCP "set" commands
-* Recall Presets
+* Recall Scenes
 
 Looking to add other functions such as macros and USB playback and whatever else!
 
@@ -45,3 +45,10 @@ v1.1.3  Bug Fixes and Enhancements
                         Feedback could get out of sync
                         Code fixups
         Enhancements:   Sorted actions so they're grouped together
+
+v1.2.1  Re-Write
+
+        Re-Written in ES6 style (no self, use classes and inline functions)
+        Separated upgradeScripts to separate file
+        Fixed global variables
+        More accurate feedback tracking
