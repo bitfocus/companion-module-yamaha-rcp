@@ -136,7 +136,7 @@ class instance extends instance_skel {
 	}
 
 
-	// Initialise TCP
+	// Initialize TCP
 	init_tcp() {
 		
 		let receivebuffer = '';
@@ -150,7 +150,7 @@ class instance extends instance_skel {
 		}
 
 		if (this.config.host) {
-			this.socket = new tcp(this.config.host, 49280 );
+			this.socket = new tcp(this.config.host, 49280);
 
 			this.socket.on('status_change', (status, message) => {
 				this.status(status, message);
@@ -165,6 +165,7 @@ class instance extends instance_skel {
 				this.status(this.STATE_OK);
 				this.log('info', `Connected!`);
 				this.getConsoleInfo();
+				this.pollScp();
 			});
 
 			this.socket.on('data', (chunk) => {
@@ -256,35 +257,37 @@ class instance extends instance_skel {
 				}
 			}
 		
-				commands[scpAction].options.push(valParams);
-			}
-			switch(scpCmd.Type) {
-				case 'integer':
-					if(scpCmd.Max == 1) {
-						valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
+			commands[scpAction].options.push(valParams);
+		
+		}
+		
+		switch(scpCmd.Type) {
+			case 'integer':
+				if(scpCmd.Max == 1) {
+					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
+				}
+				else{
+					valParams = {
+						type: 'number', label: scpLabel.split("/")[2], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
 					}
-					else{
-						valParams = {
-							type: 'number', label: scpLabel.split("/")[2], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
-						}
-					}
-					break;
-				case 'string':
-					if(scpLabel.startsWith("CustomFaderBank")) {
-						valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
-					} else if(scpLabel.endsWith("Color")) {
-						valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
-					} else {
-						valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
-					}
-					break;
-				default:
-					feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
-					feedbacks[scpAction].options.push(
-						{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
-						{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
-					)
-					continue; // Don't push another parameter - In the case of a Scene message
+				}
+				break;
+			case 'string':
+				if(scpLabel.startsWith("CustomFaderBank")) {
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
+				} else if(scpLabel.endsWith("Color")) {
+					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
+				} else {
+					valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
+				}
+				break;
+			default:
+				feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
+				feedbacks[scpAction].options.push(
+					{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
+					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+				)
+				continue; // Don't push another parameter - In the case of a Scene message
 			}
 			
 			commands[scpAction].options.push(valParams);
@@ -300,61 +303,69 @@ class instance extends instance_skel {
 		this.setFeedbackDefinitions(feedbacks);
 	}
 
-	// Handle the Actions
-	action(action) {
+	parseCmd(prefix, scpCmd, opt) {
 		
-		let opt        = action.options;
-		let optX       = opt.X;
+		let optX       = opt.X
 		let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
-		let optVal     = '';
-		let cmd		   = '';
-		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == action.action); // Find which command
-		
+		let optVal     = ''
+		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
 		if(scpCommand == undefined) {
-			this.log('debug',`Invalid command: ${action.action}`)
+			this.log('debug',`Invalid command: ${scpCmd}`)
 			return;
 		} 
-		let cmdName = scpCommand.Address;
+		let cmdName = scpCommand.Address;			
 		
 		switch(scpCommand.Type) {
 			case 'integer':
-				cmdName = `set ${cmdName}`
+				cmdName = `${prefix} ${cmdName}`
 				optX--; 				// ch #'s are 1 higher than the parameter
-				optVal = 0 + opt.Val; 	// Changes true/false to 1 0
-
+				optVal = ((prefix == 'set') ? 0 + opt.Val : ''); 	// Changes true/false to 1 0
 				break;
 			
-			case 'string':
-				cmdName = `set ${cmdName}`
+			case 'string','binary':
+				cmdName = `${prefix} ${cmdName}`
 				optX--; 				// ch #'s are 1 higher than the parameter except with Custom Banks
-				optVal = `"${opt.Val}"` // quotes around the string
+				optVal = ((prefix == 'set') ? `"${opt.Val}"` : ''); // quotes around the string
 				break;
-
+	
 			case 'scene':
 				optY = '';
 				optVal = '';
-				if(this.config.model == 'CL/QL') {
-					cmdName = `ssrecall_ex ${cmdName}`  		// Recall Scene for CL/QL
+	
+				if(prefix == 'set') {
+					scnPrefix = 'ssrecall_ex';
+					this.pollScp();		// so buttons with feedback reflect any changes
+				} else {
+					scnPrefix = 'sscurrent_ex';
+					optX = '';
 				}
-				else{
-					cmdName = `ssrecall_ex ${cmdName}${opt.Y}` 	// Recall Scene for TF
+	
+				if(this.config.model == 'CL/QL') {
+					cmdName = `${scnPrefix} ${cmdName}`;  		// Recall Scene for CL/QL
+				} else {
+					cmdName = `${scnPrefix} ${cmdName}${opt.Y}`; 	// Recall Scene for TF
 				}
 		}		
 		
-		cmd = `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
+		return `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
+	}
+
+	// Handle the Actions
+	action(action) {
 		
+		let cmd = this.parseCmd('set', action.action, action.options);
 		if (cmd !== undefined) {
 			this.log('debug', `sending ${cmd} to ${this.config.host}`);
-
+	
 			if (this.socket !== undefined && this.socket.connected) {
-				this.socket.send(cmd + "\n"); 					// send it, but add a CR to the end
+				this.socket.send(`${cmd}\n`); 					// send it, but add a CR to the end
 			}
 			else {
 				this.log('info', 'Socket not connected :(');
 			}
 		}
 	}
-
+	
 	// Handle the Feedbacks
 	feedback(feedback, bank) {
 		
@@ -402,6 +413,25 @@ class instance extends instance_skel {
 		
 		return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match
 	}
+
+
+	// Check all feedback
+	pollScp() {
+	
+		for (let page in feedbacks) {
+			for (let bank in feedbacks[page]) {
+				for (let fb in feedbacks[page][bank]) {
+					// console.log(`feedback[${page}][${bank}][${fb}] = ${Object.entries(feedbacks[page][bank][fb])}`);
+					let cmd = this.parseCmd('get', feedbacks[page][bank][fb].type, feedbacks[page][bank][fb].options);
+					if(cmd !== undefined){
+						this.log('debug', `sending ${cmd} to ${this.config.host}`);
+						this.socket.send(`${cmd}\n`)				
+					}
+				}
+			}
+		}
+	}
+
 }
 
 exports = module.exports = instance;

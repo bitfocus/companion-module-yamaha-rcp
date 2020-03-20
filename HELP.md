@@ -46,6 +46,11 @@ v1.1.3  Bug Fixes and Enhancements
                         Code fixups
         Enhancements:   Sorted actions so they're grouped together
 
+v1.1.4  Enhancements
+
+        Enhancement:    Polling for Feedback
+        Enhancement:    More TF5 commands
+
 v1.2.1  Re-Write
 
         Re-Written in ES6 style (no self, use classes and inline functions)
