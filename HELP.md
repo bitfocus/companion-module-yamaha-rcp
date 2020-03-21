@@ -57,3 +57,8 @@ v1.2.1  Re-Write
         Separated upgradeScripts to separate file
         Fixed global variables
         More accurate feedback tracking
+
+v1.2.2  Bug Fixes
+
+        Changed feedback to work more like other modules
+        Fixed Action names

@@ -35,8 +35,6 @@ class instance extends instance_skel {
 	}
 
 
-
-
 	// Web config fields
 	config_fields() {
 		
@@ -62,6 +60,7 @@ class instance extends instance_skel {
 		]
 	}
 
+	
 	// Change in Configuration
 	updateConfig(config) {
 		
@@ -96,6 +95,7 @@ class instance extends instance_skel {
 		this.updateConfig(this.config);
 	}
 
+	
 	// Make each command line into an object that can be used to create the commands
 	parseData(data, params) {
 		
@@ -132,7 +132,7 @@ class instance extends instance_skel {
 
 	// Get info from a connected console
 	getConsoleInfo() {
-		this.socket.send(`devinfo productname`);
+		this.socket.send(`devinfo productname\n`);
 	}
 
 
@@ -206,6 +206,7 @@ class instance extends instance_skel {
 		}
 	}
 
+	
 	// Module deletion
 	destroy() {
 	
@@ -226,85 +227,88 @@ class instance extends instance_skel {
 		let valParams = {};
 		let scpLabel  = '';
 
-		for (let i = 0; i < this.scpCommands.length; i++){
+		for (let i = 0; i < this.scpCommands.length; i++) {
 			
-			scpCmd = this.scpCommands[i]
+			scpCmd = this.scpCommands[i];
 		
-			if(this.config.model == 'TF' && scpCmd.Type == 'scene'){
+			if(this.config.model == 'TF' && scpCmd.Type == 'scene') {
 				scpLabel = 'Scene/Bank'
 			} else {
 				scpLabel = scpCmd.Address.slice(scpCmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
 			}
 			
 			// Add the commands from the data file. Action id's (action.action) are the SCP command number
-			let scpAction = 'scp_' + scpCmd.Index
+			let scpAction = 'scp_' + scpCmd.Index;
+			let scpLabels = scpLabel.split("/");
+			let scpLabelIdx = 0;
 			
-			commands[scpAction] = {
-				label: scpLabel, 
-				options: [
-					{type: 'number', label: scpLabel.split("/")[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
+			commands[scpAction] = {label: scpLabel, options: []};
+			if(scpCmd.X > 1) {
+					commands[scpAction].options = [
+					{type: 'number', label: scpLabels[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
+					scpLabelIdx = 1;
 			}
 
 			if(scpCmd.Y > 1) {
-				if(this.config.model == "TF" && scpCmd.Type == 'scene'){
-					valParams = {type: 'dropdown', label: scpLabel.split("/")[1], id: 'Y', default: 'A', choices:[
+				if(this.config.model == "TF" && scpCmd.Type == 'scene') {
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: 'A', choices:[
 						{id: 'A', label: 'A'},
 						{id: 'B', label: 'B'}
 					]}
-				}
-				else {
-					valParams = {type: 'number', label: scpLabel.split("/")[1], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false
-				}
-			}
-		
-			commands[scpAction].options.push(valParams);
-		
-		}
-		
-		switch(scpCmd.Type) {
-			case 'integer':
-				if(scpCmd.Max == 1) {
-					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
-				}
-				else{
-					valParams = {
-						type: 'number', label: scpLabel.split("/")[2], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
-					}
-				}
-				break;
-			case 'string':
-				if(scpLabel.startsWith("CustomFaderBank")) {
-					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
-				} else if(scpLabel.endsWith("Color")) {
-					valParams = {type: 'dropdown', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
 				} else {
-					valParams = {type: 'textinput', label: scpLabel.split("/")[2], id: 'Val', default: scpCmd.Default, regex: ''}
+					valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
 				}
-				break;
-			default:
-				feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
-				feedbacks[scpAction].options.push(
-					{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
-					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
-				)
-				continue; // Don't push another parameter - In the case of a Scene message
+
+				commands[scpAction].options.push(valParams);
 			}
 			
+			if(scpLabelIdx < scpLabels.length - 1) scpLabelIdx++;
+			
+			switch(scpCmd.Type) {
+				case 'integer':
+					if(scpCmd.Max == 1) {
+						valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
+					} else {
+						valParams = {
+							type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
+						}
+					}
+					break;
+				case 'string':
+					if(scpLabel.startsWith("CustomFaderBank")) {
+						valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
+					} else if(scpLabel.endsWith("Color")) {
+						valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
+					} else {
+						valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, regex: ''}
+					}
+					break;
+				default:
+					feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
+					feedbacks[scpAction].options.push(
+						{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
+						{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+					)
+					continue; // Don't push another parameter - In the case of a Scene message
+			}
+				
 			commands[scpAction].options.push(valParams);
 			
 			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
 			feedbacks[scpAction].options.push(
-					{type: 'colorpicker', label: 'Forground Colour', id: 'fg', default: this.rgb(0,0,0)},
+					{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
 					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 			)
 		}
-		
+
 		this.setActions(commands);
 		this.setFeedbackDefinitions(feedbacks);
 	}
 
+	// Create the proper command string for an action or poll
 	parseCmd(prefix, scpCmd, opt) {
 		
+		let scnPrefix  = '';
 		let optX       = opt.X
 		let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
 		let optVal     = ''
@@ -350,6 +354,7 @@ class instance extends instance_skel {
 		return `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
 	}
 
+
 	// Handle the Actions
 	action(action) {
 		
@@ -366,11 +371,16 @@ class instance extends instance_skel {
 		}
 	}
 	
+
 	// Handle the Feedbacks
 	feedback(feedback, bank) {
+
+		const NO_CHANGE = 0b10;
+		const MATCH     = 0b01;
 		
-		let options    = feedback.options;
-		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == feedback.type);
+		let match 	    = 0;
+		let options     = feedback.options;
+		let scpCommand  = this.scpCommands.find(cmd => 'scp_' + cmd.Index == feedback.type);
 
 		function fbPageBank() {
 			for(let page in feedbacks) {
@@ -387,7 +397,7 @@ class instance extends instance_skel {
 
 		let fbPB = fbPageBank();
 
-		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
+//		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
 			
 		if((fbPB !== undefined && this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
 			let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
@@ -397,25 +407,58 @@ class instance extends instance_skel {
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
 			}
 			
-			/*
+/*			
 			console.log(`Feedback: ${feedback.type}:${this.curScpVal.cmd.Address}`);
 			console.log(`options.X: ${options.X}, this.curScpVal.X: ${parseInt(this.curScpVal.cmd.X) + ofs}`);
 			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs}`);
-			console.log(`Valopt: ${Valopt}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}\n`);
-			*/
-
-			if(options.X == parseInt(this.curScpVal.cmd.X) + ofs)
-				if((options.Y == undefined) || (options.Y == parseInt(this.curScpVal.cmd.Y) + ofs))
-					if((this.curScpVal.cmd.Val == undefined) || (Valopt == this.curScpVal.cmd.Val)) {
-						this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: options.fg, bgcolor: options.bg};
+			console.log(`Valopt: ${Valopt}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
+*/						
+			if(options.X == parseInt(this.curScpVal.cmd.X) + ofs){
+				match = MATCH;
+			} else {
+				match = NO_CHANGE;
 			}
-		} 
+
+//			console.log(`x-match = ${match}`);
+
+			if(options.Y !== undefined) {
+				if(options.Y !== parseInt(this.curScpVal.cmd.Y) + ofs) {
+					match = NO_CHANGE;
+				}
+			}
+
+//			console.log(`y-match = ${match}`);
+
+			if(this.curScpVal.cmd.Val !== undefined) {
+				if(match == MATCH) {
+					if(Valopt == this.curScpVal.cmd.Val) {
+						match = MATCH;
+					} else {
+						match = 0;
+					}
+				}
+			} else {
+				match = (match | MATCH);
+			}
+			
+//			console.log(`final match = ${match}`);
+
+			if(match == MATCH) {
+//				console.log('Match!');
+				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: options.fg, bgcolor: options.bg};
+			} else if(match !== NO_CHANGE) {
+//				console.log('No Match');
+				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
+			}
+		}
 		
-		return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match
+//		console.log('\n');
+
+		return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match	
 	}
 
 
-	// Check all feedback
+	// Poll the console for it's status to update buttons via feedback
 	pollScp() {
 	
 		for (let page in feedbacks) {
