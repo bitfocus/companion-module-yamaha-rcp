@@ -48,8 +48,8 @@ v1.1.3  Bug Fixes and Enhancements
 
 v1.1.4  Enhancements
 
-        Enhancement:    Polling for Feedback
-        Enhancement:    More TF5 commands
+        Polling for Feedback
+        More TF5 commands
 
 v1.2.1  Re-Write
 
@@ -62,3 +62,12 @@ v1.2.2  Bug Fixes
 
         Changed feedback to work more like other modules
         Fixed Action names
+
+v1.2.3  Enhancement
+
+        Added "My Channel" to the config page to allow default channel selection without re-creating buttons
+
+v1.3.1  Enhancement
+
+        Macros! Add a Macro Button to record operations from the console or button presses on the SD
+        Drag the "Record Macro" Preset to your page, press it to start recording, do stuff, then press it again to stop recording. Go back to your presets and there's a new "Macro x" button that you can drag to your page.

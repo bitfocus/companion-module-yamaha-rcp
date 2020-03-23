@@ -122,7 +122,7 @@ OK prminfo 86 "MIXER:Current/Monitor/Fader/Level" 1 1 -32768 1000 0 "" integer a
 -- prminfo 121 "MIXER:Current/Monitor/DownMix/RsToLRLevel" 1 1 -32768 0 -300 "" integer any rw 1
 -- prminfo 122 "MIXER:Current/Monitor/DownMix/MasterLevel" 1 1 -32768 0 -300 "" integer any rw 1
 OK prminfo 123 "MIXER:Current/Cue/Output" 1 1 0 1 0 "" integer any rw 1
-OK prminfo 124 "MIXER:Current/Cue/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
+-- prminfo 124 "MIXER:Current/Cue/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
 -- prminfo 125 "MIXER:Current/Cue/Surr/CueMode" 1 1 0 8 "Mix Cue" "" string any rw 1
 OK prminfo 126 "MIXER:Current/Cue/FaderCueRelease" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 127 "MIXER:Current/Cue/InCh/Point" 1 1 0 8 "PFL" "" string any rw 1
@@ -130,7 +130,7 @@ OK prminfo 126 "MIXER:Current/Cue/FaderCueRelease" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 129 "MIXER:Current/Cue/DCA/Point" 1 1 0 8 "Pre Pan" "" string any rw 1
 -- prminfo 130 "MIXER:Current/Cue/DCA/Unity" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 131 "MIXER:Current/Cue/OutputLevel" 1 1 -32768 1000 0 "" integer any rw 1
-OK prminfo 132 "MIXER:Current/Cue/ActiveCue" 1 1 0 10 "None" "" string any r 1
+-- prminfo 132 "MIXER:Current/Cue/ActiveCue" 1 1 0 10 "None" "" string any r 1
 OK prminfo 133 "MIXER:Current/Cue/StIn/On" 16 1 0 1 0 "" integer any rw 1
 OK prminfo 134 "MIXER:Current/Cue/StInCh/On" 16 1 0 1 0 "" integer any rw 1
 OK prminfo 135 "MIXER:Current/Cue/Mtrx/On" 8 1 0 1 0 "" integer any rw 1

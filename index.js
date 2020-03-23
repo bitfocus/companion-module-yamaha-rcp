@@ -26,10 +26,13 @@ class instance extends instance_skel {
 		
 		
 		this.scpCommands = [];
+		this.scpPresets  = [];
 		this.productName = '';
 		this.scpVal 	 = [];	// Keeps track of values returned for Feedback purposes
 		this.curScpVal	 = {};
 		this.bankState 	 = new Object();
+		this.macroRec    = false;
+		this.macroCount  = 0;
 
 		this.addUpgradeScripts();
 	}
@@ -56,6 +59,16 @@ class instance extends instance_skel {
 					{id: 'CL/QL', label: 'CL/QL Console'},
 					{id: 'TF', label: 'TF Console'}
 				]
+			},
+			{
+				type: 		'number',
+				id: 		'myCh',
+				label: 		'"My" Channel',
+				width:		6,
+				min: 		1,
+				max: 		72,
+				default: 	1,
+				required: 	false
 			}
 		]
 	}
@@ -127,6 +140,7 @@ class instance extends instance_skel {
 		
 		this.init_tcp();
 		this.actions(); // Re-do the actions once the console is chosen
+		this.presets();
 	}
 
 
@@ -142,8 +156,7 @@ class instance extends instance_skel {
 		let receivebuffer = '';
 		let receivedcmd   = [];
 		let foundCmd	  = {};
-		let cmdIndex      = -1;
-
+		
 		if (this.socket !== undefined) {
 			this.socket.destroy();
 			delete this.socket;
@@ -185,11 +198,11 @@ class instance extends instance_skel {
 						foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
 						if(foundCmd !== undefined){
 						
-							cmdIndex = foundCmd.Index; // Find which command
-							this.scpVal.push({i: 'scp_' + cmdIndex, cmd: receivedcmd[i]});
+							this.scpVal.push({scp: foundCmd, cmd: receivedcmd[i]});
 							do{
 								this.curScpVal = this.scpVal.shift();
-								this.checkFeedbacks(this.curScpVal.i);
+								this.addMacro(this.curScpVal);
+								this.checkFeedbacks('scp_' + this.curScpVal.scp.Index);
 							} while(this.scpVal.length > 0);
 						
 						} else {
@@ -218,88 +231,113 @@ class instance extends instance_skel {
 	}
 
 
+	// Create single Action/Feedback
+	createAction(scpCmd, xDef, yDef, vDef) {
+		
+		let newAction = {};
+		let valParams = {};
+		let scpLabel  = '';
+
+		if(this.config.model == 'TF' && scpCmd.Type == 'scene') {
+			scpLabel = 'Scene/Bank'
+		} else {
+			scpLabel = scpCmd.Address.slice(scpCmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
+		}
+		
+		// Add the commands from the data file. Action id's (action.action) are the SCP command number
+		let scpLabels = scpLabel.split("/");
+		let scpLabelIdx = (scpLabel.startsWith("Cue")) ? 1 : 0;
+		
+		newAction = {label: scpLabel, options: []};
+		if(scpCmd.X > 1) {
+			if(scpLabel.startsWith("InCh") || scpLabel.startsWith("Cue/InCh")) {
+				newAction.options = [
+					{type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'X', default: xDef, choices: scpNames.chNames}
+				]
+			} else {
+				newAction.options = [
+					{type: 'number', label: scpLabels[scpLabelIdx], id: 'X', min: 1, max: scpCmd.X, default: xDef, required: true, range: false}
+				]
+			}
+			scpLabelIdx++;
+		}
+
+		if(scpCmd.Y > 1) {
+			if(this.config.model == "TF" && scpCmd.Type == 'scene') {
+				valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: yDef, choices:[
+					{id: 'A', label: 'A'},
+					{id: 'B', label: 'B'}
+				]}
+			} else {
+				valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: yDef, required: true, range: false}
+			}
+
+			newAction.options.push(valParams);
+		}
+		
+		if(scpLabelIdx < scpLabels.length - 1) scpLabelIdx++;
+		
+		switch(scpCmd.Type) {
+			case 'integer':
+				if(scpCmd.Max == 1) {
+					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: vDef}
+				} else {
+					valParams = {
+						type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(vDef), required: true, range: false
+					}
+				}
+				break;
+			case 'string':
+				if(scpLabel.startsWith("CustomFaderBank")) {
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, choices: scpNames.customChNames}
+				} else if(scpLabel.endsWith("Color")) {
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, choices: scpNames.chColors}
+				} else {
+					valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, regex: ''}
+				}
+				break;
+			default:
+				return newAction;
+		}
+			
+		newAction.options.push(valParams);
+		return newAction;
+		
+	}
+
 	// Create the Actions & Feedbacks
 	actions(system) {
 		
 		let commands  = {};
 		let feedbacks = {};
-		let scpCmd    = {};
-		let valParams = {};
-		let scpLabel  = '';
+		let s    	  = {};
+		let scpAction = '';
+		let yD 		  = '';
+		let vD		  = 0;
 
 		for (let i = 0; i < this.scpCommands.length; i++) {
-			
-			scpCmd = this.scpCommands[i];
+			s = this.scpCommands[i]
+			scpAction = 'scp_' + s.Index;
+			yD = ((this.config.model == "TF") && (s.Type == 'scene')) ? 'A' : 1;
+			vD = s.Default;
 		
-			if(this.config.model == 'TF' && scpCmd.Type == 'scene') {
-				scpLabel = 'Scene/Bank'
-			} else {
-				scpLabel = scpCmd.Address.slice(scpCmd.Address.indexOf("/") + 1); // String after "MIXER:Current/"
-			}
-			
-			// Add the commands from the data file. Action id's (action.action) are the SCP command number
-			let scpAction = 'scp_' + scpCmd.Index;
-			let scpLabels = scpLabel.split("/");
-			let scpLabelIdx = 0;
-			
-			commands[scpAction] = {label: scpLabel, options: []};
-			if(scpCmd.X > 1) {
-					commands[scpAction].options = [
-					{type: 'number', label: scpLabels[0], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}]
-					scpLabelIdx = 1;
-			}
+			commands[scpAction] = this.createAction(s, 1, yD, vD);
 
-			if(scpCmd.Y > 1) {
-				if(this.config.model == "TF" && scpCmd.Type == 'scene') {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: 'A', choices:[
-						{id: 'A', label: 'A'},
-						{id: 'B', label: 'B'}
-					]}
-				} else {
-					valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
-				}
-
-				commands[scpAction].options.push(valParams);
-			}
-			
-			if(scpLabelIdx < scpLabels.length - 1) scpLabelIdx++;
-			
-			switch(scpCmd.Type) {
-				case 'integer':
-					if(scpCmd.Max == 1) {
-						valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
-					} else {
-						valParams = {
-							type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
-						}
-					}
-					break;
-				case 'string':
-					if(scpLabel.startsWith("CustomFaderBank")) {
-						valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chNames}
-					} else if(scpLabel.endsWith("Color")) {
-						valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
-					} else {
-						valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, regex: ''}
-					}
-					break;
-				default:
-					feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
-					feedbacks[scpAction].options.push(
-						{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
-						{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
-					)
-					continue; // Don't push another parameter - In the case of a Scene message
-			}
-				
-			commands[scpAction].options.push(valParams);
-			
 			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
 			feedbacks[scpAction].options.push(
-					{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
-					{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+				{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
+				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
 			)
 		}
+
+		commands['macroRecStart'] = {label: 'Record Macro'};
+		commands['macroRecStop'] = {label: 'Stop Recording'};
+
+		feedbacks['macroRecStart'] = {label: 'Macro Recording', options: [
+			{type: 'checkbox', label: 'ON', id: 'on', default: true},
+			{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
+			{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+		]};
 
 		this.setActions(commands);
 		this.setFeedbackDefinitions(feedbacks);
@@ -308,8 +346,10 @@ class instance extends instance_skel {
 	// Create the proper command string for an action or poll
 	parseCmd(prefix, scpCmd, opt) {
 		
+		if(scpCmd == undefined || opt == undefined) return;
+
 		let scnPrefix  = '';
-		let optX       = opt.X
+		let optX       = (opt.X > 0) ? opt.X : this.config.myCh;
 		let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
 		let optVal     = ''
 		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
@@ -326,7 +366,7 @@ class instance extends instance_skel {
 				optVal = ((prefix == 'set') ? 0 + opt.Val : ''); 	// Changes true/false to 1 0
 				break;
 			
-			case 'string','binary':
+			case 'string':
 				cmdName = `${prefix} ${cmdName}`
 				optX--; 				// ch #'s are 1 higher than the parameter except with Custom Banks
 				optVal = ((prefix == 'set') ? `"${opt.Val}"` : ''); // quotes around the string
@@ -354,21 +394,98 @@ class instance extends instance_skel {
 		return `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
 	}
 
+	presets() {
+		this.scpPresets.push({
+			category: 'Macros',
+			label: 'Create Macro',
+			bank: {
+				style: 'text',
+				text: 'Record Macro',
+				latch: true,
+				size: '18',
+				color: this.rgb(255,255,255),
+				bgcolor: this.rgb(0,0,0)
+			},
+			actions: 			[{action: 'macroRecStart'}],
+			release_actions: 	[{action: 'macroRecStop'}],
+			feedbacks: 			[{type:   'macroRecStart', options: {on: true}}]
+		});
+	
+		this.setPresetDefinitions(this.scpPresets);
+	}
+
+	addMacro(c) {
+
+		let foundActionIdx = -1;
+
+		if(this.macroRec) {
+			let cX = parseInt(c.cmd.X);
+			let cY = parseInt(c.cmd.Y);
+			let cV = (c.scp.Max == 1) ? ((c.cmd.Val == 0) ? false : true) : c.cmd.Val
+
+			if(c.scp.Type !== 'scene'){
+				cX++;
+				cY++;
+			}
+
+			// Check for new value on existing action
+			let scpActions = this.scpPresets[this.scpPresets.length - 1].actions;
+			if(scpActions !== undefined) {
+				foundActionIdx = scpActions.findIndex(cmd => (
+					cmd.action == 'scp_' + c.scp.Index && 
+					cmd.options.X == cX &&
+					cmd.options.Y == cY
+				));
+			}
+			
+			if(foundActionIdx == -1) {
+				scpActions.push([]);
+				foundActionIdx = scpActions.length - 1;
+			}
+
+			scpActions[foundActionIdx] = {action: 'scp_' + c.scp.Index, options: {X: cX, Y: cY, Val: cV}};
+		}
+	}
 
 	// Handle the Actions
 	action(action) {
 		
-		let cmd = this.parseCmd('set', action.action, action.options);
-		if (cmd !== undefined) {
-			this.log('debug', `sending ${cmd} to ${this.config.host}`);
-	
-			if (this.socket !== undefined && this.socket.connected) {
-				this.socket.send(`${cmd}\n`); 					// send it, but add a CR to the end
+		if(!action.action.startsWith('macro')){
+			let cmd = this.parseCmd('set', action.action, action.options);
+			if (cmd !== undefined) {
+				this.log('debug', `sending ${cmd} to ${this.config.host}`);
+
+				if (this.socket !== undefined && this.socket.connected) {
+					this.socket.send(`${cmd}\n`); 					// send it, but add a CR to the end
+				}
+				else {
+					this.log('info', 'Socket not connected :(');
+				}
+			}	
+		} else {
+			if(action.action == 'macroRecStart' && this.macroRec == false) {
+				this.macroCount++;
+				this.scpPresets.push({
+					category: 'Macros',
+					label: `Macro ${this.macroCount}`,
+					bank: {
+						style: 'text',
+						text: `Macro ${this.macroCount}`,
+						size: '18',
+						color: this.rgb(255,255,255),
+						bgcolor: this.rgb(0,0,0)
+					},
+					actions: []
+				});
+				this.macroRec = true;
+
+			} else if(action.action == 'macroRecStop'){
+				this.macroRec = false;
+				this.setPresetDefinitions(this.scpPresets);
 			}
-			else {
-				this.log('info', 'Socket not connected :(');
-			}
+			this.checkFeedbacks('macroRecStart');
 		}
+
 	}
 	
 
@@ -398,8 +515,8 @@ class instance extends instance_skel {
 		let fbPB = fbPageBank();
 
 //		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
-			
-		if((fbPB !== undefined && this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
+
+		if((fbPB !== undefined) && (this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
 			let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 			let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 			
@@ -412,8 +529,9 @@ class instance extends instance_skel {
 			console.log(`options.X: ${options.X}, this.curScpVal.X: ${parseInt(this.curScpVal.cmd.X) + ofs}`);
 			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs}`);
 			console.log(`Valopt: ${Valopt}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
-*/						
-			if(options.X == parseInt(this.curScpVal.cmd.X) + ofs){
+*/			
+			let optX = (options.X > 0) ? options.X : this.config.myCh;
+			if(optX == parseInt(this.curScpVal.cmd.X) + ofs){
 				match = MATCH;
 			} else {
 				match = NO_CHANGE;
@@ -450,11 +568,15 @@ class instance extends instance_skel {
 //				console.log('No Match');
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
 			}
+			return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match	
 		}
 		
-//		console.log('\n');
+		if(feedback.type == 'macroRecStart' && options.on == this.macroRec) {
+			return {color: options.fg, bgcolor: options.bg}
+		}
 
-		return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match	
+		return;
+//		console.log('\n');
 	}
 
 
