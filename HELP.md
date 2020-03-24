@@ -71,3 +71,8 @@ v1.3.1  Enhancement
 
         Macros! Add a Macro Button to record operations from the console or button presses on the SD
         Drag the "Record Macro" Preset to your page, press it to start recording, do stuff, then press it again to stop recording. Go back to your presets and there's a new "Macro x" button that you can drag to your page.
+
+v1.3.2  Bug Fixes
+
+        Macros with negative values not played back correctly
+        Multiple Record Macro Buttons would appear in certain situations

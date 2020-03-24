@@ -17,13 +17,9 @@ class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config);
 
-		
 		Object.assign(this, {
-			...this.actions,
-			...this.feedback,
 			...upgrade
 		});
-		
 		
 		this.scpCommands = [];
 		this.scpPresets  = [];
@@ -35,6 +31,23 @@ class instance extends instance_skel {
 		this.macroCount  = 0;
 
 		this.addUpgradeScripts();
+	}
+
+
+	// Startup
+	init() {
+		this.updateConfig(this.config);
+	}
+
+
+	// Module deletion
+	destroy() {
+	
+		if (this.socket !== undefined) {
+			this.socket.destroy();
+		}
+
+		this.log('debug', `destroyed ${this.id}`);
 	}
 
 
@@ -103,12 +116,17 @@ class instance extends instance_skel {
 	}
 
 
-	// Startup
-	init() {
-		this.updateConfig(this.config);
+	// Whenever the console type changes, update the info
+	newConsole() {
+		
+		this.log('info', `Device model= ${this.config.model}`);
+		
+		this.init_tcp();
+		this.actions(); // Re-do the actions once the console is chosen
+		this.presets();
 	}
 
-	
+
 	// Make each command line into an object that can be used to create the commands
 	parseData(data, params) {
 		
@@ -133,17 +151,6 @@ class instance extends instance_skel {
 	}
 
 
-	// Whenever the console type changes, update the info
-	newConsole() {
-		
-		this.log('info', `Device model= ${this.config.model}`);
-		
-		this.init_tcp();
-		this.actions(); // Re-do the actions once the console is chosen
-		this.presets();
-	}
-
-
 	// Get info from a connected console
 	getConsoleInfo() {
 		this.socket.send(`devinfo productname\n`);
@@ -154,7 +161,7 @@ class instance extends instance_skel {
 	init_tcp() {
 		
 		let receivebuffer = '';
-		let receivedcmd   = [];
+		let receivedcmds   = [];
 		let foundCmd	  = {};
 		
 		if (this.socket !== undefined) {
@@ -193,12 +200,12 @@ class instance extends instance_skel {
 				
 				} else {
 				
-					receivedcmd = this.parseData(receivebuffer, SCP_VALS); // Break out the parameters
-					for(let i=0; i < receivedcmd.length; i++) {
-						foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmd[i].Address); // Find which command
+					receivedcmds = this.parseData(receivebuffer, SCP_VALS); // Break out the parameters
+					for(let i=0; i < receivedcmds.length; i++) {
+						foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address); // Find which command
 						if(foundCmd !== undefined){
 						
-							this.scpVal.push({scp: foundCmd, cmd: receivedcmd[i]});
+							this.scpVal.push({scp: foundCmd, cmd: receivedcmds[i]});
 							do{
 								this.curScpVal = this.scpVal.shift();
 								this.addMacro(this.curScpVal);
@@ -207,7 +214,7 @@ class instance extends instance_skel {
 						
 						} else {
 						
-							this.log('debug', `Unknown command received: ${receivedcmd[i].Address}`);
+							this.log('debug', `Unknown command received: ${receivedcmds[i].Address}`);
 						
 						}
 					}
@@ -219,16 +226,6 @@ class instance extends instance_skel {
 		}
 	}
 
-	
-	// Module deletion
-	destroy() {
-	
-		if (this.socket !== undefined) {
-			this.socket.destroy();
-		}
-
-		this.log('debug', `destroyed ${this.id}`);
-	}
 
 
 	// Create single Action/Feedback
@@ -325,8 +322,8 @@ class instance extends instance_skel {
 
 			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
 			feedbacks[scpAction].options.push(
-				{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
-				{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+				{type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0,0,0)},
+				{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
 			)
 		}
 
@@ -335,8 +332,8 @@ class instance extends instance_skel {
 
 		feedbacks['macroRecStart'] = {label: 'Macro Recording', options: [
 			{type: 'checkbox', label: 'ON', id: 'on', default: true},
-			{type: 'colorpicker', label: 'Foreground Colour', id: 'fg', default: this.rgb(0,0,0)},
-			{type: 'colorpicker', label: 'Background Colour', id: 'bg', default: this.rgb(255,0,0)}
+			{type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0,0,0)},
+			{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
 		]};
 
 		this.setActions(commands);
@@ -349,9 +346,9 @@ class instance extends instance_skel {
 		if(scpCmd == undefined || opt == undefined) return;
 
 		let scnPrefix  = '';
-		let optX       = (opt.X > 0) ? opt.X : this.config.myCh;
-		let optY       = ((opt.Y === undefined) ? 0 : opt.Y - 1);
-		let optVal     = ''
+		let optX       = (opt.X === undefined) ? 1 : (opt.X > 0) ? opt.X : this.config.myCh;
+		let optY       = (opt.Y === undefined) ? 0 : opt.Y - 1;
+		let optVal
 		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
 		if(scpCommand == undefined) {
 			this.log('debug',`Invalid command: ${scpCmd}`)
@@ -395,7 +392,7 @@ class instance extends instance_skel {
 	}
 
 	presets() {
-		this.scpPresets.push({
+		this.scpPresets = [{
 			category: 'Macros',
 			label: 'Create Macro',
 			bank: {
@@ -409,7 +406,7 @@ class instance extends instance_skel {
 			actions: 			[{action: 'macroRecStart'}],
 			release_actions: 	[{action: 'macroRecStop'}],
 			feedbacks: 			[{type:   'macroRecStart', options: {on: true}}]
-		});
+		}];
 	
 		this.setPresetDefinitions(this.scpPresets);
 	}
@@ -421,13 +418,25 @@ class instance extends instance_skel {
 		if(this.macroRec) {
 			let cX = parseInt(c.cmd.X);
 			let cY = parseInt(c.cmd.Y);
-			let cV = (c.scp.Max == 1) ? ((c.cmd.Val == 0) ? false : true) : c.cmd.Val
+			let cV
 
-			if(c.scp.Type !== 'scene'){
-				cX++;
-				cY++;
+			switch(c.scp.Type) {
+				case 'integer':
+					cX++;
+					cY++;
+					if(c.scp.Max == 1) {
+						cV = ((c.cmd.Val == 0) ? false : true)
+					} else {
+						cV = parseInt(c.cmd.Val);
+					}
+					break;
+				case 'string':
+					cX++;
+					cY++;
+					cV = c.cmd.Val;
+					break;
 			}
-
+			
 			// Check for new value on existing action
 			let scpActions = this.scpPresets[this.scpPresets.length - 1].actions;
 			if(scpActions !== undefined) {
@@ -444,6 +453,7 @@ class instance extends instance_skel {
 			}
 
 			scpActions[foundActionIdx] = {action: 'scp_' + c.scp.Index, options: {X: cX, Y: cY, Val: cV}};
+
 		}
 	}
 
