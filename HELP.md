@@ -1,78 +1,33 @@
 ## Yamaha Simple Control Protocol
 
-**Available for the following Yamaha Pro Audio Devices**
-
-* CL1/3/5
-* QL1/5
-* TF1/3/5
-* TF-Rack (TF Firmware V3.0 or Later)
-
-**Available commands**
-
-* All available SCP "set" commands
-* Recall Scenes
-
-Looking to add other functions such as macros and USB playback and whatever else!
-
-Many thanks to Jack Longden for starting this off and inspiring me to continue.
-
 Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
 *Andrew Broughton*
 
 ---
 
-**REVISION HISTORY**
+**Instructions**
 
-v1.1.0  Initial Commit
+"MY CHANNEL"
 
-        To Do:          QL/TF testing
+        This setting allows you to select a channel that will be updated in any actions that choose "My Channel" as the channel number
+        instead of CH 1 CH 2 etc. Using this means that you can create a layout that can have a specific channel on many buttons that
+        can be changed at any time. Useful when things move around from show to show, and then you don't have to change settings on a bunch of buttons.
+
+MACROS ("Learn" function)
         
-v1.1.1  Bug Fixes
-        
-        Fix:            Custom Fader Bank values corrected
-        Enhancement:    Custom Fader Bank dropdown for channel names
-        Enhancement:    Dropdown for channel colors
+        This will only work while connected to a console.
 
-v1.1.2  Bug Fix
+        Drag the "Record Macro" Preset to your page, press it to start recording, do stuff, then press it again to stop recording. Go back to your
+        presets and there'll be a new "Macro x" preset that you can now drag to your page.
 
-        Fix:            Crash on unknown command in QL
-        Enhancement:    Add QL-specific commands
+        New Macros will disappear when you restart companion, so make sure you drag the ones you want to keep onto a button!
 
-v1.1.3  Bug Fixes and Enhancements
+        Don't forget that you can create a macro by pressing a SD button that already has actions on it while a console is connected.
+        The new Macro will have those commands in it as well as any you added before you pressed the button or after!
 
-        Fix:            Values for certain parameters off by 1
-                        Feedback could get out of sync
-                        Code fixups
-        Enhancements:   Sorted actions so they're grouped together
+DYNAMIC CHANNEL PARAMETERS
 
-v1.1.4  Enhancements
-
-        Polling for Feedback
-        More TF5 commands
-
-v1.2.1  Re-Write
-
-        Re-Written in ES6 style (no self, use classes and inline functions)
-        Separated upgradeScripts to separate file
-        Fixed global variables
-        More accurate feedback tracking
-
-v1.2.2  Bug Fixes
-
-        Changed feedback to work more like other modules
-        Fixed Action names
-
-v1.2.3  Enhancement
-
-        Added "My Channel" to the config page to allow default channel selection without re-creating buttons
-
-v1.3.1  Enhancement
-
-        Macros! Add a Macro Button to record operations from the console or button presses on the SD
-        Drag the "Record Macro" Preset to your page, press it to start recording, do stuff, then press it again to stop recording. Go back to your presets and there's a new "Macro x" button that you can drag to your page.
-
-v1.3.2  Bug Fixes
-
-        Macros with negative values not played back correctly
-        Multiple Record Macro Buttons would appear in certain situations
+        If you add name, color or icon feedback for a button, (e.g. InCh/Label/Name or DCA/Label/Color), the module will pull the name,
+        color or icon from the matching channel and change the button text, color or image accordingly.
+        (images are not yet implemented)

@@ -87,7 +87,7 @@ module.exports = {
                 if(newAction != '') {
                     console.log(`Action ${action.action} => scp_${newAction}`);
                     action.action = 'scp_' + newAction;
-                    action.label = self.id + ':' + action.action;
+                    action.label = this.id + ':' + action.action;
                     changed = true;
                 }
 
@@ -120,7 +120,7 @@ module.exports = {
                 if(newAction != '') {
                     console.log(`Action ${action.action} => scp_${newAction}`);
                     action.action = 'scp_' + newAction;
-                    action.label = self.id + ':' + action.action;
+                    action.label = this.id + ':' + action.action;
                     changed = true;
                 }
 

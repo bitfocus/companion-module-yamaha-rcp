@@ -229,14 +229,25 @@
     {"id": "SEND MASTER", "label": "SEND MASTER"}
     ],
 "chColors": [
-    {"id": "Blue", "label": "Blue"},
-    {"id": "Orange", "label": "Orange"},	
-    {"id": "Yellow", "label": "Yellow"},
-    {"id": "Purple", "label": "Purple"},
-    {"id": "Cyan", "label": "Cyan"},
-    {"id": "Magenta", "label": "Magenta"},
-    {"id": "Red", "label": "Red"},
-    {"id": "Green", "label": "Green"},
-    {"id": "Off", "label": "Off"}
-    ]
+    {"id": "Blue",      "label": "Blue"},
+    {"id": "Orange",    "label": "Orange"},	
+    {"id": "Yellow",    "label": "Yellow"},
+    {"id": "Purple",    "label": "Purple"},
+    {"id": "Cyan",      "label": "Cyan"},
+    {"id": "Magenta",   "label": "Magenta"},
+    {"id": "Red",       "label": "Red"},
+    {"id": "Green",     "label": "Green"},
+    {"id": "Off",       "label": "Off"}
+    ],
+"chColorRGB": {
+    "Blue":    {"color": 16777215, "bgcolor": 255},
+    "Orange":  {"color": 0,        "bgcolor": 16753920},
+    "Yellow":  {"color": 0,        "bgcolor": 16776960},
+    "Purple":  {"color": 16777215, "bgcolor": 8388736},
+    "Cyan":    {"color": 0,        "bgcolor": 65535},
+    "Magenta": {"color": 0,        "bgcolor": 16711935},
+    "Red":     {"color": 16777215, "bgcolor": 16711680},
+    "Green":   {"color": 0,        "bgcolor": 65280},
+    "Off":     {"color": 16777215, "bgcolor": 0}
+    }
 }

@@ -6,6 +6,7 @@ var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');
 var scpNames 		= require('./scpNames.json');
 var upgrade			= require('./upgrade');
+var variables		= require('./variables');
 
 const SCP_PARAMS 	= ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
 const SCP_VALS 		= ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
@@ -18,17 +19,22 @@ class instance extends instance_skel {
 		super(system, id, config);
 
 		Object.assign(this, {
-			...upgrade
+			...upgrade,
+			...variables
 		});
 		
-		this.scpCommands = [];
-		this.scpPresets  = [];
-		this.productName = '';
-		this.scpVal 	 = [];	// Keeps track of values returned for Feedback purposes
-		this.curScpVal	 = {};
-		this.bankState 	 = new Object();
-		this.macroRec    = false;
-		this.macroCount  = 0;
+		this.scpCommands   = [];
+//		this.InChCommands  = []; 	// Which commands contain input channel #s
+		this.nameCommands  = []; 	// Commands which have a name field
+		this.colorCommands = [];	// Commands which have a color field
+		this.iconCommands  = [];	// Commands which have an icon field
+		this.scpPresets    = [];
+		this.productName   = '';
+		this.scpVal 	   = [];	// Keeps track of values returned for Feedback purposes
+		this.curScpVal	   = {};
+		this.bankState 	   = new Object();
+		this.macroRec      = false;
+		this.macroCount    = 0;
 
 		this.addUpgradeScripts();
 	}
@@ -124,6 +130,7 @@ class instance extends instance_skel {
 		this.init_tcp();
 		this.actions(); // Re-do the actions once the console is chosen
 		this.presets();
+//		this.addVariables();	// To-Do...
 	}
 
 
@@ -145,8 +152,24 @@ class instance extends instance_skel {
 					scpCommand[params[j]] = line[j].replace(/"/g,'');  // Get rid of any double quotes around the strings
 				}
 				cmds.push(scpCommand);
+
+				if(params === SCP_PARAMS) {
+					let cmdArr = undefined;
+					switch(scpCommand.Address.slice(-4)) {
+						case 'Name':
+							cmdArr = this.nameCommands;
+							break;
+						case 'olor':
+							cmdArr = this.colorCommands;
+							break;
+						case 'Icon':
+							cmdArr = this.iconCommands;
+					}
+					if(cmdArr !== undefined) cmdArr.push('scp_' + scpCommand.Index);
+				}
 			}		
 		}
+//console.log(`nameCommands = ${this.nameCommands}`);
 		return cmds
 	}
 
@@ -203,13 +226,14 @@ class instance extends instance_skel {
 					receivedcmds = this.parseData(receivebuffer, SCP_VALS); // Break out the parameters
 					for(let i=0; i < receivedcmds.length; i++) {
 						foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address); // Find which command
-						if(foundCmd !== undefined){
+						if(foundCmd !== undefined) {
 						
 							this.scpVal.push({scp: foundCmd, cmd: receivedcmds[i]});
-							do{
+							do {
 								this.curScpVal = this.scpVal.shift();
 								this.addMacro(this.curScpVal);
 								this.checkFeedbacks('scp_' + this.curScpVal.scp.Index);
+//								this.checkVariables(this.curScpVal);
 							} while(this.scpVal.length > 0);
 						
 						} else {
@@ -229,7 +253,7 @@ class instance extends instance_skel {
 
 
 	// Create single Action/Feedback
-	createAction(scpCmd, xDef, yDef, vDef) {
+	createAction(scpCmd) {
 		
 		let newAction = {};
 		let valParams = {};
@@ -249,11 +273,11 @@ class instance extends instance_skel {
 		if(scpCmd.X > 1) {
 			if(scpLabel.startsWith("InCh") || scpLabel.startsWith("Cue/InCh")) {
 				newAction.options = [
-					{type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'X', default: xDef, choices: scpNames.chNames}
+					{type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'X', default: 1, choices: scpNames.chNames}
 				]
 			} else {
 				newAction.options = [
-					{type: 'number', label: scpLabels[scpLabelIdx], id: 'X', min: 1, max: scpCmd.X, default: xDef, required: true, range: false}
+					{type: 'number', label: scpLabels[scpLabelIdx], id: 'X', min: 1, max: scpCmd.X, default: 1, required: true, range: false}
 				]
 			}
 			scpLabelIdx++;
@@ -261,12 +285,12 @@ class instance extends instance_skel {
 
 		if(scpCmd.Y > 1) {
 			if(this.config.model == "TF" && scpCmd.Type == 'scene') {
-				valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: yDef, choices:[
+				valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: 'A', choices:[
 					{id: 'A', label: 'A'},
 					{id: 'B', label: 'B'}
 				]}
 			} else {
-				valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: yDef, required: true, range: false}
+				valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
 			}
 
 			newAction.options.push(valParams);
@@ -275,22 +299,22 @@ class instance extends instance_skel {
 		if(scpLabelIdx < scpLabels.length - 1) scpLabelIdx++;
 		
 		switch(scpCmd.Type) {
-			case 'integer':
+			case 'integer','binary':
 				if(scpCmd.Max == 1) {
-					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: vDef}
+					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
 				} else {
 					valParams = {
-						type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(vDef), required: true, range: false
+						type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
 					}
 				}
 				break;
 			case 'string':
 				if(scpLabel.startsWith("CustomFaderBank")) {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, choices: scpNames.customChNames}
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.customChNames}
 				} else if(scpLabel.endsWith("Color")) {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, choices: scpNames.chColors}
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
 				} else {
-					valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: vDef, regex: ''}
+					valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, regex: ''}
 				}
 				break;
 			default:
@@ -302,44 +326,50 @@ class instance extends instance_skel {
 		
 	}
 
+	
 	// Create the Actions & Feedbacks
 	actions(system) {
 		
 		let commands  = {};
 		let feedbacks = {};
-		let s    	  = {};
+		let command    	  = {};
 		let scpAction = '';
-		let yD 		  = '';
-		let vD		  = 0;
 
 		for (let i = 0; i < this.scpCommands.length; i++) {
-			s = this.scpCommands[i]
-			scpAction = 'scp_' + s.Index;
-			yD = ((this.config.model == "TF") && (s.Type == 'scene')) ? 'A' : 1;
-			vD = s.Default;
+			command = this.scpCommands[i]
+			scpAction = 'scp_' + command.Index;
 		
-			commands[scpAction] = this.createAction(s, 1, yD, vD);
+			commands[scpAction] = this.createAction(command);
 
-			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone
-			feedbacks[scpAction].options.push(
-				{type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0,0,0)},
-				{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
-			)
+			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone the Action to a matching feedback
+			if(this.nameCommands.includes(scpAction) || this.iconCommands.includes(scpAction) || this.colorCommands.includes(scpAction)) {
+				feedbacks[scpAction].options.pop();
+			} else {
+				feedbacks[scpAction].options.push(
+					{type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0,0,0)},
+					{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
+				)
+			}
 		}
 
 		commands['macroRecStart'] = {label: 'Record Macro'};
 		commands['macroRecStop'] = {label: 'Stop Recording'};
 
-		feedbacks['macroRecStart'] = {label: 'Macro Recording', options: [
+		feedbacks['macroRecStart'] = {label: 'Macro is Recording', options: [
 			{type: 'checkbox', label: 'ON', id: 'on', default: true},
 			{type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0,0,0)},
 			{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
 		]};
 
+this.log('info','******** COMMAND LIST *********');
+Object.entries(commands).forEach(([key, value]) => this.log('info',`<font face="courier">${value.label.padEnd(36, '\u00A0')} ${key}</font>`));
+this.log('info','***** END OF COMMAND LIST *****')
+		
 		this.setActions(commands);
 		this.setFeedbackDefinitions(feedbacks);
 	}
 
+	
 	// Create the proper command string for an action or poll
 	parseCmd(prefix, scpCmd, opt) {
 		
@@ -357,7 +387,7 @@ class instance extends instance_skel {
 		let cmdName = scpCommand.Address;			
 		
 		switch(scpCommand.Type) {
-			case 'integer':
+			case 'integer','binary':
 				cmdName = `${prefix} ${cmdName}`
 				optX--; 				// ch #'s are 1 higher than the parameter
 				optVal = ((prefix == 'set') ? 0 + opt.Val : ''); 	// Changes true/false to 1 0
@@ -391,6 +421,8 @@ class instance extends instance_skel {
 		return `${cmdName} ${optX} ${optY} ${optVal}`.trim(); 	// Command string to send to console
 	}
 
+	
+	// Create the preset definitions
 	presets() {
 		this.scpPresets = [{
 			category: 'Macros',
@@ -411,6 +443,8 @@ class instance extends instance_skel {
 		this.setPresetDefinitions(this.scpPresets);
 	}
 
+	
+	// Add a command to a Macro Preset
 	addMacro(c) {
 
 		let foundActionIdx = -1;
@@ -457,9 +491,10 @@ class instance extends instance_skel {
 		}
 	}
 
+	
 	// Handle the Actions
 	action(action) {
-		
+
 		if(!action.action.startsWith('macro')){
 			let cmd = this.parseCmd('set', action.action, action.options);
 			if (cmd !== undefined) {
@@ -489,9 +524,14 @@ class instance extends instance_skel {
 				});
 				this.macroRec = true;
 
-			} else if(action.action == 'macroRecStop'){
+			} else if(action.action == 'macroRecStop') {
 				this.macroRec = false;
-				this.setPresetDefinitions(this.scpPresets);
+				if(this.scpPresets[this.scpPresets.length - 1].actions.length > 0) {
+					this.setPresetDefinitions(this.scpPresets);
+				} else {
+					this.scpPresets.pop();
+					this.macroCount = 0;
+				}
 			}
 			this.checkFeedbacks('macroRecStart');
 		}
@@ -527,19 +567,20 @@ class instance extends instance_skel {
 //		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
 
 		if((fbPB !== undefined) && (this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
-			let Valopt = ((scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
+			let optVal = (options.Val == undefined ? undefined : (scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 			let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 			
 			if(this.bankState[`${fbPB.pg}:${fbPB.bk}`] == undefined) {
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
 			}
 			
-/*			
+/*
 			console.log(`Feedback: ${feedback.type}:${this.curScpVal.cmd.Address}`);
 			console.log(`options.X: ${options.X}, this.curScpVal.X: ${parseInt(this.curScpVal.cmd.X) + ofs}`);
 			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs}`);
-			console.log(`Valopt: ${Valopt}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
-*/			
+			console.log(`options.Val: ${options.Val}, optVal: ${optVal}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
+*/
+			
 			let optX = (options.X > 0) ? options.X : this.config.myCh;
 			if(optX == parseInt(this.curScpVal.cmd.X) + ofs){
 				match = MATCH;
@@ -557,27 +598,35 @@ class instance extends instance_skel {
 
 //			console.log(`y-match = ${match}`);
 
-			if(this.curScpVal.cmd.Val !== undefined) {
+			if(optVal !== undefined) {
 				if(match == MATCH) {
-					if(Valopt == this.curScpVal.cmd.Val) {
+					if(optVal == this.curScpVal.cmd.Val) {
 						match = MATCH;
 					} else {
 						match = 0;
 					}
 				}
 			} else {
-				match = (match | MATCH);
+				if(this.curScpVal.cmd.Val == undefined) match = (match | MATCH);
 			}
 			
 //			console.log(`final match = ${match}`);
 
 			if(match == MATCH) {
-//				console.log('Match!');
+				console.log('Match!');
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: options.fg, bgcolor: options.bg};
+				if(this.curScpVal.cmd.Val !== undefined) {
+					if(this.nameCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {text: this.curScpVal.cmd.Val};
+					if(this.colorCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = scpNames.chColorRGB[this.curScpVal.cmd.Val];
+//					if(this.iconCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`].png = this.makeIcon(this.curScpVal.cmd.Val);
+				}
+			
 			} else if(match !== NO_CHANGE) {
-//				console.log('No Match');
+				console.log('No Match');
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
 			}
+//			console.log(`bankState[] = ${JSON.stringify(this.bankState[`${fbPB.pg}:${fbPB.bk}`],null,4)}\n`);
+
 			return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match	
 		}
 		
@@ -586,7 +635,7 @@ class instance extends instance_skel {
 		}
 
 		return;
-//		console.log('\n');
+		console.log('\n');
 	}
 
 
@@ -606,6 +655,7 @@ class instance extends instance_skel {
 			}
 		}
 	}
+
 
 }
 

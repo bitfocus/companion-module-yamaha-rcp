@@ -1,13 +1,13 @@
 {
 	"name": "yamaha-scp",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"api_version": "1.0.0",
 	"description": "Control module for Yamaha Pro Audio equipment",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"keywords": ["Audio"],
+	"keywords": ["Audio","Mixer","Console"],
 	"manufacturer": "Yamaha",
 	"product": ["TF","QL/CL"],
 	"shortname": "yamaha-scp",
