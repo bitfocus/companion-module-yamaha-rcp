@@ -24,7 +24,6 @@ class instance extends instance_skel {
 		});
 		
 		this.scpCommands   = [];
-//		this.InChCommands  = []; 	// Which commands contain input channel #s
 		this.nameCommands  = []; 	// Commands which have a name field
 		this.colorCommands = [];	// Commands which have a color field
 		this.iconCommands  = [];	// Commands which have an icon field
@@ -299,7 +298,8 @@ class instance extends instance_skel {
 		if(scpLabelIdx < scpLabels.length - 1) scpLabelIdx++;
 		
 		switch(scpCmd.Type) {
-			case 'integer','binary':
+			case 'integer':
+			case 'binary':
 				if(scpCmd.Max == 1) {
 					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
 				} else {
@@ -387,7 +387,8 @@ this.log('info','***** END OF COMMAND LIST *****')
 		let cmdName = scpCommand.Address;			
 		
 		switch(scpCommand.Type) {
-			case 'integer','binary':
+			case 'integer':
+			case 'binary':
 				cmdName = `${prefix} ${cmdName}`
 				optX--; 				// ch #'s are 1 higher than the parameter
 				optVal = ((prefix == 'set') ? 0 + opt.Val : ''); 	// Changes true/false to 1 0
@@ -456,6 +457,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 
 			switch(c.scp.Type) {
 				case 'integer':
+				case 'binary':
 					cX++;
 					cY++;
 					if(c.scp.Max == 1) {
@@ -613,7 +615,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 //			console.log(`final match = ${match}`);
 
 			if(match == MATCH) {
-				console.log('Match!');
+//				console.log('Match!');
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: options.fg, bgcolor: options.bg};
 				if(this.curScpVal.cmd.Val !== undefined) {
 					if(this.nameCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {text: this.curScpVal.cmd.Val};
@@ -635,7 +637,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 		}
 
 		return;
-		console.log('\n');
+//		console.log('\n');
 	}
 
 

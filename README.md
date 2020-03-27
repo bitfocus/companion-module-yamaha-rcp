@@ -76,7 +76,7 @@ v1.3.2  Bug Fixes
         Macros with negative values not played back correctly
         Multiple Record Macro Buttons would appear in certain situations
 
-v1.3.3  Dynamic Channel Parameters
+v1.3.3  Dynamic Parameters
 
-        Added the ability for the button text and color to match the channel/mix/DCA name and/or color using feedback.
-        See HELP.md for details
+        Added the ability for buttons to have channel names and colors automatically pulled from the console
+        if desired.

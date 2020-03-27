@@ -7,7 +7,7 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"keywords": ["Audio","Mixer","Console"],
+	"keywords": ["Audio"],
 	"manufacturer": "Yamaha",
 	"product": ["TF","QL/CL"],
 	"shortname": "yamaha-scp",
