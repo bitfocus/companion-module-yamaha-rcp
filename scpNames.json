@@ -239,6 +239,17 @@
     {"id": "Green",     "label": "Green"},
     {"id": "Off",       "label": "Off"}
     ],
+"chColorsTF": [
+    {"id": "Blue",      "label": "Blue"},
+    {"id": "Orange",    "label": "Orange"},	
+    {"id": "Yellow",    "label": "Yellow"},
+    {"id": "Purple",    "label": "Purple"},
+    {"id": "SkyBlue",   "label": "SkyBlue"},
+    {"id": "Pink",      "label": "Pink"},
+    {"id": "Red",       "label": "Red"},
+    {"id": "Green",     "label": "Green"},
+    {"id": "Off",       "label": "Off"}
+    ],
 "chColorRGB": {
     "Blue":    {"color": 16777215, "bgcolor": 255},
     "Orange":  {"color": 0,        "bgcolor": 16753920},

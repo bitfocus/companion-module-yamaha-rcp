@@ -26,14 +26,12 @@ MACROS ("Learn" function)
         New Macros will disappear when you restart companion, so make sure you drag the ones you want to keep onto
         a button!
 
-        Don't forget that you can create a macro by pressing a SD button that already has actions on it while a
-        console is connected.
+        Don't forget that you can create a macro by pressing a SD button (while recording) that already has actions
+        on it while a console is connected.
         The new Macro will have those commands in it as well as any you added before you pressed the button or
         after!
 
 DYNAMIC CHANNEL PARAMETERS
 
-        If you add name, color or icon feedback for a button, (e.g. InCh/Label/Name or DCA/Label/Color), the module
-        will pull the name, color or icon from the matching channel and change the button text, color or image
-        accordingly.
-        (images are not yet implemented)
+        If you add name or color feedback for a button, (e.g. InCh/Label/Name or DCA/Label/Color), the module
+        will pull the name or color from the matching channel and change the button text or color accordingly.

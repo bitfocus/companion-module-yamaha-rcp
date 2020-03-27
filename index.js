@@ -182,9 +182,10 @@ class instance extends instance_skel {
 	// Initialize TCP
 	init_tcp() {
 		
-		let receivebuffer = '';
+		let receivebuffer  = '';
+		let receivedLines  = [];
 		let receivedcmds   = [];
-		let foundCmd	  = {};
+		let foundCmd	   = {};
 		
 		if (this.socket !== undefined) {
 			this.socket.destroy();
@@ -213,35 +214,42 @@ class instance extends instance_skel {
 			this.socket.on('data', (chunk) => {
 				receivebuffer += chunk;
 				
-				this.log('debug', `Received from device: ${receivebuffer}`);
+				receivedLines = receivebuffer.split("\x0A");	// Split by line break
 
-				if(receivebuffer.indexOf('OK devinfo productname') !== -1) {
-				
-					this.productName = receivebuffer.slice(receivebuffer.lastIndexOf(" "));
-					this.log('info', `Device found: ${this.productName}`);
-				
-				} else {
-				
-					receivedcmds = this.parseData(receivebuffer, SCP_VALS); // Break out the parameters
-					for(let i=0; i < receivedcmds.length; i++) {
-						foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address); // Find which command
-						if(foundCmd !== undefined) {
-						
-							this.scpVal.push({scp: foundCmd, cmd: receivedcmds[i]});
-							do {
-								this.curScpVal = this.scpVal.shift();
-								this.addMacro(this.curScpVal);
-								this.checkFeedbacks('scp_' + this.curScpVal.scp.Index);
-//								this.checkVariables(this.curScpVal);
-							} while(this.scpVal.length > 0);
-						
-						} else {
-						
-							this.log('debug', `Unknown command received: ${receivedcmds[i].Address}`);
-						
+
+				for(let line of receivedLines){
+					if(line.length == 0) continue;
+
+					this.log('debug', `Received from device: '${line}'`);
+
+					if(line.indexOf('OK devinfo productname') !== -1) {
+					
+						this.productName = line.slice(receivebuffer.lastIndexOf(" "));
+						this.log('info', `Device found: ${this.productName}`);
+					
+					} else {
+					
+						receivedcmds = this.parseData(line, SCP_VALS); // Break out the parameters
+						for(let i=0; i < receivedcmds.length; i++) {
+							foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address); // Find which command
+							if(foundCmd !== undefined) {
+							
+								this.scpVal.push({scp: foundCmd, cmd: receivedcmds[i]});
+								do {
+									this.curScpVal = this.scpVal.shift();
+									this.addMacro(this.curScpVal);
+									this.checkFeedbacks('scp_' + this.curScpVal.scp.Index);
+//									this.checkVariables(this.curScpVal);
+								} while(this.scpVal.length > 0);
+							
+							} else {
+							
+								this.log('debug', `Unknown command received: ${receivedcmds[i].Address}`);
+							
+							}
 						}
 					}
-				}
+				}				
 				
 				receivebuffer = '';	// Clear the buffer
 			
@@ -312,7 +320,8 @@ class instance extends instance_skel {
 				if(scpLabel.startsWith("CustomFaderBank")) {
 					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.customChNames}
 				} else if(scpLabel.endsWith("Color")) {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.chColors}
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, 
+					choices: this.config.model == "TF" ? scpNames.chColorsTF : scpNames.chColors}
 				} else {
 					valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, regex: ''}
 				}
@@ -381,7 +390,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 		let optVal
 		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
 		if(scpCommand == undefined) {
-			this.log('debug',`Invalid command: ${scpCmd}`)
+			this.log('debug',`PARSECMD: Invalid command. '${scpCmd}'`)
 			return;
 		} 
 		let cmdName = scpCommand.Address;			
@@ -500,7 +509,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 		if(!action.action.startsWith('macro')){
 			let cmd = this.parseCmd('set', action.action, action.options);
 			if (cmd !== undefined) {
-				this.log('debug', `sending ${cmd} to ${this.config.host}`);
+				this.log('debug', `sending '${cmd}' to ${this.config.host}`);
 
 				if (this.socket !== undefined && this.socket.connected) {
 					this.socket.send(`${cmd}\n`); 					// send it, but add a CR to the end
@@ -650,7 +659,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 					// console.log(`feedback[${page}][${bank}][${fb}] = ${Object.entries(feedbacks[page][bank][fb])}`);
 					let cmd = this.parseCmd('get', feedbacks[page][bank][fb].type, feedbacks[page][bank][fb].options);
 					if(cmd !== undefined){
-						this.log('debug', `sending ${cmd} to ${this.config.host}`);
+						this.log('debug', `sending '${cmd}' to ${this.config.host}`);
 						this.socket.send(`${cmd}\n`)				
 					}
 				}
