@@ -1,4 +1,4 @@
-## Yamaha Simple Control Protocol
+## Yamaha Simple Control Protocol - v1.3.5
 
 Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
 

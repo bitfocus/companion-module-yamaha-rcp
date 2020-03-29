@@ -1,6 +1,7 @@
 // Control module for Yamaha Pro Audio, using SCP communication
 // Jack Longden <Jack@atov.co.uk> 2019
-// updated by Andrew Broughton <andy@checkcheckonetwo.com> Feb 2020
+// updated by Andrew Broughton <andy@checkcheckonetwo.com>
+// Mar 28, 2020 Version 1.3.5 
 
 var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');
@@ -26,7 +27,6 @@ class instance extends instance_skel {
 		this.scpCommands   = [];
 		this.nameCommands  = []; 	// Commands which have a name field
 		this.colorCommands = [];	// Commands which have a color field
-		this.iconCommands  = [];	// Commands which have an icon field
 		this.scpPresets    = [];
 		this.productName   = '';
 		this.scpVal 	   = [];	// Keeps track of values returned for Feedback purposes
@@ -160,9 +160,6 @@ class instance extends instance_skel {
 							break;
 						case 'olor':
 							cmdArr = this.colorCommands;
-							break;
-						case 'Icon':
-							cmdArr = this.iconCommands;
 					}
 					if(cmdArr !== undefined) cmdArr.push('scp_' + scpCommand.Index);
 				}
@@ -231,7 +228,7 @@ class instance extends instance_skel {
 					
 						receivedcmds = this.parseData(line, SCP_VALS); // Break out the parameters
 						for(let i=0; i < receivedcmds.length; i++) {
-							foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address); // Find which command
+							foundCmd = this.scpCommands.find(cmd => cmd.Address == receivedcmds[i].Address.slice(0,cmd.Address.length)); // Find which command
 							if(foundCmd !== undefined) {
 							
 								this.scpVal.push({scp: foundCmd, cmd: receivedcmds[i]});
@@ -244,7 +241,7 @@ class instance extends instance_skel {
 							
 							} else {
 							
-								this.log('debug', `Unknown command received: ${receivedcmds[i].Address}`);
+								this.log('debug', `Unknown command received: '${receivedcmds[i].Address}'`);
 							
 							}
 						}
@@ -292,9 +289,9 @@ class instance extends instance_skel {
 
 		if(scpCmd.Y > 1) {
 			if(this.config.model == "TF" && scpCmd.Type == 'scene') {
-				valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: 'A', choices:[
-					{id: 'A', label: 'A'},
-					{id: 'B', label: 'B'}
+				valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Y', default: 'a', choices:[
+					{id: 'a', label: 'A'},
+					{id: 'b', label: 'B'}
 				]}
 			} else {
 				valParams = {type: 'number', label: scpLabels[scpLabelIdx], id: 'Y', min: 1, max: scpCmd.Y, default: 1, required: true, range: false}
@@ -341,7 +338,7 @@ class instance extends instance_skel {
 		
 		let commands  = {};
 		let feedbacks = {};
-		let command    	  = {};
+		let command   = {};
 		let scpAction = '';
 
 		for (let i = 0; i < this.scpCommands.length; i++) {
@@ -349,9 +346,14 @@ class instance extends instance_skel {
 			scpAction = 'scp_' + command.Index;
 		
 			commands[scpAction] = this.createAction(command);
-
 			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone the Action to a matching feedback
-			if(this.nameCommands.includes(scpAction) || this.iconCommands.includes(scpAction) || this.colorCommands.includes(scpAction)) {
+/*
+if(commands[scpAction].options.slice(-1)[0].type == 'dropdown'){
+	console.log(`command  = ${JSON.stringify(commands[scpAction],null,4)}`);
+	console.log(`feedback = ${JSON.stringify(feedbacks[scpAction],null,4)}`);
+}
+*/
+			if(this.nameCommands.includes(scpAction) || this.colorCommands.includes(scpAction)) {
 				feedbacks[scpAction].options.pop();
 			} else {
 				feedbacks[scpAction].options.push(
@@ -390,7 +392,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 		let optVal
 		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
 		if(scpCommand == undefined) {
-			this.log('debug',`PARSECMD: Invalid command. '${scpCmd}'`)
+			this.log('debug',`PARSECMD: Unrecognized command. '${scpCmd}'`)
 			return;
 		} 
 		let cmdName = scpCommand.Address;			
@@ -588,7 +590,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 /*
 			console.log(`Feedback: ${feedback.type}:${this.curScpVal.cmd.Address}`);
 			console.log(`options.X: ${options.X}, this.curScpVal.X: ${parseInt(this.curScpVal.cmd.X) + ofs}`);
-			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs}`);
+			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs} (or '${this.curScpVal.cmd.Address.slice(-1)}')`);
 			console.log(`options.Val: ${options.Val}, optVal: ${optVal}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
 */
 			
@@ -602,8 +604,15 @@ this.log('info','***** END OF COMMAND LIST *****')
 //			console.log(`x-match = ${match}`);
 
 			if(options.Y !== undefined) {
-				if(options.Y !== parseInt(this.curScpVal.cmd.Y) + ofs) {
-					match = NO_CHANGE;
+				if(this.curScpVal.cmd.Address.slice(0, -1) !== 'scene_'){
+					if(options.Y !== parseInt(this.curScpVal.cmd.Y) + ofs) {
+						match = NO_CHANGE;
+					}
+				} else {
+					// for TF Scene messages. Address will be 'scene_a' or 'scene_b'
+					if(options.Y !== this.curScpVal.cmd.Address.slice(-1)) {
+						match = NO_CHANGE;
+					}
 				}
 			}
 
@@ -629,11 +638,10 @@ this.log('info','***** END OF COMMAND LIST *****')
 				if(this.curScpVal.cmd.Val !== undefined) {
 					if(this.nameCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {text: this.curScpVal.cmd.Val};
 					if(this.colorCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = scpNames.chColorRGB[this.curScpVal.cmd.Val];
-//					if(this.iconCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`].png = this.makeIcon(this.curScpVal.cmd.Val);
 				}
 			
 			} else if(match !== NO_CHANGE) {
-				console.log('No Match');
+//				console.log('No Match');
 				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
 			}
 //			console.log(`bankState[] = ${JSON.stringify(this.bankState[`${fbPB.pg}:${fbPB.bk}`],null,4)}\n`);
@@ -652,13 +660,13 @@ this.log('info','***** END OF COMMAND LIST *****')
 
 	// Poll the console for it's status to update buttons via feedback
 	pollScp() {
-	
+
 		for (let page in feedbacks) {
 			for (let bank in feedbacks[page]) {
 				for (let fb in feedbacks[page][bank]) {
-					// console.log(`feedback[${page}][${bank}][${fb}] = ${Object.entries(feedbacks[page][bank][fb])}`);
+//					console.log(`feedbacks[${page}][${bank}][${fb}] = ${JSON.stringify(feedbacks[page][bank][fb],null,4)}`);
 					let cmd = this.parseCmd('get', feedbacks[page][bank][fb].type, feedbacks[page][bank][fb].options);
-					if(cmd !== undefined){
+					if(cmd !== undefined && this.id == feedbacks[page][bank][fb].instance_id){
 						this.log('debug', `sending '${cmd}' to ${this.config.host}`);
 						this.socket.send(`${cmd}\n`)				
 					}

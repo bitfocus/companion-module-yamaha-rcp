@@ -81,7 +81,9 @@ v1.3.3  Dynamic Parameters
         Added the ability for buttons to have channel names and colors automatically pulled from the console
         if desired.
 
-v1.3.4  Bug Fixes
+v1.3.5  Bug Fixes
 
         Changed erroneous TF parameters, possibly making the Dynamic Parameters work for the TF
         Parsing improved on commands from console
+        Don't send commands for disabled instances
+        Color & scene message fixes for TF

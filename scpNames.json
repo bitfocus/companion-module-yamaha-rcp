@@ -252,13 +252,15 @@
     ],
 "chColorRGB": {
     "Blue":    {"color": 16777215, "bgcolor": 255},
-    "Orange":  {"color": 0,        "bgcolor": 16753920},
+    "Orange":  {"color": 0,        "bgcolor": 16752640},
     "Yellow":  {"color": 0,        "bgcolor": 16776960},
     "Purple":  {"color": 16777215, "bgcolor": 8388736},
     "Cyan":    {"color": 0,        "bgcolor": 65535},
+    "SkyBlue": {"color": 0,        "bgcolor": 65535},
     "Magenta": {"color": 0,        "bgcolor": 16711935},
+    "Pink":    {"color": 0,        "bgcolor": 16711935},
     "Red":     {"color": 16777215, "bgcolor": 16711680},
-    "Green":   {"color": 0,        "bgcolor": 65280},
+    "Green":   {"color": 0,        "bgcolor": 57344},
     "Off":     {"color": 16777215, "bgcolor": 0}
     }
 }
