@@ -83,7 +83,8 @@ v1.3.3  Dynamic Parameters
 
 v1.3.5  Bug Fixes
 
-        Changed erroneous TF parameters, possibly making the Dynamic Parameters work for the TF
+        Changed erroneous TF parameters in an effort to make the Dynamic Parameters work for the TF
         Parsing improved on commands from console
         Don't send commands for disabled instances
         Color & scene message fixes for TF
+        Custom layer fix for QL

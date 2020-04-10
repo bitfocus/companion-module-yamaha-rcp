@@ -7,7 +7,6 @@ var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');
 var scpNames 		= require('./scpNames.json');
 var upgrade			= require('./upgrade');
-var variables		= require('./variables');
 
 const SCP_PARAMS 	= ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
 const SCP_VALS 		= ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
@@ -21,7 +20,6 @@ class instance extends instance_skel {
 
 		Object.assign(this, {
 			...upgrade,
-			...variables
 		});
 		
 		this.scpCommands   = [];
@@ -129,7 +127,6 @@ class instance extends instance_skel {
 		this.init_tcp();
 		this.actions(); // Re-do the actions once the console is chosen
 		this.presets();
-//		this.addVariables();	// To-Do...
 	}
 
 
@@ -165,7 +162,6 @@ class instance extends instance_skel {
 				}
 			}		
 		}
-//console.log(`nameCommands = ${this.nameCommands}`);
 		return cmds
 	}
 
@@ -197,12 +193,12 @@ class instance extends instance_skel {
 			});
 
 			this.socket.on('error', (err) => {
-				this.status(this.STATE_ERROR, err);
+				this.status(this.STATUS_ERROR, err);
 				this.log('error', `Network error: ${err.message}`);
 			});
 
 			this.socket.on('connect', () => {
-				this.status(this.STATE_OK);
+				this.status(this.STATUS_OK);
 				this.log('info', `Connected!`);
 				this.getConsoleInfo();
 				this.pollScp();
@@ -236,7 +232,6 @@ class instance extends instance_skel {
 									this.curScpVal = this.scpVal.shift();
 									this.addMacro(this.curScpVal);
 									this.checkFeedbacks('scp_' + this.curScpVal.scp.Index);
-//									this.checkVariables(this.curScpVal);
 								} while(this.scpVal.length > 0);
 							
 							} else {
@@ -347,12 +342,7 @@ class instance extends instance_skel {
 		
 			commands[scpAction] = this.createAction(command);
 			feedbacks[scpAction] = JSON.parse(JSON.stringify(commands[scpAction])); // Clone the Action to a matching feedback
-/*
-if(commands[scpAction].options.slice(-1)[0].type == 'dropdown'){
-	console.log(`command  = ${JSON.stringify(commands[scpAction],null,4)}`);
-	console.log(`feedback = ${JSON.stringify(feedbacks[scpAction],null,4)}`);
-}
-*/
+
 			if(this.nameCommands.includes(scpAction) || this.colorCommands.includes(scpAction)) {
 				feedbacks[scpAction].options.pop();
 			} else {
@@ -363,7 +353,7 @@ if(commands[scpAction].options.slice(-1)[0].type == 'dropdown'){
 			}
 		}
 
-		commands['macroRecStart'] = {label: 'Record Macro'};
+		commands['macroRecStart'] = {label: 'Record SCP Macro'};
 		commands['macroRecStop'] = {label: 'Stop Recording'};
 
 		feedbacks['macroRecStart'] = {label: 'Macro is Recording', options: [
@@ -372,10 +362,12 @@ if(commands[scpAction].options.slice(-1)[0].type == 'dropdown'){
 			{type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255,0,0)}
 		]};
 
+/*
 this.log('info','******** COMMAND LIST *********');
 Object.entries(commands).forEach(([key, value]) => this.log('info',`<font face="courier">${value.label.padEnd(36, '\u00A0')} ${key}</font>`));
 this.log('info','***** END OF COMMAND LIST *****')
-		
+*/
+
 		this.setActions(commands);
 		this.setFeedbackDefinitions(feedbacks);
 	}
@@ -441,9 +433,9 @@ this.log('info','***** END OF COMMAND LIST *****')
 			label: 'Create Macro',
 			bank: {
 				style: 'text',
-				text: 'Record Macro',
+				text: 'Record SCP Macro',
 				latch: true,
-				size: '18',
+				size: '14',
 				color: this.rgb(255,255,255),
 				bgcolor: this.rgb(0,0,0)
 			},
@@ -562,33 +554,20 @@ this.log('info','***** END OF COMMAND LIST *****')
 		let options     = feedback.options;
 		let scpCommand  = this.scpCommands.find(cmd => 'scp_' + cmd.Index == feedback.type);
 
-		function fbPageBank() {
-			for(let page in feedbacks) {
-				for(let bank in feedbacks[page]) {
-					for(let fb in feedbacks[page][bank]) {
-						// console.log(`fb.id = ${feedbacks[page][bank][fb].id}, feedback.id = ${feedback.id}`);
-						if(feedbacks[page][bank][fb].id == feedback.id){
-							return {pg: page, bk: bank}
-						}
-					}
-				}
-			}
-		}
-
-		let fbPB = fbPageBank();
+		let fbid = feedback.id;
 
 //		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
 
-		if((fbPB !== undefined) && (this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
+		if((fbid !== undefined) && (this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
 			let optVal = (options.Val == undefined ? undefined : (scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 			let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
 			
-			if(this.bankState[`${fbPB.pg}:${fbPB.bk}`] == undefined) {
-				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
+			if(this.bankState[fbid] == undefined) {
+				this.bankState[fbid] = {text: bank.text, color: bank.color, bgcolor: bank.bgcolor}
 			}
 			
 /*
-			console.log(`Feedback: ${feedback.type}:${this.curScpVal.cmd.Address}`);
+			console.log(`Feedback: ${feedback.id} = ${feedback.type} (${this.curScpVal.cmd.Address})`);
 			console.log(`options.X: ${options.X}, this.curScpVal.X: ${parseInt(this.curScpVal.cmd.X) + ofs}`);
 			console.log(`options.Y: ${options.Y}, this.curScpVal.Y: ${parseInt(this.curScpVal.cmd.Y) + ofs} (or '${this.curScpVal.cmd.Address.slice(-1)}')`);
 			console.log(`options.Val: ${options.Val}, optVal: ${optVal}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
@@ -634,19 +613,20 @@ this.log('info','***** END OF COMMAND LIST *****')
 
 			if(match == MATCH) {
 //				console.log('Match!');
-				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: options.fg, bgcolor: options.bg};
+				this.bankState[fbid] = {text: bank.text, color: options.fg, bgcolor: options.bg};
+				
 				if(this.curScpVal.cmd.Val !== undefined) {
-					if(this.nameCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {text: this.curScpVal.cmd.Val};
-					if(this.colorCommands.includes(feedback.type)) this.bankState[`${fbPB.pg}:${fbPB.bk}`] = scpNames.chColorRGB[this.curScpVal.cmd.Val];
+					if(this.nameCommands.includes(feedback.type)) this.bankState[fbid] = {text: this.curScpVal.cmd.Val};
+					if(this.colorCommands.includes(feedback.type)) this.bankState[fbid] = scpNames.chColorRGB[this.curScpVal.cmd.Val];
 				}
 			
 			} else if(match !== NO_CHANGE) {
 //				console.log('No Match');
-				this.bankState[`${fbPB.pg}:${fbPB.bk}`] = {color: bank.color, bgcolor: bank.bgcolor}
+				this.bankState[fbid] = {text: bank.text, color: bank.color, bgcolor: bank.bgcolor}
 			}
-//			console.log(`bankState[] = ${JSON.stringify(this.bankState[`${fbPB.pg}:${fbPB.bk}`],null,4)}\n`);
+//			console.log(this.bankState[fbid]);
 
-			return this.bankState[`${fbPB.pg}:${fbPB.bk}`]; // return the old value if no match, but the new value if there is a match	
+			return this.bankState[fbid]; // return the old value if no match, but the new value if there is a match	
 		}
 		
 		if(feedback.type == 'macroRecStart' && options.on == this.macroRec) {
@@ -659,19 +639,15 @@ this.log('info','***** END OF COMMAND LIST *****')
 
 
 	// Poll the console for it's status to update buttons via feedback
-	pollScp() {
 
-		for (let page in feedbacks) {
-			for (let bank in feedbacks[page]) {
-				for (let fb in feedbacks[page][bank]) {
-//					console.log(`feedbacks[${page}][${bank}][${fb}] = ${JSON.stringify(feedbacks[page][bank][fb],null,4)}`);
-					let cmd = this.parseCmd('get', feedbacks[page][bank][fb].type, feedbacks[page][bank][fb].options);
-					if(cmd !== undefined && this.id == feedbacks[page][bank][fb].instance_id){
-						this.log('debug', `sending '${cmd}' to ${this.config.host}`);
-						this.socket.send(`${cmd}\n`)				
-					}
-				}
-			}
+	pollScp() {
+		let allFeedbacks = this.getAllFeedbacks();
+		for (let fb in allFeedbacks) {
+			let cmd = this.parseCmd('get', allFeedbacks[fb].type, allFeedbacks[fb].options);
+			if(cmd !== undefined && this.id == allFeedbacks[fb].instance_id) {
+				this.log('debug', `sending '${cmd}' to ${this.config.host}`);
+				this.socket.send(`${cmd}\n`)
+			}				
 		}
 	}
 
