@@ -272,7 +272,7 @@ class instance extends instance_skel {
 		if(scpCmd.X > 1) {
 			if(scpLabel.startsWith("InCh") || scpLabel.startsWith("Cue/InCh")) {
 				newAction.options = [
-					{type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'X', default: 1, choices: scpNames.chNames}
+					{type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'X', default: 1, minChoicesForSearch: 0, choices: scpNames.chNames}
 				]
 			} else {
 				newAction.options = [
@@ -301,7 +301,7 @@ class instance extends instance_skel {
 			case 'integer':
 			case 'binary':
 				if(scpCmd.Max == 1) {
-					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: scpCmd.Default}
+					valParams = {type: 'checkbox', label: 'On', id: 'Val', default: (scpCmd.Default == 1) ? true : false}
 				} else {
 					valParams = {
 						type: 'number', label: scpLabels[scpLabelIdx], id: 'Val', min: scpCmd.Min, max: scpCmd.Max, default: parseInt(scpCmd.Default), required: true, range: false
@@ -310,9 +310,9 @@ class instance extends instance_skel {
 				break;
 			case 'string':
 				if(scpLabel.startsWith("CustomFaderBank")) {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, choices: scpNames.customChNames}
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, minChoicesForSearch: 0, choices: scpNames.customChNames}
 				} else if(scpLabel.endsWith("Color")) {
-					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, 
+					valParams = {type: 'dropdown', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, minChoicesForSearch: 0, 
 					choices: this.config.model == "TF" ? scpNames.chColorsTF : scpNames.chColors}
 				} else {
 					valParams = {type: 'textinput', label: scpLabels[scpLabelIdx], id: 'Val', default: scpCmd.Default, regex: ''}
@@ -430,12 +430,12 @@ this.log('info','***** END OF COMMAND LIST *****')
 	presets() {
 		this.scpPresets = [{
 			category: 'Macros',
-			label: 'Create Macro',
+			label: 'Create SCP Macro',
 			bank: {
 				style: 'text',
 				text: 'Record SCP Macro',
 				latch: true,
-				size: '14',
+				size: 'auto',
 				color: this.rgb(255,255,255),
 				bgcolor: this.rgb(0,0,0)
 			},

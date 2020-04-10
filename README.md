@@ -88,3 +88,4 @@ v1.3.5  Bug Fixes
         Don't send commands for disabled instances
         Color & scene message fixes for TF
         Custom layer fix for QL
+        Default value for checkbox parsing fix
