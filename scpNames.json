@@ -1,5 +1,8 @@
 {"chNames": [
-    {"id": 0, "label": "My Channel"},
+    {"id": -1, "label": "My Channel 1"},
+    {"id": -2, "label": "My Channel 2"},
+    {"id": -3, "label": "My Channel 3"},
+    {"id": -4, "label": "My Channel 4"},
     {"id": 1, "label": "CH1"},
     {"id": 2, "label": "CH2"},
     {"id": 3, "label": "CH3"},

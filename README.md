@@ -89,3 +89,6 @@ v1.3.5  Bug Fixes
         Color & scene message fixes for TF
         Custom layer fix for QL
         Default value for checkbox parsing fix
+        Enabled search for dropdowns
+
+v1.3.6  Additional "My Channels"

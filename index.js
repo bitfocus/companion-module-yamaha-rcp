@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio, using SCP communication
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Mar 28, 2020 Version 1.3.5 
+// Apr 10, 2020 Version 1.3.6 
 
 var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');
@@ -57,7 +57,8 @@ class instance extends instance_skel {
 	// Web config fields
 	config_fields() {
 		
-		return [{
+		let fields = [
+			{
 				type: 		'textinput',
 				id: 		'host',
 				label: 		'IP Address of Console',
@@ -75,18 +76,28 @@ class instance extends instance_skel {
 					{id: 'CL/QL', label: 'CL/QL Console'},
 					{id: 'TF', label: 'TF Console'}
 				]
+			}
+		]
+		for(let i = 1; i <= 4; i++){
+			fields.push({
+				type: 		'textinput',
+				id: 		`myChName${i}`,
+				label: 		`My Channel #${i} Name`,
+				width: 		6,
+				default: 	`My Channel ${i}`,
 			},
 			{
 				type: 		'number',
-				id: 		'myCh',
-				label: 		'"My" Channel',
-				width:		6,
+				id: 		`myCh${i}`,
+				label: 		`Channel #${i}`,
+				width:		2,
 				min: 		1,
 				max: 		72,
 				default: 	1,
 				required: 	false
-			}
-		]
+			})
+		}
+		return fields;
 	}
 
 	
@@ -114,6 +125,10 @@ class instance extends instance_skel {
 			let bcmd = b.Address.slice(b.Address.indexOf("/") + 1);
 			return acmd.toLowerCase().localeCompare(bcmd.toLowerCase());
 		})
+
+		for (let i = 0; i < 4; i++) {
+			scpNames.chNames[i] = {id: `-${i+1}`, label: this.config[`myChName${(i+1)}`]};
+		}
 		
 		this.newConsole();
 	}
@@ -124,9 +139,9 @@ class instance extends instance_skel {
 		
 		this.log('info', `Device model= ${this.config.model}`);
 		
-		this.init_tcp();
 		this.actions(); // Re-do the actions once the console is chosen
 		this.presets();
+		this.init_tcp();
 	}
 
 
@@ -379,7 +394,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 		if(scpCmd == undefined || opt == undefined) return;
 
 		let scnPrefix  = '';
-		let optX       = (opt.X === undefined) ? 1 : (opt.X > 0) ? opt.X : this.config.myCh;
+		let optX       = (opt.X === undefined) ? 1 : (opt.X > 0) ? opt.X : this.config[`myCh${-opt.X}`];
 		let optY       = (opt.Y === undefined) ? 0 : opt.Y - 1;
 		let optVal
 		let scpCommand = this.scpCommands.find(cmd => 'scp_' + cmd.Index == scpCmd);
@@ -556,8 +571,6 @@ this.log('info','***** END OF COMMAND LIST *****')
 
 		let fbid = feedback.id;
 
-//		console.log(`Page: ${fbPB.pg}, Bank: ${fbPB.bk}`);
-
 		if((fbid !== undefined) && (this.curScpVal.cmd !== undefined) && (scpCommand !== undefined)) {
 			let optVal = (options.Val == undefined ? undefined : (scpCommand.Type == 'integer') ? 0 + options.Val : `${options.Val}`) 	// 0 + value turns true/false into 1 0
 			let ofs = ((scpCommand.Type == 'scene') ? 0 : 1); 									// Scenes are equal, channels are 1 higher
@@ -573,7 +586,7 @@ this.log('info','***** END OF COMMAND LIST *****')
 			console.log(`options.Val: ${options.Val}, optVal: ${optVal}, this.curScpVal.Val: ${this.curScpVal.cmd.Val}`);
 */
 			
-			let optX = (options.X > 0) ? options.X : this.config.myCh;
+			let optX = (options.X > 0) ? options.X : this.config[`myCh${-options.X}`];
 			if(optX == parseInt(this.curScpVal.cmd.X) + ofs){
 				match = MATCH;
 			} else {
