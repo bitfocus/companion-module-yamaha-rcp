@@ -1,20 +1,4 @@
-## Yamaha Simple Control Protocol
-
-**Available for the following Yamaha Pro Audio Devices**
-
-* CL1/3/5
-* QL1/3/5
-* TF1/3/5
-* TF-Rack (TF Firmware V3.0 or Later)
-
-**Available commands**
-
-* All available SCP "set" commands
-* Recall Presets
-
-Looking to add other functions such as macros and USB playback and whatever else!
-
-Many thanks to Jack Longden for starting this off and inspiring me to continue.
+## Yamaha Simple Control Protocol - v1.4.0
 
 Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
@@ -22,26 +6,33 @@ Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions,
 
 ---
 
-**REVISION HISTORY**
+**Instructions**
 
-v1.1.0  Initial Commit
+"MY CHANNEL"
 
-        To Do:          QL/TF testing
+        This setting (in the settings tab - click Edit on the instance tab) allows you to select a channel that will
+        be updated in any actions that choose "My Channel" as the channel number instead of CH 1 CH 2 etc. Using
+        this means that you can create a layout that can have a specific channel on many buttons that can be changed
+        at any time. Useful when things move around from show to show, and then you don't have to change settings
+        on a bunch of buttons.
+
+MACROS ("Learn" Function)
         
-v1.1.1  Bug Fixes
-        
-        Fix:            Custom Fader Bank values corrected
-        Enhancement:    Custom Fader Bank dropdown for channel names
-        Enhancement:    Dropdown for channel colors
+        This will only work while connected to a console.
 
-v1.1.2  Bug Fix
+        Drag the "Record SCP Macro" Preset to your page, press it to start recording, do stuff, then press it again to
+        stop recording. Go back to your presets and there'll be a new "Macro x" preset that you can now drag to
+        your page.
 
-        Fix:            Crash on unknown command in QL
-        Enhancement:    Add QL-specific commands
+        New Macros will disappear when you restart companion, so make sure you drag the ones you want to keep onto
+        a button!
 
-v1.1.3  Bug Fixes and Enhancements
+        Don't forget that you can create a macro by pressing a SD button (while recording) that already has actions
+        on it while a console is connected.
+        The new Macro will have those commands in it as well as any you added before you pressed the button or
+        after!
 
-        Fix:            Values for certain parameters off by 1
-                        Feedback could get out of sync
-                        Code fixups
-        Enhancements:   Sorted actions so they're grouped together
+DYNAMIC CHANNEL PARAMETERS
+
+        If you add name or color feedback for a button, (e.g. InCh/Label/Name or DCA/Label/Color), the module
+        will pull the name or color from the matching channel and change the button text or color accordingly.

@@ -1,15 +1,15 @@
 {
 	"name": "yamaha-scp",
-	"version": "1.1.3",
+	"version": "1.4.0",
 	"api_version": "1.0.0",
-	"description": "Control module for Yamaha Pro Audio equipment",
+	"description": "Control module for Yamaha Pro Audio equipment via SCP",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"keywords": ["Audio"],
+	"keywords": ["Audio","SCP","Mixer"],
 	"manufacturer": "Yamaha",
-	"product": ["TF Console","QL/CL Console","TF-Rack"],
+	"product": ["TF (SCP)","QL/CL (SCP)"],
 	"shortname": "yamaha-scp",
 	"homepage": "https://github.com/bitfocus/companion-module-yamaha-scp#readme",
 	"repository": {
