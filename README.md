@@ -92,3 +92,5 @@ v1.3.5  Bug Fixes
         Enabled search for dropdowns
 
 v1.3.6  Additional "My Channels"
+
+v1.4.0  Additional dropdowns for patch & Icons, Rebuild of feedback code (thank you Keith!)
