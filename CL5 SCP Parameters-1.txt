@@ -26,7 +26,7 @@ OK prminfo 22 "MIXER:Current/St/Out/Balance" 2 1 -63 63 0 "" integer any rw 1
 -- prminfo 25 "MIXER:Current/StIn/Surr/LRPan" 16 1 -63 63 0 "" integer any rw 1
 -- prminfo 26 "MIXER:Current/StIn/Surr/FRPan" 16 1 -63 63 0 "" integer any rw 1
 -- prminfo 27 "MIXER:Current/StIn/Surr/FRPanRev" 16 1 -63 63 0 "" integer any rw 1
--- prminfo 28 "MIXER:Current/StIn/Surr/Div" 16 1 0 100 100 "" integer any rw 1
+OK prminfo 28 "MIXER:Current/StIn/Surr/Div" 16 1 0 100 100 "" integer any rw 1
 -- prminfo 29 "MIXER:Current/StIn/Surr/LOn" 16 1 0 1 1 "" integer any rw 1
 -- prminfo 30 "MIXER:Current/StIn/Surr/ROn" 16 1 0 1 1 "" integer any rw 1
 -- prminfo 31 "MIXER:Current/StIn/Surr/COn" 16 1 0 1 1 "" integer any rw 1
@@ -42,7 +42,7 @@ OK prminfo 40 "MIXER:Current/StIn/Dyna2/Threshold" 16 1 -540 0 -80 "" integer an
 -- prminfo 41 "MIXER:Current/StInCh/Surr/LRPan" 16 1 -63 63 0 "" integer any rw 1
 -- prminfo 42 "MIXER:Current/StInCh/Surr/FRPan" 16 1 -63 63 0 "" integer any rw 1
 -- prminfo 43 "MIXER:Current/StInCh/Surr/FRPanRev" 16 1 -63 63 0 "" integer any rw 1
--- prminfo 44 "MIXER:Current/StInCh/Surr/Div" 16 1 0 100 100 "" integer any rw 1
+OK prminfo 44 "MIXER:Current/StInCh/Surr/Div" 16 1 0 100 100 "" integer any rw 1
 -- prminfo 45 "MIXER:Current/StInCh/Surr/LOn" 16 1 0 1 1 "" integer any rw 1
 -- prminfo 46 "MIXER:Current/StInCh/Surr/ROn" 16 1 0 1 1 "" integer any rw 1
 -- prminfo 47 "MIXER:Current/StInCh/Surr/COn" 16 1 0 1 1 "" integer any rw 1
@@ -196,7 +196,7 @@ OK prminfo 193 "MIXER:Current/Mix/Out/Balance" 24 1 -63 63 0 "" integer any rw 1
 -- prminfo 195 "MIXER:Current/InCh/Surr/LRPan" 72 1 -63 63 0 "" integer any rw 1
 -- prminfo 196 "MIXER:Current/InCh/Surr/FRPan" 72 1 -63 63 0 "" integer any rw 1
 -- prminfo 197 "MIXER:Current/InCh/Surr/FRPanRev" 72 1 -63 63 0 "" integer any rw 1
--- prminfo 198 "MIXER:Current/InCh/Surr/Div" 72 1 0 100 100 "" integer any rw 1
+OK prminfo 198 "MIXER:Current/InCh/Surr/Div" 72 1 0 100 100 "" integer any rw 1
 -- prminfo 199 "MIXER:Current/InCh/Surr/LOn" 72 1 0 1 1 "" integer any rw 1
 -- prminfo 200 "MIXER:Current/InCh/Surr/ROn" 72 1 0 1 1 "" integer any rw 1
 -- prminfo 201 "MIXER:Current/InCh/Surr/COn" 72 1 0 1 1 "" integer any rw 1
