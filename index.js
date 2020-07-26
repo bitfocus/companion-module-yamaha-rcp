@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio, using SCP communication
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Apr 13, 2020 Version 1.4.0 
+// Apr 13, 2020 Version 1.4.1 
 
 var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');

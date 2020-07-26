@@ -94,3 +94,5 @@ v1.3.5  Bug Fixes
 v1.3.6  Additional "My Channels"
 
 v1.4.0  Additional dropdowns for patch & Icons, Rebuild of feedback code (thank you Keith!)
+
+v1.4.1  Added "Div" commands
