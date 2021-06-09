@@ -6,7 +6,7 @@
 var tcp 			= require('../../tcp');
 var instance_skel 	= require('../../instance_skel');
 var scpNames 		= require('./scpNames.json');
-var upgrade			= require('./upgrade');
+var upgradeScripts	= require('./upgrade');
 
 const SCP_PARAMS 	= ['Ok', 'Command', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale'];
 const SCP_VALS 		= ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal'];
@@ -18,10 +18,6 @@ class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config);
 
-		Object.assign(this, {
-			...upgrade,
-		});
-		
 		this.scpCommands   = [];
 		this.nameCommands  = []; 	// Commands which have a name field
 		this.colorCommands = [];	// Commands which have a color field
@@ -31,9 +27,11 @@ class instance extends instance_skel {
 		this.macroCount    = 0;
 		this.dataStore     = {};
 
-		this.addUpgradeScripts();
 	}
 
+	static GetUpgradeScripts() {
+		return upgradeScripts
+	}
 
 	// Startup
 	init() {
