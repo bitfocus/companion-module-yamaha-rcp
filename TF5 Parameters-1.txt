@@ -47,17 +47,17 @@ OK prminfo 45 "MIXER:Current/FxRtnCh/ToMono/On" 4 1 0 1 1 "" integer any rw 1
 OK prminfo 46 "MIXER:Current/FxRtnCh/ToSt/Pan" 4 0 -63 63 0 "" integer any rw 1
 OK prminfo 47 "MIXER:Current/FxRtnCh/ToStereo/Pan" 4 0 -63 63 0 "" integer any rw 1
 OK prminfo 48 "MIXER:Current/DCA/Fader/Level" 8 0 -32768 1000 0 "dB" integer any rw 100
-OK prminfo 49 "MIXER:Current/DcaCh/Fader/Level" 8 0 -32768 1000 0 "dB" integer any rw 100
+-- prminfo 49 "MIXER:Current/DcaCh/Fader/Level" 8 0 -32768 1000 0 "dB" integer any rw 100
 OK prminfo 50 "MIXER:Current/DCA/Fader/On" 8 0 0 1 1 "" integer any rw 1
-OK prminfo 51 "MIXER:Current/DcaCh/Fader/On" 8 0 0 1 1 "" integer any rw 1
+-- prminfo 51 "MIXER:Current/DcaCh/Fader/On" 8 0 0 1 1 "" integer any rw 1
 OK prminfo 52 "MIXER:Current/DCA/Label/Color" 8 0 0 8 0 "" string any rw 1
-OK prminfo 53 "MIXER:Current/DcaCh/Label/Color" 8 0 0 8 0 "" string any rw 1
+-- prminfo 53 "MIXER:Current/DcaCh/Label/Color" 8 0 0 8 0 "" string any rw 1
 OK prminfo 54 "MIXER:Current/DCA/Label/Icon" 8 0 0 12 0 "" binary any rw 1
-OK prminfo 55 "MIXER:Current/DcaCh/Label/Icon" 8 0 0 12 0 "" binary any rw 1
+-- prminfo 55 "MIXER:Current/DcaCh/Label/Icon" 8 0 0 12 0 "" binary any rw 1
 OK prminfo 56 "MIXER:Current/DCA/Label/Category" 8 0 0 16 0 "" binary any rw 1
-OK prminfo 57 "MIXER:Current/DcaCh/Label/Category" 8 0 0 16 0 "" binary any rw 1
+-- prminfo 57 "MIXER:Current/DcaCh/Label/Category" 8 0 0 16 0 "" binary any rw 1
 OK prminfo 58 "MIXER:Current/DCA/Label/Name" 8 0 0 64 "DCA 1" "" string any rw 1
-OK prminfo 59 "MIXER:Current/DcaCh/Label/Name" 8 0 0 64 "DCA 1" "" string any rw 1
+-- prminfo 59 "MIXER:Current/DcaCh/Label/Name" 8 0 0 64 "DCA 1" "" string any rw 1
 OK prminfo 60 "MIXER:Current/Mix/Fader/Level" 20 0 -32768 1000 0 "dB" integer any rw 100
 OK prminfo 61 "MIXER:Current/Mix/Fader/On" 20 0 0 1 1 "" integer any rw 1
 OK prminfo 62 "MIXER:Current/Mix/Label/Color" 20 0 0 8 0 "" string any rw 1
