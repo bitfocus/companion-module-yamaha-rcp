@@ -1,0 +1,27 @@
+{
+	"name": "yamaha-rcp",
+	"legacy": [
+		"yamaha-scp"
+	],
+	"version": "1.6.2",
+	"api_version": "1.0.0",
+	"description": "Control module for Yamaha Pro Audio equipment via Yamaha Remote Control Protocol",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": ["Audio","Mixer","Yamaha","RCP"],
+	"manufacturer": "Yamaha",
+	"product": ["TF (RCP)","QL/CL (RCP)","Rivage (RCP)"],
+	"shortname": "yamaha-RCP",
+	"homepage": "https://github.com/bitfocus/companion-module-yamaha-rcp#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-yamaha-rcp.git"
+	},
+	"author": "Andrew Broughton <andy@checkcheckonetwo.com>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://discourse.checkcheckonetwo.com/c/software/stream-deck-companion/14"
+	}
+}
