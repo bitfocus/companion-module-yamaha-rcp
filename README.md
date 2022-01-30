@@ -15,13 +15,15 @@
 
 Many thanks to Jack Longden for starting this off and inspiring me to continue.
 
-Please visit http://www.checkcheckonetwo.com for help, discussions, suggestions, etc.
+Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
 *Andrew Broughton*
 
 ---
 
 **REVISION HISTORY**
+
+v1.6.3  Bug fix for Scene Recall
 
 v1.6.2  Initial support for Relative values
 

@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Sep 3, 2021 Version 1.6.2
+// Sep 3, 2021 Version 1.6.3
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -189,12 +189,11 @@ class instance extends instance_skel {
 							//console.log("Looking for: ", cmdToFind, " Found: ", foundCmd);
 
 							if (foundCmd !== undefined) {
+								this.addToDataStore({ rcp: foundCmd, cmd: receivedcmds[i] })
+								this.addMacro({ rcp: foundCmd, cmd: receivedcmds[i] })
+								this.checkFeedbacks()
 								if (foundCmd.Command == 'scninfo') {
 									this.pollrcp();
-								} else {
-									this.addToDataStore({ rcp: foundCmd, cmd: receivedcmds[i] })
-									this.addMacro({ rcp: foundCmd, cmd: receivedcmds[i] })
-									this.checkFeedbacks()
 								}
 							} else {
 								this.log('debug', `Unknown command received: '${receivedcmds[i].Address}'`)
@@ -754,7 +753,7 @@ class instance extends instance_skel {
 		let allFeedbacks = this.getAllFeedbacks()
 		for (let fb in allFeedbacks) {
 			let cmd = this.parseCmd('get', allFeedbacks[fb].type, allFeedbacks[fb].options)
-			if (cmd !== undefined && this.id == allFeedbacks[fb].instance_id) {
+			if (cmd !== undefined && (this.id == allFeedbacks[fb].instance_id) && !cmd.toLowerCase().includes("scene")) {
 				this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
 				this.socket.send(`${cmd}\n`)
 			}
