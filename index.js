@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Sep 3, 2021 Version 1.6.3
+// Feb 6, 2022 Version 1.6.3
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -577,6 +577,10 @@ class instance extends instance_skel {
 					cX++
 					cY++
 					cV = c.cmd.Val
+					break
+				case 'scene':
+					cX = parseInt(c.cmd.Val)
+
 			}
 
 			// Check for new value on existing action
@@ -704,9 +708,13 @@ class instance extends instance_skel {
 		let retOptions = {}
 
 		if (rcpCommand !== undefined) {
-			let optVal = options.Val == undefined ? options.X : options.Val
-			let optX = options.X > 0 ? options.X : this.config[`myCh${-options.X}`]
-			let optY = options.Y == undefined ? 1 : options.Y
+			let optVal = (options.Val == undefined) ? options.X : options.Val
+			let optX = (options.X > 0) ? options.X : this.config[`myCh${-options.X}`]
+			let optY = (options.Y == undefined) ? 1 : options.Y
+			if (feedback.type.toLowerCase().includes("scene")) {
+				optX = 1
+				optY = 1
+			}
 
 			//console.log(`\nFeedback: '${feedback.id}' from bank '${bank.text}' is ${feedback.type} (${rcpCommand.Address})`);
 			//console.log("options (raw)", options)
