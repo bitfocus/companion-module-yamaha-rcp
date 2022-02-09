@@ -133,7 +133,7 @@ module.exports = {
 	upg113to160: (context, config, actions, feedbacks) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('Running 1.1.3 -> 1.6.0 Upgrade.')
+		console.log('Running 1.1.3 -> 1.6.x Upgrade.')
 		var changed = false
 
 		if (config != null) {

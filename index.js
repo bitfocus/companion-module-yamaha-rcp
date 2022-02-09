@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Feb 6, 2022 Version 1.6.3
+// Feb 9, 2022 Version 1.6.4
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -519,8 +519,8 @@ class instance extends instance_skel {
 					optX = ''
 				}
 
-				if (this.config.model == 'CL/QL') {
-					cmdName = `${scnPrefix} ${cmdName}` // Recall Scene for CL/QL
+				if (this.config.model != 'TF') {
+					cmdName = `${scnPrefix} ${cmdName}` // Recall Scene for CL/QL & Rivage
 				} else {
 					cmdName = `${scnPrefix} ${cmdName}${opt.Y}` // Recall Scene for TF
 				}
