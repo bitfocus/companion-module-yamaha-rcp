@@ -1,4 +1,14 @@
 module.exports = {
+	makeChNames: (r) => {
+		for (let i = 1; i <= 288; i++) {
+            r["chNames"].push(
+                {"id": i, "label": `CH${i}`}
+            )
+        }
+        console.log(r.chNames)
+		return r.chNames
+	},
+
 	getParams: (instance, config) => {
 		const RCP_PARAMS = [
 			'Ok',
@@ -17,6 +27,7 @@ module.exports = {
 			'Scale',
 		]
 		var rcpNames = require('./rcpNames.json')
+		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
 		let fname = ''
 		let rcpCommands

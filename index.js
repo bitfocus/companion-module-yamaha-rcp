@@ -362,6 +362,15 @@ class instance extends instance_skel {
 						minChoicesForSearch: 0,
 						choices: rcpNames.chIcons,
 					}
+				} else if (rcpLabel == 'InCh/Patch') {
+					valParams = {
+						type: 'dropdown',
+						label: rcpLabels[rcpLabelIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.inChPatch,
+					}
 				} else if (rcpLabel == 'DanteOutPort/Patch') {
 					valParams = {
 						type: 'dropdown',
