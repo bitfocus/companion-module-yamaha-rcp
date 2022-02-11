@@ -1,11 +1,10 @@
 module.exports = {
 	makeChNames: (r) => {
 		for (let i = 1; i <= 288; i++) {
-            r["chNames"].push(
+            r.chNames.push(
                 {"id": i, "label": `CH${i}`}
             )
         }
-        console.log(r.chNames)
 		return r.chNames
 	},
 
