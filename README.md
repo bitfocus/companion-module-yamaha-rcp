@@ -23,6 +23,8 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 
 **REVISION HISTORY**
 
+v1.6.5  Yet another Bug fix for Scene Recall on Rivage
+
 v1.6.4  Bug fix for Scene Recall on Rivage (different issue)
 
 v1.6.3  Bug fix for Scene Recall

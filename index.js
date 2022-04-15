@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Feb 9, 2022 Version 1.6.4
+// Mar 8, 2022 Version 1.6.5
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -113,13 +113,12 @@ class instance extends instance_skel {
 		this.actions() // Re-do the actions once the console is chosen
 		this.presets()
 		this.init_tcp()
-
-		//console.log(this.config);
 	}
 
 	// Get info from a connected console
 	getConsoleInfo() {
 		this.socket.send(`devinfo productname\n`)
+		this.socket.send(`scpmode sstype "text"\n`)
 	}
 
 	// Initialize TCP
@@ -159,8 +158,6 @@ class instance extends instance_skel {
 				receivedLines = receivebuffer.split('\x0A') // Split by line break
 				if (receivedLines.length == 0) return // No messages
 
-				//console.log(`Incoming:\n${receivebuffer}`);
-
 				if (receivebuffer.slice(-1) != '\x0A') {
 					receivebuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
 					receivedLines.splice(receivedLines.length - 1) // Remove it.
@@ -168,13 +165,10 @@ class instance extends instance_skel {
 					receivebuffer = ''
 				}
 
-				//console.log(`Remaining: ${receivebuffer}`);
-
 				for (let line of receivedLines) {
 					if (line.length == 0) {
 						continue
 					}
-
 					this.log('debug', `Received: '${line}'`)
 
 					if (line.indexOf('OK devinfo productname') !== -1) {
@@ -182,21 +176,23 @@ class instance extends instance_skel {
 						this.log('info', `Device found: ${this.productName}`)
 					} else {
 						receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
-						//console.log(receivedcmds);
+
 						for (let i = 0; i < receivedcmds.length; i++) {
 							let cmdToFind = receivedcmds[i].Address
 							foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind.slice(0, cmd.Address.length)) // Find which command
-							//console.log("Looking for: ", cmdToFind, " Found: ", foundCmd);
 
 							if (foundCmd !== undefined) {
-								this.addToDataStore({ rcp: foundCmd, cmd: receivedcmds[i] })
+
+								let curCmd = JSON.parse(JSON.stringify(receivedcmds[i]))
+
+								this.addToDataStore({ rcp: foundCmd, cmd: curCmd })
 								this.addMacro({ rcp: foundCmd, cmd: receivedcmds[i] })
 								this.checkFeedbacks()
 								if (foundCmd.Command == 'scninfo') {
 									this.pollrcp();
 								}
 							} else {
-								this.log('debug', `Unknown command received: '${receivedcmds[i].Address}'`)
+								this.log('debug', `Unknown command: '${receivedcmds[i].Address}'`)
 							}
 						}
 					}
@@ -233,6 +229,16 @@ class instance extends instance_skel {
 						minChoicesForSearch: 0,
 						choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X) + 4),
 					},
+				]
+			} else if (this.config.model == 'PM' && rcpCmd.Type == 'scene') {
+				newAction.options = [
+					{
+						type: 'textinput',
+						label: rcpLabels[rcpLabelIdx],
+						id: 'X',
+						default: rcpCmd.Default,
+						regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/'
+					}
 				]
 			} else {
 				newAction.options = [
@@ -517,14 +523,17 @@ class instance extends instance_skel {
 				break
 
 			case 'scene':
+				if (this.config.model == 'PM') {
+					optX = `"${opt.X}"`
+				}
 				optY = ''
 				optVal = ''
 
 				if (prefix == 'set') {
-					scnPrefix = 'ssrecall_ex'
-					this.pollrcp() // so buttons with feedback reflect any changes
+					scnPrefix = (this.config.model == 'PM') ? 'ssrecallt_ex' : 'ssrecall_ex'
+					//this.pollrcp() // so buttons with feedback reflect any changes?
 				} else {
-					scnPrefix = 'sscurrent_ex'
+					scnPrefix = (this.config.model == 'PM') ? 'sscurrentt_ex' : 'sscurrent_ex'
 					optX = ''
 				}
 
@@ -588,8 +597,7 @@ class instance extends instance_skel {
 					cV = c.cmd.Val
 					break
 				case 'scene':
-					cX = parseInt(c.cmd.Val)
-
+					cX = (this.config.model == 'PM') ? c.cmd.X : parseInt(c.cmd.Val)
 			}
 
 			// Check for new value on existing action
@@ -649,8 +657,6 @@ class instance extends instance_skel {
 
 	// Handle the Actions
 	action(action, button) {
-		//console.log(action);
-
 		if (!action.action.startsWith('macro')) {
 			// Regular action
 			let cmd = this.parseCmd('set', action.action, action.options)
@@ -682,7 +688,6 @@ class instance extends instance_skel {
 							actions: [],
 						}
 					} else {
-						//console.log('Stopped.');
 						this.macroRec = false
 						if (this.macro.actions.length > 0) {
 							this.dropMacro(this.macro, button)
@@ -751,7 +756,6 @@ class instance extends instance_skel {
 
 			return false
 		}
-		//console.log(`macroMode: ${this.macroMode}, macroRec: ${this.macroRec}`);
 		if (feedback.type == 'macro' && this.macroRec) {
 			if (this.macroMode == 'latch') {
 				return { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 255, 0), text: 'REC' }
@@ -804,8 +808,6 @@ class instance extends instance_skel {
 			this.dataStore[dsAddr][iX] = {}
 		}
 		this.dataStore[dsAddr][iX][iY] = cmd.cmd.Val
-
-		//console.log(this.dataStore)
 	}
 }
 

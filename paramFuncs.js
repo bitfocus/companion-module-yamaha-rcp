@@ -28,6 +28,10 @@ module.exports = {
 		var rcpNames = require('./rcpNames.json')
 		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
+		console.log("\nYamaha-RCP: getParams: instance = ", instance, "\n")
+		instance.nameCommands = []
+		instance.colorCommands = []
+		
 		let fname = ''
 		let rcpCommands
 		const FS = require('fs')
@@ -44,6 +48,7 @@ module.exports = {
 		}
 
 		// Read the DataFile
+console.log("Yamaha-RCP: getParams: Getting parameters from file: ", fname)
 		if (fname !== '') {
 			let data = FS.readFileSync(`${__dirname}/${fname}`)
 			rcpCommands = module.exports.parseData(instance, data, RCP_PARAMS)
@@ -59,8 +64,6 @@ module.exports = {
 				rcpNames.chNames[i] = { id: `-${i + 1}`, label: config[`myChName${i + 1}`] }
 			}
 		}
-
-		//console.log('rcpCommands: ', rcpCommands)
 		return rcpCommands
 	},
 

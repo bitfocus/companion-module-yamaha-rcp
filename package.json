@@ -3,7 +3,7 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "1.6.4",
+	"version": "1.6.5",
 	"api_version": "1.0.0",
 	"description": "Control module for Yamaha Pro Audio equipment via Yamaha Remote Control Protocol",
 	"main": "index.js",

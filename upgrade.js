@@ -6,7 +6,7 @@ module.exports = {
 	// Upgrade  1.0.x > 1.1.0
 	upg111to112: (context, config, actions, feedbacks) => {
 		var changed = false
-		console.log('Running 1.1.1 -> 1.1.2 Upgrade.')
+		console.log('Yamaha-SCP: Running 1.1.1 -> 1.1.2 Upgrade.')
 
 		let checkUpgrade = (action, changed) => {
 			let newAction = ''
@@ -80,7 +80,7 @@ module.exports = {
 			}
 
 			if (newAction != '') {
-				console.log(`Action ${action.action} => scp_${newAction}`)
+				console.log(`Yamaha-SCP: Action ${action.action} => scp_${newAction}`)
 				action.action = 'scp_' + newAction
 				action.label = this.id + ':' + action.action
 				changed = true
@@ -98,7 +98,7 @@ module.exports = {
 
 	// Upgrade  1.1.2 > 1.1.3, adds "scp_" in front of action names (for no real reason...)
 	upg112to113: (context, config, actions, feedbacks) => {
-		console.log('Running 1.1.2 -> 1.1.3 Upgrade.')
+		console.log('Yamaha-SCP: Running 1.1.2 -> 1.1.3 Upgrade.')
 		var changed = false
 
 		let checkUpgrade = (action, changed) => {
@@ -109,7 +109,7 @@ module.exports = {
 			}
 
 			if (newAction != '') {
-				console.log(`Action ${action.action} => scp_${newAction}`)
+				console.log(`Yamaha-SCP: Action ${action.action} => scp_${newAction}`)
 				action.action = 'scp_' + newAction
 				action.label = this.id + ':' + action.action
 				changed = true
@@ -133,16 +133,16 @@ module.exports = {
 	upg113to160: (context, config, actions, feedbacks) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('Running 1.1.3 -> 1.6.x Upgrade.')
+		console.log('Yamaha-RCP: Running 1.1.3 -> 1.6.x Upgrade.')
 		var changed = false
 
 		if (config != null) {
-			console.log("\nGetting Parameters...")
-			console.log("paramFuncs:\n", paramFuncs)
-			console.log('\nconfig:\n', config)
-			console.log('\nthis:\n', this)
+			console.log("\nYamaha-RCP: Getting Parameters...")
+			console.log("Yamaha-RCP: paramFuncs:\n", paramFuncs)
+			console.log('\nYamaha-RCP: config:\n', config)
+			console.log('\nYamaha-RCP: this:\n', this)
 			var rcpCommands = paramFuncs.getParams(this, config)
-			console.log('rcpCommands: ', rcpCommands)
+			console.log('Yamaha-RCP: rcpCommands: ', rcpCommands)
 		}
 
 		let checkUpgrade = (action, isAction, changed) => {
@@ -155,24 +155,24 @@ module.exports = {
 
 				if (newAction !== undefined) {
 					newName = newAction.Address.replace(/:/g, '_')
-					console.log(`Action ${name} => ${newName}`)
+					console.log(`Yamaha-RCP: Action ${name} => ${newName}`)
 					isAction ? (action.action = newName) : (action.type = newName)
 					action.label = this.id + ':' + newName
 					changed = true
 				} else {
-					console.log(`Action ${name} not found in list!`)
+					console.log(`Yamaha-RCP: Action ${name} not found in list!`)
 				}
-			}
+			}c
 			return changed
 		}
 
 		for (let k in actions) {
-			console.log('Checking actions...')
+			console.log('\nYamaha-RCP: Checking actions...')
 			changed = checkUpgrade(actions[k], true, changed)
 		}
 
 		for (let k in feedbacks) {
-			console.log('Checking feedbacks...')
+			console.log('\nYamaha-RCP: Checking feedbacks...')
 			changed = checkUpgrade(feedbacks[k], false, changed)
 		}
 
