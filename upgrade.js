@@ -162,17 +162,18 @@ module.exports = {
 				} else {
 					console.log(`Yamaha-RCP: Action ${name} not found in list!`)
 				}
-			}c
+			}
 			return changed
 		}
 
+		console.log('\nYamaha-RCP: Checking actions...')
 		for (let k in actions) {
-			console.log('\nYamaha-RCP: Checking actions...')
+			console.log("checking action ", k, "\n", actions[k])
 			changed = checkUpgrade(actions[k], true, changed)
 		}
 
+		console.log('\nYamaha-RCP: Checking feedbacks...')
 		for (let k in feedbacks) {
-			console.log('\nYamaha-RCP: Checking feedbacks...')
 			changed = checkUpgrade(feedbacks[k], false, changed)
 		}
 
