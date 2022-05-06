@@ -138,11 +138,7 @@ module.exports = {
 
 		if (config != null) {
 			console.log("\nYamaha-RCP: Getting Parameters...")
-			console.log("Yamaha-RCP: paramFuncs:\n", paramFuncs)
-			console.log('\nYamaha-RCP: config:\n', config)
-			console.log('\nYamaha-RCP: this:\n', this)
 			var rcpCommands = paramFuncs.getParams(this, config)
-			console.log('Yamaha-RCP: rcpCommands: ', rcpCommands)
 		}
 
 		let checkUpgrade = (action, isAction, changed) => {
@@ -168,7 +164,6 @@ module.exports = {
 
 		console.log('\nYamaha-RCP: Checking actions...')
 		for (let k in actions) {
-			console.log("checking action ", k, "\n", actions[k])
 			changed = checkUpgrade(actions[k], true, changed)
 		}
 
