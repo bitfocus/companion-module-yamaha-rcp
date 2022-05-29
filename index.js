@@ -319,8 +319,6 @@ class instance extends instance_skel {
 						],
 					}
 				} else {
-					// Change back to valParams = {} if relative doesn't work out!
-					// valParams = {
 					newAction.options.push({
 						type: 'number',
 						label: rcpLabels[rcpLabelIdx],
@@ -330,6 +328,7 @@ class instance extends instance_skel {
 						default: parseInt(rcpCmd.Default),
 						required: true,
 						range: false,
+						allowExpression: true
 					})
 					valParams = {
 						type: 'checkbox',
