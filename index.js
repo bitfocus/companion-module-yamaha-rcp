@@ -319,8 +319,6 @@ class instance extends instance_skel {
 						],
 					}
 				} else {
-					// Change back to valParams = {} if relative doesn't work out!
-					// valParams = {
 					newAction.options.push({
 						type: 'number',
 						label: rcpLabels[rcpLabelIdx],
@@ -330,6 +328,7 @@ class instance extends instance_skel {
 						default: parseInt(rcpCmd.Default),
 						required: true,
 						range: false,
+						allowExpression: true
 					})
 					valParams = {
 						type: 'checkbox',
@@ -518,6 +517,9 @@ class instance extends instance_skel {
 
 			case 'string':
 				cmdName = `${prefix} ${cmdName}`
+				this.parseVariables(opt.Val, (value) => {
+					opt.Val = value
+				})
 				optVal = (prefix == 'set') ? `"${opt.Val}"` : '' // quotes around the string
 				optX-- // ch #'s are 1 higher than the parameter except with Custom Banks
 				break

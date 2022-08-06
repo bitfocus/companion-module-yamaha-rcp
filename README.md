@@ -6,14 +6,12 @@
 * CL1/3/5
 * QL1/5
 * TF1/3/5
-* TF-Rack (TF Firmware V3.0 or Later)
+* TF-Rack
 
 **Available commands**
 
 * Selected "set" commands
 * Recall Scenes
-
-Many thanks to Jack Longden for starting this off and inspiring me to continue.
 
 Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
@@ -22,6 +20,8 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 ---
 
 **REVISION HISTORY**
+
+v1.6.6  Support for Variables (values only so far)
 
 v1.6.5  Yet another Bug fix for Scene Recall on Rivage
 
