@@ -21,6 +21,8 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 
 **REVISION HISTORY**
 
+v1.6.7  No more need for "My Channel" now that there's custom variables!
+
 v1.6.6  Support for Variables (values only so far)
 
 v1.6.5  Yet another Bug fix for Scene Recall on Rivage

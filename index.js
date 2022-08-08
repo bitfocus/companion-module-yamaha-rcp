@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Jack Longden <Jack@atov.co.uk> 2019
 // updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Mar 8, 2022 Version 1.6.5
+// Mar 8, 2022 Version 1.6.6
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -49,7 +49,7 @@ class instance extends instance_skel {
 		this.log('debug', `destroyed ${this.id}`)
 	}
 
-	// Web config fields
+	// Web UI config fields
 	config_fields() {
 		let fields = [
 			{
@@ -73,27 +73,7 @@ class instance extends instance_skel {
 				],
 			},
 		]
-		for (let i = 1; i <= 4; i++) {
-			fields.push(
-				{
-					type: 'textinput',
-					id: `myChName${i}`,
-					label: `My Channel #${i} Name`,
-					width: 6,
-					default: `My Channel ${i}`,
-				},
-				{
-					type: 'number',
-					id: `myCh${i}`,
-					label: `Channel #${i}`,
-					width: 2,
-					min: 1,
-					max: 72,
-					default: 1,
-					required: false,
-				}
-			)
-		}
+
 		return fields
 	}
 
@@ -179,7 +159,8 @@ class instance extends instance_skel {
 
 						for (let i = 0; i < receivedcmds.length; i++) {
 							let cmdToFind = receivedcmds[i].Address
-							foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind.slice(0, cmd.Address.length)) // Find which command
+							//foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind.slice(0, cmd.Address.length)) // Find which command
+							foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
 
 							if (foundCmd !== undefined) {
 
@@ -227,7 +208,7 @@ class instance extends instance_skel {
 						id: 'X',
 						default: 1,
 						minChoicesForSearch: 0,
-						choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X) + 4),
+						choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X)),
 					},
 				]
 			} else if (this.config.model == 'PM' && rcpCmd.Type == 'scene') {
@@ -482,7 +463,7 @@ class instance extends instance_skel {
 		if (rcpCmd == undefined || opt == undefined || rcpCmd == 'macro') return
 
 		let scnPrefix = ''
-		let optX = opt.X === undefined ? 1 : opt.X > 0 ? opt.X : this.config[`myCh${-opt.X}`]
+		let optX = opt.X === undefined ? 1 : opt.X
 		let optY = opt.Y === undefined ? 0 : opt.Y - 1
 		let optVal
 		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == rcpCmd)
@@ -505,9 +486,17 @@ class instance extends instance_skel {
 						}
 					} else {
 						optVal = opt.Val
+
 						if (opt.Rel != undefined && opt.Rel == true) {
 							if (this.dataStore[rcpCmd] !== undefined && this.dataStore[rcpCmd][optX] !== undefined) {
-								optVal = parseInt(this.dataStore[rcpCmd][optX][optY + 1]) + optVal
+								let curVal = parseInt(this.dataStore[rcpCmd][optX][optY + 1])
+								// Handle bottom of range
+								if (curVal == -32768 && optVal > 0) {
+									curVal = -9600
+								} else if (curVal == -9600 && optVal < 0) {
+									curVal = -32768
+								}
+								optVal = curVal + optVal
 							}
 						}
 					}
@@ -662,6 +651,7 @@ class instance extends instance_skel {
 		if (!action.action.startsWith('macro')) {
 			// Regular action
 			let cmd = this.parseCmd('set', action.action, action.options)
+
 			if (cmd !== undefined) {
 				this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
 				if (this.socket !== undefined && this.socket.connected) {
