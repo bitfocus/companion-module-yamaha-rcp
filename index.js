@@ -715,7 +715,7 @@ class instance extends instance_skel {
 
 		if (rcpCommand !== undefined) {
 			let optVal = (options.Val == undefined) ? options.X : options.Val
-			let optX = (options.X > 0) ? options.X : this.config[`myCh${-options.X}`]
+			let optX = options.X
 			let optY = (options.Y == undefined) ? 1 : options.Y
 			if (feedback.type.toLowerCase().includes("scene")) {
 				optX = 1
