@@ -29,7 +29,7 @@ class instance extends instance_skel {
 		this.dataStore = {}
 	}
 
-	static DEVELOPER_forceStartupUpgradeScript = 1
+	//static DEVELOPER_forceStartupUpgradeScript = 1
 
 	static GetUpgradeScripts() {
 		return [upgrade.upg111to112, upgrade.upg112to113, upgrade.upg113to160]
