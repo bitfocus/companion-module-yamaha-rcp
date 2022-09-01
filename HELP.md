@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol - v1.6.6
+## Yamaha Remote Control Protocol - v1.6.7
 
 Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
@@ -7,10 +7,6 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 ---
 
 **Instructions**
-
-**"MY CHANNEL"**
-
->This setting (in the settings tab - click Edit on the instance tab) allows you to select a channel that will be updated in any actions that choose "My Channel" as the channel number instead of CH 1 CH 2 etc. Using this means that you can create a layout that can have a specific channel on many buttons that can be changed at any time. Useful when things move around from show to show, and then you don't have to change settings on a bunch of buttons.
 
 **MACROS** ("Learn" Function)
 

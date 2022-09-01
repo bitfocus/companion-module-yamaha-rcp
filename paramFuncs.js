@@ -58,10 +58,6 @@ module.exports = {
 				let bcmd = b.Address.slice(b.Address.indexOf('/') + 1)
 				return acmd.toLowerCase().localeCompare(bcmd.toLowerCase())
 			})
-
-			for (let i = 0; i < 4; i++) {
-				rcpNames.chNames[i] = { id: `-${i + 1}`, label: config[`myChName${i + 1}`] }
-			}
 		}
 		return rcpCommands
 	},
@@ -76,7 +72,7 @@ module.exports = {
 			// but it basically pulls out the space-separated values, except for spaces that are inside quotes!
 			line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 
-			if (line !== null && ['OK', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
+			if (line !== null && ['OK', 'OKm', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
 				let rcpCommand = {}
 
 				for (var j = 0; j < line.length; j++) {
