@@ -25,6 +25,7 @@ class instance extends instance_skel {
 		this.macroRec = false
 		this.macroCount = 0
 		this.macroMode = 'latch'
+		this.feedbackId = ''
 		this.macro = {}
 		this.dataStore = {}
 	}
@@ -558,7 +559,7 @@ class instance extends instance_skel {
 				release_actions: [{ action: 'macroUnLatch' }],
 				feedbacks: [
 					{ type: 'macro', options: { mode: 'r', fg: this.rgb(0, 0, 0), bg: this.rgb(255, 0, 0) } },
-					{ type: 'macro', options: { mode: 'rl', fg: this.rgb(0, 0, 0), bg: this.rgb(255, 255, 0) } }, //,
+					{ type: 'macro', options: { mode: 'rl', fg: this.rgb(0, 0, 0), bg: this.rgb(255, 255, 0) } },
 				],
 			},
 		]
@@ -648,6 +649,7 @@ class instance extends instance_skel {
 
 	// Handle the Actions
 	action(action, button) {
+
 		if (!action.action.startsWith('macro')) {
 			// Regular action
 			let cmd = this.parseCmd('set', action.action, action.options)
@@ -668,6 +670,7 @@ class instance extends instance_skel {
 						this.macroRec = true
 						this.macroMode = ''
 						this.macroCount++
+						this.feedbackId = feedbacks[button.page][button.bank][0].id
 						this.macro = {
 							label: `Macro ${this.macroCount}`,
 							bank: {
@@ -748,7 +751,7 @@ class instance extends instance_skel {
 
 			return false
 		}
-		if (feedback.type == 'macro' && this.macroRec) {
+		if (feedback.type == 'macro' && feedback.id == this.feedbackId && this.macroRec) {
 			if (this.macroMode == 'latch') {
 				return { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 255, 0), text: 'REC' }
 			} else {
