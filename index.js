@@ -508,9 +508,9 @@ class instance extends instance_skel {
 			case 'string':
 				cmdName = `${prefix} ${cmdName}`
 				this.parseVariables(opt.Val, (value) => {
-					opt.Val = value
+					let optVal = value
 				})
-				optVal = (prefix == 'set') ? `"${opt.Val}"` : '' // quotes around the string
+				optVal = (prefix == 'set') ? `"${optVal}"` : '' // quotes around the string
 				optX-- // ch #'s are 1 higher than the parameter except with Custom Banks
 				break
 
