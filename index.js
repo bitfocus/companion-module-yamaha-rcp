@@ -508,9 +508,8 @@ class instance extends instance_skel {
 			case 'string':
 				cmdName = `${prefix} ${cmdName}`
 				this.parseVariables(opt.Val, (value) => {
-					opt.Val = value
+					optVal = (prefix == 'set') ? `"${value}"` : '' // quotes around the string
 				})
-				optVal = (prefix == 'set') ? `"${opt.Val}"` : '' // quotes around the string
 				optX-- // ch #'s are 1 higher than the parameter except with Custom Banks
 				break
 
@@ -725,9 +724,9 @@ class instance extends instance_skel {
 				optY = 1
 			}
 
-			//console.log(`\nFeedback: '${feedback.id}' from bank '${bank.text}' is ${feedback.type} (${rcpCommand.Address})`);
-			//console.log("options (raw)", options)
-			//console.log(`X: ${optX}, Y: ${optY}, Val: ${optVal}`);
+//console.log(`\nFeedback: '${feedback.id}' from bank '${bank.text}' is ${feedback.type} (${rcpCommand.Address})`);
+//console.log("options (raw)", options)
+//console.log(`X: ${optX}, Y: ${optY}, Val: ${optVal}`);
 
 			if (this.dataStore[feedback.type] !== undefined && this.dataStore[feedback.type][optX] !== undefined) {
 				if (this.dataStore[feedback.type][optX][optY] == optVal) {
