@@ -30,6 +30,7 @@ module.exports = {
 
 		instance.nameCommands = []
 		instance.colorCommands = []
+		instance.levelCommands = []
 		
 		let fname = ''
 		let rcpCommands
@@ -88,6 +89,9 @@ module.exports = {
 							break
 						case 'olor':
 							instance.colorCommands.push(rcpCommand.Address.replace(/:/g, '_'))
+							break
+						case 'evel':
+							instance.levelCommands.push(rcpCommand.Address.replace(/:/g, '_'))
 					}
 				}
 			}

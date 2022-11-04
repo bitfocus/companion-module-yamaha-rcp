@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol
+## Yamaha Remote Control Protocol v1.7.1
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -20,6 +20,10 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 ---
 
 **REVISION HISTORY**
+
+v1.7.1  Bug fixes for custom variable handling
+
+v1.7.0  Add the ability to set custom variables via Feedback
 
 v1.6.7  No more need for "My Channel" now that there's custom variables!
 

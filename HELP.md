@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol - v1.6.7
+## Yamaha Remote Control Protocol - v1.7.1
 
 Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
@@ -18,4 +18,7 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 
 **DYNAMIC CHANNEL PARAMETERS**
 
->If you add name or color feedback for a button, (e.g. InCh/Label/Name or DCA/Label/Color), the module will pull the name or color from the matching channel and change the button text or color accordingly.
+>If you add color feedback for a button, (e.g. InCh/Label/Color or DCA/Label/Color), the module will pull the color from the matching channel and change the button text or color accordingly.
+
+**SET CUSTOM VARIABLES FROM FEEDBACK**
+>In feedback, put a variable in for a value with the "@" sign instead of the "$" sign to set that variable to the current value. e.g. use @(internal:custom_MyLevel1) in the value field for InCh/Fader/Level Ch1 and the custom variable MyLevel1 will have the current value of Ch 1's fader.

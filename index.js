@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Originally by Jack Longden <Jack@atov.co.uk> 2019
 // Updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Current version as of Aug 8, 2022 is Version 1.6.7
+// Current version as of Oct 28, 2022 is Version 1.7.1
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
@@ -99,7 +99,9 @@ class instance extends instance_skel {
 	// Get info from a connected console
 	getConsoleInfo() {
 		this.socket.send(`devinfo productname\n`)
-		this.socket.send(`scpmode sstype "text"\n`)
+		if (this.config.model == 'PM') {
+			this.socket.send(`scpmode sstype "text"\n`)
+		}
 	}
 
 	// Initialize TCP
@@ -210,6 +212,7 @@ class instance extends instance_skel {
 						default: 1,
 						minChoicesForSearch: 0,
 						choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X)),
+						allowCustom: true
 					},
 				]
 			} else if (this.config.model == 'PM' && rcpCmd.Type == 'scene') {
@@ -408,8 +411,8 @@ class instance extends instance_skel {
 			commands[rcpAction] = this.createAction(command)
 			feedbacks[rcpAction] = JSON.parse(JSON.stringify(commands[rcpAction])) // Clone the Action to a matching feedback
 
-			if (this.nameCommands.includes(rcpAction) || this.colorCommands.includes(rcpAction)) {
-				feedbacks[rcpAction].type = 'advanced' // New feedback style
+			if (this.colorCommands.includes(rcpAction)) {
+				feedbacks[rcpAction].type = 'advanced' // Old feedback style
 				feedbacks[rcpAction].options.pop()
 			} else {
 				feedbacks[rcpAction].type = 'boolean' // New feedback style
@@ -464,7 +467,10 @@ class instance extends instance_skel {
 		if (rcpCmd == undefined || opt == undefined || rcpCmd == 'macro') return
 
 		let scnPrefix = ''
-		let optX = opt.X === undefined ? 1 : opt.X
+		let optX
+		this.parseVariables(opt.X, (value) => {
+			optX = opt.X === undefined ? 1 : value
+		})
 		let optY = opt.Y === undefined ? 0 : opt.Y - 1
 		let optVal
 		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == rcpCmd)
@@ -631,7 +637,7 @@ class instance extends instance_skel {
 
 			let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == preset.actions[i].action)
 			
-			if (this.nameCommands.includes(rcpCommand.Address.replace(/:/g, '_')) || this.colorCommands.includes(rcpCommand.Address.replace(/:/g, '_'))) {
+			if (this.colorCommands.includes(rcpCommand.Address.replace(/:/g, '_'))) {
 				preset.feedbacks[i].options.Val = undefined
 			}
 
@@ -716,33 +722,50 @@ class instance extends instance_skel {
 		let retOptions = {}
 
 		if (rcpCommand !== undefined) {
-			let optVal = (options.Val == undefined) ? options.X : options.Val
-			let optX = options.X
+			let optX
+			this.parseVariables(options.X, (value) => {
+				optX = value
+			})
+
 			let optY = (options.Y == undefined) ? 1 : options.Y
+
 			if (feedback.type.toLowerCase().includes("scene")) {
 				optX = 1
 				optY = 1
 			}
+			let optVal
+			this.parseVariables(options.Val, (value) => {
+				optVal = options.Val === undefined ? options.X : value
+			})
 
 //console.log(`\nFeedback: '${feedback.id}' from bank '${bank.text}' is ${feedback.type} (${rcpCommand.Address})`);
 //console.log("options (raw)", options)
 //console.log(`X: ${optX}, Y: ${optY}, Val: ${optVal}`);
 
 			if (this.dataStore[feedback.type] !== undefined && this.dataStore[feedback.type][optX] !== undefined) {
-				if (this.dataStore[feedback.type][optX][optY] == optVal) {
+				let data = this.dataStore[feedback.type][optX][optY]
+				if (this.levelCommands.includes(feedback.type)) {
+					data = (data > -32768) ? (data / 100).toFixed(2) : "-inf"
+				}
+				if (data == optVal) {
 					//console.log('  *** Match ***');
 					return true
 				} else {
+					const reg = /\@\(([^:$)]+):custom_([^)$]+)\)/
+					let matches = reg.exec(optVal)
+					if (matches) {
+						let data = this.dataStore[feedback.type][optX][optY]
+						if (this.levelCommands.includes(feedback.type)) {
+							data = (data > -32768) ? (data / 100).toFixed(2) : "-inf"
+						}
+						this.system.emit('custom_variable_set_value', matches[2], data)
+					}
+					
 					if (this.colorCommands.includes(feedback.type)) {
 						let c = rcpNames.chColorRGB[this.dataStore[feedback.type][optX][optY]]
 						retOptions.color = c.color
 						retOptions.bgcolor = c.bgcolor
 						//console.log(`  *** Match *** (Color) ${JSON.stringify(retOptions)}\n`);
-						return retOptions
-					}
-					if (this.nameCommands.includes(feedback.type)) {
-						retOptions.text = this.dataStore[feedback.type][optX][optY]
-						//console.log(`  *** Match *** (Text) ${JSON.stringify(retOptions)}\n`);
 						return retOptions
 					}
 				}
