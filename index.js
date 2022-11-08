@@ -390,7 +390,10 @@ class instance extends instance_skel {
 				}
 				break
 			default:
-				return newAction
+				if (newAction.options.length == 1) {
+					newAction.options[0].allowExpression = true
+				}
+				return newAction // scene or other single-parameter action
 		}
 
 		newAction.options.push(valParams)

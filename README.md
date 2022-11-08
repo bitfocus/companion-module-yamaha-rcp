@@ -21,7 +21,7 @@ Please visit http://discourse.checkcheckonetwo.com for help, discussions, sugges
 
 **REVISION HISTORY**
 
-v1.7.1  Bug fixes for custom variable handling
+v1.7.1  Bug fixes for custom variable handling & add ability to set variable for Scene #
 
 v1.7.0  Add the ability to set custom variables via Feedback
 
