@@ -1,7 +1,7 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Originally by Jack Longden <Jack@atov.co.uk> 2019
 // Updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Current version as of Oct 28, 2022 is Version 1.7.1
+// Current version as of Dec 4, 2022 is Version 1.7.2
 
 var tcp = require('../../tcp')
 var instance_skel = require('../../instance_skel')
