@@ -150,7 +150,7 @@ module.exports = {
 				newAction = rcpCommands.find((i) => i.Index == name.slice(4))
 
 				if (newAction !== undefined) {
-					newName = newAction.Address.replace(/:/g, '_')
+					newName = newAction.Address
 					console.log(`Yamaha-RCP: Action ${name} => ${newName}`)
 					isAction ? (action.action = newName) : (action.type = newName)
 					action.label = this.id + ':' + newName

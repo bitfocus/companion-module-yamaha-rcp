@@ -1,47 +1,50 @@
 // Control module for Yamaha Pro Audio digital mixers
-// Jack Longden <Jack@atov.co.uk> 2019
-// updated by Andrew Broughton <andy@checkcheckonetwo.com>
-// Mar 8, 2022 Version 1.6.6
+// Andrew Broughton <andy@checkcheckonetwo.com>
+// Aug 9, 2022 Version 2.0.0 (v3)
 
-var tcp = require('../../tcp')
-var instance_skel = require('../../instance_skel')
-var shortid = require('shortid')
-var rcpNames = require('./rcpNames.json')
-var upgrade = require('./upgrade')
-var paramFuncs = require('./paramFuncs')
+const { InstanceBase, Regex, runEntrypoint, shortid, combineRgb, TCPHelper } = require('@companion-module/base')
+
+const upgrade = require('./upgrade')
+const rcpNames = require('./rcpNames.json')
+const paramFuncs = require('./paramFuncs')
 
 const RCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal']
 
 // Instance Setup
-class instance extends instance_skel {
-	constructor(system, id, config) {
-		super(system, id, config)
-
-		this.rcpCommands = []
-		this.nameCommands = [] // Commands which have a name field
-		this.colorCommands = [] // Commands which have a color field
-		this.rcpPresets = []
-		this.productName = ''
-		this.macroRec = false
-		this.macroCount = 0
-		this.macroMode = 'latch'
-		this.macro = {}
-		this.dataStore = {}
-	}
-
-	static DEVELOPER_forceStartupUpgradeScript = 1
-
-	static GetUpgradeScripts() {
-		return [upgrade.upg111to112, upgrade.upg112to113, upgrade.upg113to160]
+class instance extends InstanceBase {
+	constructor(internal) {
+		super(internal)
+		console.log("Finished constructor!")
 	}
 
 	// Startup
-	init() {
-		this.updateConfig(this.config)
+	async init(config) {
+		this.updateStatus("Starting")
+		this.config = config
+		this.rcpCommands = []
+		this.colorCommands = [] // Commands which have a color field
+		this.levelCommands = [] // Commands that set a level
+//		this.rcpPresets = []
+		this.productName = ''
+		this.dataStore = {}
+
+		console.log("this: ", this)
+		this.newConsole()
+		console.log("Finished init!")
+	}
+
+	// Change in Configuration
+	async configUpdated(config) {
+		this.config = config
+		console.log("config: ", this.config)
+		if (this.config.model) {
+			this.newConsole()
+		}
+		console.log("Finished configUpdated!")
 	}
 
 	// Module deletion
-	destroy() {
+	async destroy() {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
@@ -50,15 +53,16 @@ class instance extends instance_skel {
 	}
 
 	// Web UI config fields
-	config_fields() {
-		let fields = [
+	getConfigFields() {
+		console.log("Running getConfigFields()")
+		return [
 			{
 				type: 'textinput',
 				id: 'host',
 				label: 'IP Address of Console',
 				width: 6,
 				default: '192.168.0.128',
-				regex: this.REGEX_IP,
+				regex: Regex.IP
 			},
 			{
 				type: 'dropdown',
@@ -69,40 +73,33 @@ class instance extends instance_skel {
 				choices: [
 					{ id: 'CL/QL', label: 'CL/QL Console' },
 					{ id: 'TF', label: 'TF Console' },
-					{ id: 'PM', label: 'Rivage Console' },
-				],
-			},
+					{ id: 'PM', label: 'Rivage Console' }
+				]
+			}
 		]
-
-		return fields
-	}
-
-	// Change in Configuration
-	updateConfig(config) {
-		this.config = config
-		if (this.config.model) {
-			this.rcpCommands = paramFuncs.getParams(this, config)
-			this.newConsole()
-		}
 	}
 
 	// Whenever the console type changes, update the info
 	newConsole() {
-		this.log('info', `Device model= ${this.config.model}`)
+		this.log('info', `Console selected: ${this.config.model}`)
+		this.rcpCommands = paramFuncs.getParams(this, this.config)
 
-		this.actions() // Re-do the actions once the console is chosen
-		this.presets()
-		this.init_tcp()
+		this.updateActions() 	// Re-do the actions once the console is chosen
+		//this.createPresets()
+		this.initTCP()
+		console.log("Finished newConsole!")
 	}
 
 	// Get info from a connected console
 	getConsoleInfo() {
 		this.socket.send(`devinfo productname\n`)
-		this.socket.send(`scpmode sstype "text"\n`)
+		if (this.config.model == 'PM') {
+			this.socket.send(`scpmode sstype "text"\n`)
+		}
 	}
 
 	// Initialize TCP
-	init_tcp() {
+	initTCP() {
 		let receivebuffer = ''
 		let receivedLines = []
 		let receivedcmds = []
@@ -114,19 +111,19 @@ class instance extends instance_skel {
 		}
 
 		if (this.config.host) {
-			this.socket = new tcp(this.config.host, 49280)
+			this.socket = new TCPHelper(this.config.host, 49280)
 
 			this.socket.on('status_change', (status, message) => {
-				this.status(status, message)
+				this.updateStatus(status, message)
 			})
 
 			this.socket.on('error', (err) => {
-				this.status(this.STATUS_ERROR, err)
+				this.updateStatus('connection_failure', err)
 				this.log('error', `Network error: ${err.message}`)
 			})
 
 			this.socket.on('connect', () => {
-				this.status(this.STATUS_OK)
+				this.updateStatus('ok')
 				this.log('info', `Connected!`)
 				this.getConsoleInfo()
 				this.pollrcp()
@@ -159,7 +156,6 @@ class instance extends instance_skel {
 
 						for (let i = 0; i < receivedcmds.length; i++) {
 							let cmdToFind = receivedcmds[i].Address
-							//foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind.slice(0, cmd.Address.length)) // Find which command
 							foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
 
 							if (foundCmd !== undefined) {
@@ -167,8 +163,9 @@ class instance extends instance_skel {
 								let curCmd = JSON.parse(JSON.stringify(receivedcmds[i]))
 
 								this.addToDataStore({ rcp: foundCmd, cmd: curCmd })
-								this.addMacro({ rcp: foundCmd, cmd: receivedcmds[i] })
+								
 								this.checkFeedbacks()
+								
 								if (foundCmd.Command == 'scninfo') {
 									this.pollrcp();
 								}
@@ -180,6 +177,15 @@ class instance extends instance_skel {
 				}
 			})
 		}
+	}
+
+	handleStartStopRecordActions(isRecording) {
+		// Track whether actions are being recorded
+		// Other modules may need to start/stop some real work here to be fed appropriate data from a device/library
+		this.isRecordingActions = isRecording
+
+		console.log("Recording: ", this.isRecordingActions)
+
 	}
 
 	// Create single Action/Feedback
@@ -198,7 +204,7 @@ class instance extends instance_skel {
 		let rcpLabels = rcpLabel.split('/')
 		let rcpLabelIdx = rcpLabel.startsWith('Cue') ? 1 : 0
 
-		newAction = { label: rcpLabel, options: [] }
+		newAction = { name: rcpLabel, options: [] }
 		if (rcpCmd.X > 1) {
 			if (rcpLabel.startsWith('InCh') || rcpLabel.startsWith('Cue/InCh')) {
 				newAction.options = [
@@ -209,6 +215,7 @@ class instance extends instance_skel {
 						default: 1,
 						minChoicesForSearch: 0,
 						choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X)),
+						allowCustom: true
 					},
 				]
 			} else if (this.config.model == 'PM' && rcpCmd.Type == 'scene') {
@@ -272,12 +279,13 @@ class instance extends instance_skel {
 
 		switch (rcpCmd.Type) {
 			case 'integer':
-				newAction.subscribe = (action) => {
- 					let req = this.parseCmd('get', action.action, action.options)
+				newAction.subscribe = async (action) => {
+ 					let req = await this.parseCmd('get', action.actionId, action.options)
+					req = req.replace("MIXER_", "MIXER:")
 					if (req !== undefined) {
 						this.log('debug', `Sending : '${req}' to ${this.config.host}`)
 		
-						if (this.socket !== undefined && this.socket.connected) {
+						if (this.socket !== undefined && this.socket.isConnected) {
 							this.socket.send(`${req}\n`) // get current param
 						} else {
 							this.log('info', 'Socket not connected :(')
@@ -385,16 +393,45 @@ class instance extends instance_skel {
 					}
 				}
 				break
+
 			default:
+				newAction.callback = async(event) => {
+					let cmd = this.parseCmd('set', event.actionId, event.options).replace("MIXER_", "MIXER:")
+		
+					if (cmd !== undefined) {
+						this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
+						if (this.socket !== undefined && this.socket.isConnected) {
+							this.socket.send(`${cmd}\n`) // send it, but add a CR to the end
+						} else {
+							this.log('info', 'Socket not connected :(')
+						}
+					}
+				}
 				return newAction
 		}
 
 		newAction.options.push(valParams)
+		
+		newAction.callback = async(event) => {
+
+			console.log("Action callback event: ", event)
+			let cmd = this.parseCmd('set', event.actionId, event.options).replace("MIXER_", "MIXER:")
+			console.log("Action Found cmd: ", cmd)
+
+			if (cmd !== undefined) {
+				this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
+				if (this.socket !== undefined && this.socket.isConnected) {
+					this.socket.send(`${cmd}\n`) // send it, but add a CR to the end
+				} else {
+					this.log('info', 'Socket not connected :(')
+				}
+			}
+		}
 		return newAction
 	}
 
 	// Create the Actions & Feedbacks
-	actions(system) {
+	updateActions(system) {
 		let commands = {}
 		let feedbacks = {}
 		let command = {}
@@ -402,71 +439,142 @@ class instance extends instance_skel {
 
 		for (let i = 0; i < this.rcpCommands.length; i++) {
 			command = this.rcpCommands[i]
-			rcpAction = command.Address.replace(/:/g, '_')
+			rcpAction = command.Address
 
 			commands[rcpAction] = this.createAction(command)
-			feedbacks[rcpAction] = JSON.parse(JSON.stringify(commands[rcpAction])) // Clone the Action to a matching feedback
+			feedbacks[rcpAction] = this.createFeedbackFromAction(commands[rcpAction])
 
-			if (this.nameCommands.includes(rcpAction) || this.colorCommands.includes(rcpAction)) {
-				feedbacks[rcpAction].type = 'advanced' // New feedback style
-				feedbacks[rcpAction].options.pop()
-			} else {
-				feedbacks[rcpAction].type = 'boolean' // New feedback style
+		}
 
-				if (feedbacks[rcpAction].options.length > 0) {
-					let lastOptions = feedbacks[rcpAction].options[feedbacks[rcpAction].options.length - 1]
-					if (lastOptions.label == 'State') {
-						lastOptions.choices.pop() // Get rid of the Toggle setting for Feedbacks
-						lastOptions.default = 1 // Don't select Toggle if there's no Toggle!
-					}
-					if (lastOptions.label == 'Relative') {
-						feedbacks[rcpAction].options.pop() // Get rid of Relative checkbox for feedback
-					}
+		this.setActionDefinitions(commands)
+		this.setFeedbackDefinitions(feedbacks)
+			
+//		this.log('info','******** RCP COMMAND LIST *********');
+//		Object.entries(commands).forEach(([key, value]) => this.log('info',`${value.name.padEnd(36, '\u00A0')} ${key}`));
+//		this.log('info','***** END OF COMMAND LIST *****')
+
+	}
+
+
+	createFeedbackFromAction(action) {
+
+		let newFeedback = JSON.parse(JSON.stringify(action)) // Clone the Action to a matching feedback
+
+		if (this.colorCommands.includes(action.name)) {
+			newFeedback.type = 'advanced' // New feedback style
+			newFeedback.options.pop()
+		} else {
+			newFeedback.type = 'boolean' // New feedback style
+
+			if (newFeedback.options.length > 0) {
+				let lastOptions = newFeedback.options[newFeedback.options.length - 1]
+				if (lastOptions.label == 'State') {
+					lastOptions.choices.pop() // Get rid of the Toggle setting for Feedbacks
+					lastOptions.default = 1 // Don't select Toggle if there's no Toggle!
 				}
-
-				feedbacks[rcpAction].style = { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 0, 0) }
+				if (lastOptions.name == 'Relative') {
+					newFeedback.options.pop() // Get rid of Relative checkbox for feedback
+				}
 			}
 		}
 
-		commands['macroRecStart'] = { label: 'Record RCP Macro' }
-		commands['macroRecLatch'] = { label: 'Record RCP Macro (latched)' }
-		commands['macroUnLatch'] = { label: 'Unlatch RCP Macro' }
-		feedbacks['macro'] = {
-			label: 'Macro Feedback',
-			type: 'advanced',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Mode',
-					id: 'mode',
-					choices: [
-						{ id: 'r', label: 'Record' },
-						{ id: 'rl', label: 'Record Latch' },
-						{ id: 's', label: 'Stop' },
-					],
-				},
-				{ type: 'colorpicker', label: 'Color', id: 'fg', default: this.rgb(0, 0, 0) },
-				{ type: 'colorpicker', label: 'Background', id: 'bg', default: this.rgb(255, 0, 0) },
-			],
+		newFeedback.defaultStyle = { color: combineRgb(0, 0, 0), bgcolor: combineRgb(255, 0, 0) }
+
+		console.log("New Feedback: ",newFeedback)
+
+		newFeedback.callback = (event) => {
+				
+			console.log("Feedback callback event: ", event)
+
+			let options = event.options
+			let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address == event.feedbackId)
+			let retOptions = {}
+
+			if (rcpCommand !== undefined) {
+				let optX
+				this.parseVariablesInString(options.X).then(value => {
+					optX = value
+				})
+
+				let optY = (options.Y == undefined) ? 1 : options.Y
+
+				if (event.feedbackId.toLowerCase().includes("scene")) {
+					optX = 1
+					optY = 1
+				}
+
+				let optVal
+				this.parseVariablesInString(options.Val).then(value => {
+					optVal = options.Val === undefined ? options.X : value
+				})
+				console.log(`\nFeedback Event: '${event.feedbackId}' from controlId '${event.controlId}' is ${rcpCommand.Address}`);
+				console.log("options (raw)", options)
+				console.log(`X: ${optX}, Y: ${optY}, Val: ${optVal}`);
+
+				if (this.dataStore[event.feedbackId] !== undefined && this.dataStore[event.feedbackId][optX] !== undefined) {
+					let data = this.dataStore[event.feedbackId][optX][optY]
+					if (this.levelCommands.includes(event.feedbackId)) {
+						data = (data > -32768) ? (data / 100).toFixed(2) : "-inf"
+					}
+					if (data == optVal) {
+						//console.log('  *** Match ***');
+						return true
+					} else {
+						const reg = /\@\(([^:$)]+):custom_([^)$]+)\)/
+						let matches = reg.exec(optVal)
+						if (matches) {
+							let data = this.dataStore[event.feedbackId][optX][optY]
+							if (this.levelCommands.includes(event.feedbackId)) {
+								data = (data > -32768) ? (data / 100).toFixed(2) : "-inf"
+							}
+							this.system.emit('custom_variable_set_value', matches[2], data)
+						}
+						
+						if (this.colorCommands.includes(event.feedbackId)) {
+							let c = rcpNames.chColorRGB[this.dataStore[event.feedbackId][optX][optY]]
+							retOptions.color = c.color
+							retOptions.bgcolor = c.bgcolor
+							//console.log(`  *** Match *** (Color) ${JSON.stringify(retOptions)}\n`);
+							return retOptions
+						}
+					}
+				}
+
+				return false
+
+			}
+
+			return
+
 		}
 
-//this.log('info','******** RCP COMMAND LIST *********');
-//Object.entries(commands).forEach(([key, value]) => this.log('info',`${value.label.padEnd(36, '\u00A0')} ${key}`));
-//this.log('info','***** END OF COMMAND LIST *****')
+		return newFeedback
 
-		this.setActions(commands)
-		this.setFeedbackDefinitions(feedbacks)
 	}
+
+
+
 
 	// Create the proper command string for an action or poll
 	parseCmd(prefix, rcpCmd, opt) {
-		if (rcpCmd == undefined || opt == undefined || rcpCmd == 'macro') return
+
+		console.log("rcpCmd: ",rcpCmd, "opt: ", opt)
+
+		if (rcpCmd == undefined || opt == undefined) return
 
 		let scnPrefix = ''
-		let optX = opt.X === undefined ? 1 : opt.X
+		
+		let optX
+		this.parseVariablesInString(opt.X).then(value => {
+			console.log(`\nvalue of ${opt.X} = `, value, "\n\n")
+			optX = opt.X === undefined ? 1 : value
+		})
+		
 		let optY = opt.Y === undefined ? 0 : opt.Y - 1
 		let optVal
-		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == rcpCmd)
+		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address == rcpCmd)
+
+console.log("rcpCommand: ", rcpCommand)
 
 		if (rcpCommand == undefined) {
 			this.log('debug', `PARSECMD: Unrecognized command. '${rcpCmd}'`)
@@ -506,10 +614,9 @@ class instance extends instance_skel {
 
 			case 'string':
 				cmdName = `${prefix} ${cmdName}`
-				this.parseVariables(opt.Val, (value) => {
-					opt.Val = value
+				this.parseVariablesInString(opt.Val).then((value) => {
+					optVal = (prefix == 'set') ? `"${value}"` : '' // quotes around the string
 				})
-				optVal = (prefix == 'set') ? `"${opt.Val}"` : '' // quotes around the string
 				optX-- // ch #'s are 1 higher than the parameter except with Custom Banks
 				break
 
@@ -539,11 +646,11 @@ class instance extends instance_skel {
 	}
 
 	// Create the preset definitions
-	presets() {
+	createPresets() {
 		this.rcpPresets = [
 			{
 				category: 'Macros',
-				label: 'Create RCP Macro',
+				name: 'Create RCP Macro',
 				bank: {
 					style: 'png',
 					text: 'Record RCP Macro',
@@ -551,14 +658,14 @@ class instance extends instance_skel {
 					pngalignment: 'center:center',
 					latch: false,
 					size: 'auto',
-					color: this.rgb(255, 255, 255),
-					bgcolor: this.rgb(0, 0, 0),
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
 				},
 				actions: [{ action: 'macroRecStart' }, { action: 'macroRecLatch', delay: 500 }],
 				release_actions: [{ action: 'macroUnLatch' }],
 				feedbacks: [
-					{ type: 'macro', options: { mode: 'r', fg: this.rgb(0, 0, 0), bg: this.rgb(255, 0, 0) } },
-					{ type: 'macro', options: { mode: 'rl', fg: this.rgb(0, 0, 0), bg: this.rgb(255, 255, 0) } }, //,
+					{ type: 'macro', options: { mode: 'r', fg: combineRgb(0, 0, 0), bg: combineRgb(255, 0, 0) } },
+					{ type: 'macro', options: { mode: 'rl', fg: combineRgb(0, 0, 0), bg: combineRgb(255, 255, 0) } }, //,
 				],
 			},
 		]
@@ -566,203 +673,11 @@ class instance extends instance_skel {
 		this.setPresetDefinitions(this.rcpPresets)
 	}
 
-	// Add a command to a Macro Preset
-	addMacro(c) {
-		let foundActionIdx = -1
-
-		if (this.macroRec) {
-			let cX = parseInt(c.cmd.X)
-			let cY = parseInt(c.cmd.Y)
-			let cV
-
-			switch (c.rcp.Type) {
-				case 'integer':
-				case 'binary':
-					cX++
-					cY++
-					cV = parseInt(c.cmd.Val)
-					break
-				case 'string':
-					cX++
-					cY++
-					cV = c.cmd.Val
-					break
-				case 'scene':
-					cX = (this.config.model == 'PM') ? c.cmd.X : parseInt(c.cmd.Val)
-			}
-
-			// Check for new value on existing action
-			let rcpActions = this.macro.actions
-			if (rcpActions !== undefined) {
-				foundActionIdx = rcpActions.findIndex(
-					(cmd) => cmd.action == c.rcp.Address.replace(/:/g, '_') && cmd.options.X == cX && cmd.options.Y == cY
-				)
-			}
-
-			if (foundActionIdx == -1) {
-				rcpActions.push([])
-				foundActionIdx = rcpActions.length - 1
-			}
-
-			rcpActions[foundActionIdx] = { action: c.rcp.Address.replace(/:/g, '_'), options: { X: cX, Y: cY, Val: cV } }
-		}
-	}
-
-	dropMacro(preset, button) {
-		if (preset.actions == undefined) {
-			return
-		}
-
-		preset.release_actions = []
-		preset.feedbacks = []
-
-		for (var i = 0; i < preset.actions.length; ++i) {
-			preset.actions[i].id = shortid.generate()
-			preset.actions[i].instance = this.id
-			preset.actions[i].label = this.id + ':' + preset.actions[i].action
-
-			preset.feedbacks.push({
-				id: shortid.generate(),
-				instance_id: this.id,
-				type: preset.actions[i].action,
-				options: { ...preset.actions[i].options },
-				style: { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 0, 0) },
-			})
-
-			let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == preset.actions[i].action)
-			
-			if (this.nameCommands.includes(rcpCommand.Address.replace(/:/g, '_')) || this.colorCommands.includes(rcpCommand.Address.replace(/:/g, '_'))) {
-				preset.feedbacks[i].options.Val = undefined
-			}
-
-			if (rcpCommand != undefined && rcpCommand.Type == 'integer' && rcpCommand.Max == 1) {
-				preset.actions[i].options.Val = 'Toggle'
-			}
-		}
-
-		bank_actions[button.page][button.bank].pop() // For some reason this is necessary...
-		preset.config = preset.bank
-		delete preset.bank
-		this.system.emit('import_bank', button.page, button.bank, preset)
-	}
-
-	// Handle the Actions
-	action(action, button) {
-		if (!action.action.startsWith('macro')) {
-			// Regular action
-			let cmd = this.parseCmd('set', action.action, action.options)
-
-			if (cmd !== undefined) {
-				this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
-				if (this.socket !== undefined && this.socket.connected) {
-					this.socket.send(`${cmd}\n`) // send it, but add a CR to the end
-				} else {
-					this.log('info', 'Socket not connected :(')
-				}
-			}
-		} else {
-			// Macro
-			switch (action.action) {
-				case 'macroRecStart':
-					if (!this.macroRec) {
-						this.macroRec = true
-						this.macroMode = ''
-						this.macroCount++
-						this.macro = {
-							label: `Macro ${this.macroCount}`,
-							bank: {
-								style: 'text',
-								text: `Macro ${this.macroCount}`,
-								size: 'auto',
-								color: this.rgb(255, 255, 255),
-								bgcolor: this.rgb(0, 0, 0),
-							},
-							actions: [],
-						}
-					} else {
-						this.macroRec = false
-						if (this.macro.actions.length > 0) {
-							this.dropMacro(this.macro, button)
-						} else {
-							this.macroCount--
-						}
-						this.macroMode = 'stopped'
-					}
-					break
-
-				case 'macroRecLatch':
-					if (this.macroMode == '') {
-						this.macroMode = 'latch'
-					}
-					break
-
-				case 'macroUnLatch':
-					if (this.macroMode == '') {
-						this.macro.bank.latch = false
-						this.macroMode = 'one-shot'
-					}
-			}
-		}
-
-		this.checkFeedbacks('macro')
-	}
-
-	// Handle the Feedbacks
-	feedback(feedback, bank) {
-		let options = feedback.options
-		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == feedback.type)
-		let retOptions = {}
-
-		if (rcpCommand !== undefined) {
-			let optVal = (options.Val == undefined) ? options.X : options.Val
-			let optX = (options.X > 0) ? options.X : this.config[`myCh${-options.X}`]
-			let optY = (options.Y == undefined) ? 1 : options.Y
-			if (feedback.type.toLowerCase().includes("scene")) {
-				optX = 1
-				optY = 1
-			}
-
-			//console.log(`\nFeedback: '${feedback.id}' from bank '${bank.text}' is ${feedback.type} (${rcpCommand.Address})`);
-			//console.log("options (raw)", options)
-			//console.log(`X: ${optX}, Y: ${optY}, Val: ${optVal}`);
-
-			if (this.dataStore[feedback.type] !== undefined && this.dataStore[feedback.type][optX] !== undefined) {
-				if (this.dataStore[feedback.type][optX][optY] == optVal) {
-					//console.log('  *** Match ***');
-					return true
-				} else {
-					if (this.colorCommands.includes(feedback.type)) {
-						let c = rcpNames.chColorRGB[this.dataStore[feedback.type][optX][optY]]
-						retOptions.color = c.color
-						retOptions.bgcolor = c.bgcolor
-						//console.log(`  *** Match *** (Color) ${JSON.stringify(retOptions)}\n`);
-						return retOptions
-					}
-					if (this.nameCommands.includes(feedback.type)) {
-						retOptions.text = this.dataStore[feedback.type][optX][optY]
-						//console.log(`  *** Match *** (Text) ${JSON.stringify(retOptions)}\n`);
-						return retOptions
-					}
-				}
-			}
-
-			return false
-		}
-		if (feedback.type == 'macro' && this.macroRec) {
-			if (this.macroMode == 'latch') {
-				return { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 255, 0), text: 'REC' }
-			} else {
-				return { color: this.rgb(0, 0, 0), bgcolor: this.rgb(255, 0, 0), text: 'REC' }
-			}
-		}
-
-		return
-	}
-
 	// Poll the console for it's status to update buttons via feedback
 
 	pollrcp() {
 		this.subscribeActions()
+/*
 		let allFeedbacks = this.getAllFeedbacks()
 		for (let fb in allFeedbacks) {
 			let cmd = this.parseCmd('get', allFeedbacks[fb].type, allFeedbacks[fb].options)
@@ -771,11 +686,12 @@ class instance extends instance_skel {
 				this.socket.send(`${cmd}\n`)
 			}
 		}
+*/
 	}
 
 	addToDataStore(cmd) {
 		let idx = cmd.rcp.Index
-		let dsAddr = cmd.rcp.Address.replace(/:/g, '_')
+		let dsAddr = cmd.rcp.Address
 		let iY
 
 		if (cmd.cmd.Val == undefined) {
@@ -803,4 +719,4 @@ class instance extends instance_skel {
 	}
 }
 
-exports = module.exports = instance
+runEntrypoint(instance, upgrade)

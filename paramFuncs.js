@@ -28,8 +28,9 @@ module.exports = {
 		var rcpNames = require('./rcpNames.json')
 		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
-		instance.nameCommands = []
+//		instance.nameCommands = []
 		instance.colorCommands = []
+		instance.levelCommmands = []
 		
 		let fname = ''
 		let rcpCommands
@@ -76,18 +77,19 @@ module.exports = {
 				let rcpCommand = {}
 
 				for (var j = 0; j < line.length; j++) {
-					rcpCommand[params[j]] = line[j].replace(/"/g, '') // Get rid of any double quotes around the strings
+					// Get rid of any double quotes around the strings and change the colon to underscore
+					rcpCommand[params[j]] = line[j].replace(/"/g, '').replace(/:/g, '_')
 				}
 
 				cmds.push(rcpCommand)
 
 				if (params[0] == 'Ok') {
                    switch (rcpCommand.Address.slice(-4)) {
-						case 'Name':
-							instance.nameCommands.push(rcpCommand.Address.replace(/:/g, '_'))
+						case 'evel':
+							instance.levelCommands.push(rcpCommand.Address)
 							break
 						case 'olor':
-							instance.colorCommands.push(rcpCommand.Address.replace(/:/g, '_'))
+							instance.colorCommands.push(rcpCommand.Address)
 					}
 				}
 			}
