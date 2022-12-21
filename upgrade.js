@@ -153,6 +153,16 @@ module.exports = {
 					newName = newAction.Address
 					console.log(`Yamaha-RCP: Action ${name} => ${newName}`)
 					isAction ? (action.action = newName) : (action.type = newName)
+					switch (action.options.Val) {
+						case true: {
+							action.options.Val = 1
+							break;
+						}
+						case false: {
+							action.options.Val = 0
+							break;
+						}
+					}
 					action.label = this.id + ':' + newName
 					changed = true
 				} else {
