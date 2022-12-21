@@ -564,12 +564,13 @@ class instance extends InstanceBase {
 
 		let scnPrefix = ''
 		
-		let optX
+		let optX = opt.X === undefined ? 1 : opt.X
+/*
 		this.parseVariablesInString(opt.X).then(value => {
 			console.log(`\nvalue of ${opt.X} = `, value, "\n\n")
 			optX = opt.X === undefined ? 1 : value
 		})
-		
+*/
 		let optY = opt.Y === undefined ? 0 : opt.Y - 1
 		let optVal
 		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address == rcpCmd)

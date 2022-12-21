@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v1.7.2
+## Yamaha Remote Control Protocol v2.0.0 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
