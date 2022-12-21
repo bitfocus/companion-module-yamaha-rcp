@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol
+## Yamaha Remote Control Protocol v1.7.1
 
 **Available for the following Yamaha Pro Audio Devices**
 
