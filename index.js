@@ -395,8 +395,10 @@ class instance extends InstanceBase {
 				break
 
 			default:
-				newAction.callback = async(event) => {
-					let cmd = this.parseCmd('set', event.actionId, event.options).replace("MIXER_", "MIXER:")
+				newAction.callback = (event) => {
+					this.parseCmd('set', event.actionId, event.options).then(cmd => {
+						cmd = cmd.replace("MIXER_", "MIXER:")
+					})
 		
 					if (cmd !== undefined) {
 						this.log('debug', `Sending : '${cmd}' to ${this.config.host}`)
@@ -412,10 +414,13 @@ class instance extends InstanceBase {
 
 		newAction.options.push(valParams)
 		
-		newAction.callback = async(event) => {
+		newAction.callback = (event) => {
 
-			console.log("Action callback event: ", event)
-			let cmd = this.parseCmd('set', event.actionId, event.options).replace("MIXER_", "MIXER:")
+			console.log("\n\nAction callback event: ", event)
+			this.parseCmd('set', event.actionId, event.options).then(cmd => {
+				console.log("\ncmd = ", cmd, "\n")
+				cmd = cmd.replace("MIXER_", "MIXER:")
+			})
 			console.log("Action Found cmd: ", cmd)
 
 			if (cmd !== undefined) {
@@ -480,7 +485,7 @@ class instance extends InstanceBase {
 
 		newFeedback.defaultStyle = { color: combineRgb(0, 0, 0), bgcolor: combineRgb(255, 0, 0) }
 
-		console.log("New Feedback: ",newFeedback)
+// console.log("New Feedback: ",newFeedback)
 
 		newFeedback.callback = (event) => {
 				
@@ -556,7 +561,7 @@ class instance extends InstanceBase {
 
 
 	// Create the proper command string for an action or poll
-	parseCmd(prefix, rcpCmd, opt) {
+	async parseCmd(prefix, rcpCmd, opt) {
 
 		console.log("rcpCmd: ",rcpCmd, "opt: ", opt)
 
@@ -565,12 +570,12 @@ class instance extends InstanceBase {
 		let scnPrefix = ''
 		
 		let optX = opt.X === undefined ? 1 : opt.X
-/*
+
 		this.parseVariablesInString(opt.X).then(value => {
 			console.log(`\nvalue of ${opt.X} = `, value, "\n\n")
 			optX = opt.X === undefined ? 1 : value
 		})
-*/
+
 		let optY = opt.Y === undefined ? 0 : opt.Y - 1
 		let optVal
 		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address == rcpCmd)
@@ -677,6 +682,9 @@ console.log("rcpCommand: ", rcpCommand)
 	// Poll the console for it's status to update buttons via feedback
 
 	pollrcp() {
+
+console.log("\nInside pollrcp()\n")
+
 		this.subscribeActions()
 /*
 		let allFeedbacks = this.getAllFeedbacks()
