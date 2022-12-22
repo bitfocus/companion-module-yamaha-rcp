@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol - v2.0.0
+## Yamaha Remote Control Protocol - v3.0.0
 
 Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
