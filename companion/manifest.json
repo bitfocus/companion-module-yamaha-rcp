@@ -3,14 +3,12 @@
 	"name": "yamaha-rcp",
 	"shortname": "yamaha-rcp",
 	"description": "yamaha-rcp",
-	"version": "2.0.0",
+	"version": "3.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-yamaha-rcp.git",
-	"bugs": "https://github.com/bitfocus/companion-module-yamaha-rcp/issues",
+	"bugs": "https://discourse.checkcheckonetwo.com",
 	"maintainers": [],
-	"legacyIds": [
-		"yamaha-scp"
-	],
+	"legacyIds": ["yamaha-scp"],
 	"runtime": {
 		"type": "node18",
 		"api": "nodejs-ipc",
@@ -18,10 +16,6 @@
 		"entrypoint": "../index.js"
 	},
 	"manufacturer": "Yamaha",
-	"products": [
-		"CL/QL","TF","Rivage"
-	],
-	"keywords": [
-		"Yamaha","Mixer"
-	]
+	"products": ["CL/QL", "TF", "Rivage"],
+	"keywords": ["Yamaha", "Mixer"]
 }

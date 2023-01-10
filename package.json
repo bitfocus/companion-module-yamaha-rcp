@@ -6,7 +6,8 @@
 	"version": "3.0.0",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"format": "prettier -w ."
 	},
 	"repository": {
 		"type": "git",
@@ -18,5 +19,6 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~0.6.1"
-	}
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json"
 }

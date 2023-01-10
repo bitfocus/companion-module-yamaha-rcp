@@ -1,14 +1,12 @@
 module.exports = {
 	makeChNames: (r) => {
 		for (let i = 1; i <= 288; i++) {
-            r.chNames.push(
-                {"id": i, "label": `CH${i}`}
-            )
-        }
+			r.chNames.push({ id: i, label: `CH${i}` })
+		}
 		return r.chNames
 	},
 
-	getParams: (instance, config) => {
+	getParams: (instance) => {
 		const RCP_PARAMS = [
 			'Ok',
 			'Command',
@@ -28,15 +26,14 @@ module.exports = {
 		var rcpNames = require('./rcpNames.json')
 		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
-//		instance.nameCommands = []
 		instance.colorCommands = []
 		instance.levelCommmands = []
-		
+
 		let fname = ''
 		let rcpCommands
 		const FS = require('fs')
 
-		switch (config.model) {
+		switch (instance.config.model) {
 			case 'CL/QL':
 				fname = 'CLQL Parameters-1.txt'
 				break
@@ -48,7 +45,7 @@ module.exports = {
 		}
 
 		// Read the DataFile
-		console.log("Yamaha-RCP: getParams: Getting parameters from file: ", fname)
+		console.log('Yamaha-RCP: getParams: Getting parameters from file: ', fname)
 		if (fname !== '') {
 			let data = FS.readFileSync(`${__dirname}/${fname}`)
 			rcpCommands = module.exports.parseData(instance, data, RCP_PARAMS)
@@ -84,7 +81,8 @@ module.exports = {
 				cmds.push(rcpCommand)
 
 				if (params[0] == 'Ok') {
-                   switch (rcpCommand.Address.slice(-4)) {
+					// Only do this on initial command list creation
+					switch (rcpCommand.Address.slice(-4)) {
 						case 'evel':
 							instance.levelCommands.push(rcpCommand.Address)
 							break

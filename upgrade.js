@@ -137,7 +137,7 @@ module.exports = {
 		var changed = false
 
 		if (config != null) {
-			console.log("\nYamaha-RCP: Getting Parameters...")
+			console.log('\nYamaha-RCP: Getting Parameters...')
 			var rcpCommands = paramFuncs.getParams(this, config)
 		}
 
@@ -156,11 +156,11 @@ module.exports = {
 					switch (action.options.Val) {
 						case true: {
 							action.options.Val = 1
-							break;
+							break
 						}
 						case false: {
 							action.options.Val = 0
-							break;
+							break
 						}
 					}
 					action.label = this.id + ':' + newName
