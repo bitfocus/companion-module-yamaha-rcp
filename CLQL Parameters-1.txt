@@ -265,4 +265,4 @@ OK prminfo 263 "QL:Current/CustomFaderBank/Master/SourceCh" 4 2 0 11 "NO ASSIGN"
 OK prminfo 264 "QL:Current/FaderBank/Select" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 265 "QL:Current/FaderBank/Bank/Recall" 1 3 0 8 0 "" integer any rw 1
 OK prminfo 266 "QL:Current/FaderBank/Bank/Toggle" 1 1 0 8 0 "" integer any rw 1
-OK scninfo 1000 "MIXER:Lib/Scene" 300 1 0 0 0 "" scene any rw 1
+OK scninfo 1000 "MIXER:Lib/Scene" 1 1 0 300 0 "" integer any rw 1

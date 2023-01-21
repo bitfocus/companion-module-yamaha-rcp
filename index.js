@@ -4,10 +4,11 @@
 
 const { InstanceBase, Regex, runEntrypoint, shortid, combineRgb, TCPHelper } = require('@companion-module/base')
 
-const actionFunctions = require('./actions.js')
-const feedbackFunctions = require('./feedbacks.js')
-const upgrade = require('./upgrade')
 const paramFuncs = require('./paramFuncs')
+const actionFuncs = require('./actions.js')
+const feedbackFuncs = require('./feedbacks.js')
+const varFuncs = require('./variables.js')
+const upgrade = require('./upgrade')
 
 const RCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal']
 
@@ -81,17 +82,11 @@ class instance extends InstanceBase {
 		this.rcpCommands = paramFuncs.getParams(this)
 
 		this.updateActions() // Re-do the actions once the console is chosen
+		varFuncs.initVars(this)
 		this.createPresets()
 		this.initTCP()
 	}
 
-	// Get info from a connected console
-	getConsoleInfo() {
-		this.sendCmd(`devinfo productname`)
-		if (this.config.model == 'PM') {
-			this.sendCmd(`scpmode sstype "text"`)
-		}
-	}
 
 	// Initialize TCP
 	initTCP() {
@@ -118,7 +113,6 @@ class instance extends InstanceBase {
 
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
-				this.getConsoleInfo()
 				this.pollrcp()
 			})
 
@@ -141,28 +135,27 @@ class instance extends InstanceBase {
 					}
 					this.log('debug', `Received: '${line}'`)
 
-					if (line.indexOf('OK devinfo productname') !== -1) {
-						this.productName = line.slice(line.lastIndexOf(' '))
-						this.log('info', `Device found: ${this.productName}`)
-					} else {
-						receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
+					receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
 
-						for (let i = 0; i < receivedcmds.length; i++) {
-							let cmdToFind = receivedcmds[i].Address
-							foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
-							if (foundCmd !== undefined) {
-								let curCmd = JSON.parse(JSON.stringify(receivedcmds[i]))
-								this.addToDataStore({ rcp: foundCmd, cmd: curCmd })
-								if (this.isRecordingActions) {
-									this.addToActionRecording({ rcp: foundCmd, cmd: curCmd })
-								}
-								this.checkFeedbacks()
-								if (foundCmd.Command == 'scninfo') {
-									this.pollrcp()
-								}
-							} else {
-								this.log('debug', `Unknown command: '${cmdToFind}'`)
+					for (let i = 0; i < receivedcmds.length; i++) {
+						let cmdToFind = receivedcmds[i].Address
+						foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
+						let curCmd = JSON.parse(JSON.stringify(receivedcmds[i]))
+
+						if (foundCmd !== undefined && foundCmd.Command == 'prminfo') {
+							this.addToDataStore(curCmd)
+							if (this.isRecordingActions) {
+								this.addToActionRecording({ rcp: foundCmd, cmd: curCmd })
 							}
+							this.checkFeedbacks(foundCmd.Address)
+						} else if (['OK', 'OKM', 'NOTIFY'].indexOf(curCmd.Status.toUpperCase()) !== -1) {
+							varFuncs.setVar(this, curCmd) // Check and set module vars (message is not a param cmd)
+							if (foundCmd !== undefined && foundCmd.Index == 1000 && curCmd.Command.slice(0, 8) == 'ssrecall') {
+								console.log('\n\n\nSCENE CMD!!: \n', curCmd)
+								this.pollrcp()
+							}
+						} else {
+							this.log('debug', `Unknown command: '${cmdToFind}'`)
 						}
 					}
 				}
@@ -192,19 +185,29 @@ class instance extends InstanceBase {
 		for (let i = 0; i < this.rcpCommands.length; i++) {
 			command = this.rcpCommands[i]
 			rcpAction = command.Address
-			let newAction = actionFunctions.createAction(this, command)
+			let newAction = actionFuncs.createAction(this, command)
+
 			newAction.callback = async (event) => {
-				let cmd = (await actionFunctions.parseCmd(this, 'set', event.actionId, event.options)).replace(
+				const reg = /\@\(([^:$)]+):custom_([^)$]+)\)/
+				let matches = reg.exec(event.options.Val)
+				if (matches) {
+console.log("\n\n\nSetting Variable ", matches, " to ", data, "\n\n\n")
+					let data = instance.dataStore[event.actionId][event.options.X][event.options.optY]
+					instance.setCustomVariableValue(matches[2], data)
+				}
+
+				let cmd = (await actionFuncs.parseCmd(this, 'set', event.actionId, event.options)).replace(
 					'MIXER_',
 					'MIXER:'
 				)
+
 				if (cmd !== undefined) {
 					this.sendCmd(cmd)
 				}
 			}
 
 			commands[rcpAction] = newAction
-			feedbacks[rcpAction] = feedbackFunctions.createFeedbackFromAction(this, newAction)
+			feedbacks[rcpAction] = feedbackFuncs.createFeedbackFromAction(this, newAction)
 		}
 
 		this.setActionDefinitions(commands)
@@ -230,7 +233,13 @@ class instance extends InstanceBase {
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(0, 0, 0),
 				},
-				steps: [{ down: [{ actionId: 'internal:Action Recorder: Set connections' }] }],
+				steps: [
+					{ 
+						down: [
+							{ actionId: 'internal:Action Recorder: Set connections' }
+						]
+					}
+				],
 				feedbacks: [
 					{
 						feedbackId: 'macro',
@@ -251,39 +260,59 @@ class instance extends InstanceBase {
 	pollrcp() {
 		console.log('\nInside pollrcp()\n')
 
+		varFuncs.getVars(this)
 		this.subscribeActions()
 		this.subscribeFeedbacks()
 	}
 
+	// Add a value to the dataStore
 	addToDataStore(cmd) {
-		let idx = cmd.rcp.Index
-		let dsAddr = cmd.rcp.Address
-		let iY
 
-		if (cmd.cmd.Val == undefined) {
-			cmd.cmd.Val = parseInt(cmd.cmd.X)
-			cmd.cmd.X = undefined
+console.log('\n\n\nAddToDataStore: cmd = \n\n', cmd, '\n\n')
+
+		let dsAddr = cmd.Address
+
+		if (cmd.Val == undefined) {
+			cmd.Val = parseInt(cmd.X)
+			cmd.X = undefined
 		}
-		cmd.cmd.X = (cmd.cmd.X == undefined) ? 0 : cmd.cmd.X
-		let iX = parseInt(cmd.cmd.X) + 1
-		if (this.config.model == 'TF' && idx == 1000) {
-			iY = cmd.cmd.Address.slice(-1)
-		} else {
-			cmd.cmd.Y = (cmd.cmd.Y == undefined) ? 0 : cmd.cmd.Y
-			iY = parseInt(cmd.cmd.Y) + 1
-		}
+
+		let dsX = (cmd.X == undefined) ? 1 : parseInt(cmd.X) + 1
+		let dsY = (cmd.Y == undefined) ? 1 : parseInt(cmd.Y) + 1
+
 		if (this.dataStore[dsAddr] == undefined) {
 			this.dataStore[dsAddr] = {}
 		}
-		if (this.dataStore[dsAddr][iX] == undefined) {
-			this.dataStore[dsAddr][iX] = {}
+		if (this.dataStore[dsAddr][dsX] == undefined) {
+			this.dataStore[dsAddr][dsX] = {}
+
 		}
-		this.dataStore[dsAddr][iX][iY] = cmd.cmd.Val
+		this.dataStore[dsAddr][dsX][dsY] = cmd.Val
+
+console.log(`Adding: [${dsAddr}][${dsX}][${dsY}] = "${cmd.Val}" to dataStore. dataStore = \n`, this.dataStore, '\n\n\n')
+
 	}
 
+	
+	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
+	async getFromDataStore(cmd) {
+		let data = undefined
+
+		if (this.dataStore[cmd.Address] !== undefined && this.dataStore[cmd.Address][cmd.X] !== undefined) {
+			data = parseInt(instance.dataStore[cmd.Address][cmd.X][cmd.Y])
+		} else {
+			let req = (await actionFunctions.parseCmd(instance, 'get', cmd.Address, cmd)).replace(
+				'MIXER_',
+				'MIXER:'
+			)
+			this.sendCmd(req) // Get the current value
+		}
+		return data
+	}
+
+
+	// Track whether actions are being recorded
 	handleStartStopRecordActions(isRecording) {
-		// Track whether actions are being recorded
-		// Other modules may need to start/stop some real work here to be fed appropriate data from a device/library
 		this.isRecordingActions = isRecording
 	}
 
@@ -307,8 +336,6 @@ class instance extends InstanceBase {
 				cY++
 				cV = c.cmd.Val
 				break
-			case 'scene':
-				cX = (this.config.model == 'PM') ? c.cmd.X : parseInt(c.cmd.Val)
 		}
 
 		this.recordAction(

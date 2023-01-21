@@ -70,7 +70,7 @@ module.exports = {
 			// but it basically pulls out the space-separated values, except for spaces that are inside quotes!
 			line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 
-			if (line !== null && ['OK', 'OKm', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
+			if (line !== null && ['OK', 'OKM', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
 				let rcpCommand = {}
 
 				for (var j = 0; j < line.length; j++) {
