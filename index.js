@@ -2,7 +2,7 @@
 // Andrew Broughton <andy@checkcheckonetwo.com>
 // Aug 9, 2022 Version 3.0.0 (v3)
 
-const { InstanceBase, Regex, runEntrypoint, shortid, combineRgb, TCPHelper } = require('@companion-module/base')
+const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
 const paramFuncs = require('./paramFuncs')
 const actionFuncs = require('./actions.js')
@@ -24,17 +24,16 @@ class instance extends InstanceBase {
 		this.config = config
 		this.rcpCommands = []
 		this.colorCommands = [] // Commands which have a color field
-		this.levelCommands = [] // Commands that set a level
 		this.rcpPresets = []
-		this.productName = ''
 		this.dataStore = {}
+		this.reqStack = []
+		this.variables = []
 		this.newConsole()
 	}
 
 	// Change in Configuration
 	async configUpdated(config) {
 		this.config = config
-		console.log('config: ', this.config)
 		if (this.config.model) {
 			this.newConsole()
 		}
@@ -51,7 +50,6 @@ class instance extends InstanceBase {
 
 	// Web UI config fields
 	getConfigFields() {
-		console.log('Running getConfigFields()')
 		return [
 			{
 				type: 'textinput',
@@ -87,7 +85,6 @@ class instance extends InstanceBase {
 		this.initTCP()
 	}
 
-
 	// Initialize TCP
 	initTCP() {
 		let receivebuffer = ''
@@ -113,16 +110,17 @@ class instance extends InstanceBase {
 
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
-				this.pollrcp()
+				varFuncs.getVars(this)
 			})
 
 			this.socket.on('data', (chunk) => {
 				receivebuffer += chunk
-
 				receivedLines = receivebuffer.split('\x0A') // Split by line break
-				if (receivedLines.length == 0) return // No messages
+				if (receivedLines.length == 0) {
+					return // No messages
+				}
 
-				if (receivebuffer.slice(-1) != '\x0A') {
+				if (receivebuffer.endsWith('\x0A')) {
 					receivebuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
 					receivedLines.splice(receivedLines.length - 1) // Remove it.
 				} else {
@@ -133,30 +131,53 @@ class instance extends InstanceBase {
 					if (line.length == 0) {
 						continue
 					}
-					this.log('debug', `Received: '${line}'`)
-
+					this.log('debug', `Received: '${line}'\treqStack = ${this.reqStack.length}`)
 					receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
 
 					for (let i = 0; i < receivedcmds.length; i++) {
-						let cmdToFind = receivedcmds[i].Address
-						foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
-						let curCmd = JSON.parse(JSON.stringify(receivedcmds[i]))
+						let curCmd = JSON.parse(JSON.stringify(receivedcmds[i])) // deep clone
+						let cmdToFind = curCmd.Address
 
-						if (foundCmd !== undefined && foundCmd.Command == 'prminfo') {
-							this.addToDataStore(curCmd)
-							if (this.isRecordingActions) {
-								this.addToActionRecording({ rcp: foundCmd, cmd: curCmd })
-							}
-							this.checkFeedbacks(foundCmd.Address)
-						} else if (['OK', 'OKM', 'NOTIFY'].indexOf(curCmd.Status.toUpperCase()) !== -1) {
-							varFuncs.setVar(this, curCmd) // Check and set module vars (message is not a param cmd)
-							if (foundCmd !== undefined && foundCmd.Index == 1000 && curCmd.Command.slice(0, 8) == 'ssrecall') {
-								console.log('\n\n\nSCENE CMD!!: \n', curCmd)
-								this.pollrcp()
-							}
-						} else {
-							this.log('debug', `Unknown command: '${cmdToFind}'`)
+						let reqIdx = this.reqStack.findIndex((c) => 
+							(c.Address == curCmd.Address && c.X == (curCmd.X || 0) && c.Y == (curCmd.Y || 0))
+						)
+						if (reqIdx > -1) {
+							this.reqStack.splice(reqIdx, 1) // Remove it!
 						}
+						if (this.reqStack.length > 0) { // More to send?
+							let cmdToSend = this.reqStack[0] // Oldest
+							let req = `get ${cmdToSend.Address} ${cmdToSend.X} ${cmdToSend.Y}`
+							this.sendCmd(req)
+						}
+
+						foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
+						if (foundCmd != undefined) {
+							if (foundCmd.Command == 'prminfo') {
+								this.addToDataStore(curCmd)
+								if (this.isRecordingActions) {
+									this.addToActionRecording({ rcpCmd: foundCmd, options: curCmd })
+								}
+								this.checkFeedbacks(foundCmd.Address.replace(/:/g, '_')) // Companion commands use a _ instead of :
+								varFuncs.setVar(this, curCmd)
+							}
+							continue
+						}
+
+						if (curCmd.Address.startsWith('MIXER:Lib/Scene')) {
+							if (curCmd.Status == 'OK' && curCmd.Command.startsWith('ssrecall')) {
+								this.pollConsole()
+							}
+							varFuncs.setVar(this, curCmd)
+							continue
+						}
+
+						if (curCmd.Command == 'devinfo') {
+							varFuncs.setVar(this, curCmd) // Check and set module vars (message is not a param cmd)
+							continue
+						}
+
+						this.log('warn', `Unknown command: '${cmdToFind}'`)
+
 					}
 				}
 			})
@@ -165,7 +186,8 @@ class instance extends InstanceBase {
 
 	sendCmd(c) {
 		if (c !== undefined) {
-			this.log('debug', `Sending : '${c}' to ${this.config.host}`)
+			c = c.trim()
+			this.log('debug', `Sending : '${c}' to ${this.getVariableValue('modelName')} @ ${this.config.host}`)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the console
@@ -175,47 +197,40 @@ class instance extends InstanceBase {
 		}
 	}
 
+	findRcpCmd(cmdName) {
+		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == cmdName)
+		if (rcpCommand == undefined) {
+			this.log('debug', `FINDCMD: Unrecognized command. '${cmdName}'`)
+		}
+		return rcpCommand
+	}
+
 	// Create the Actions & Feedbacks
-	updateActions(system) {
+	updateActions() {
 		let commands = {}
 		let feedbacks = {}
-		let command = {}
+		let rcpCommand = {}
 		let rcpAction = ''
 
 		for (let i = 0; i < this.rcpCommands.length; i++) {
-			command = this.rcpCommands[i]
-			rcpAction = command.Address
-			let newAction = actionFuncs.createAction(this, command)
+			rcpCommand = this.rcpCommands[i]
+			rcpAction = rcpCommand.Address.replace(/:/g, '_') // Change the : to _ as companion doesn't like colons in names
+			let newAction = actionFuncs.createAction(this, rcpCommand)
 
 			newAction.callback = async (event) => {
-				const reg = /\@\(([^:$)]+):custom_([^)$]+)\)/
-				let matches = reg.exec(event.options.Val)
-				if (matches) {
-console.log("\n\n\nSetting Variable ", matches, " to ", data, "\n\n\n")
-					let data = instance.dataStore[event.actionId][event.options.X][event.options.optY]
-					instance.setCustomVariableValue(matches[2], data)
-				}
-
-				let cmd = (await actionFuncs.parseCmd(this, 'set', event.actionId, event.options)).replace(
-					'MIXER_',
-					'MIXER:'
-				)
-
+				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
+				let cmd = await actionFuncs.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: event.options })
 				if (cmd !== undefined) {
 					this.sendCmd(cmd)
 				}
 			}
 
-			commands[rcpAction] = newAction
+			if (rcpCommand.RW == 'rw') commands[rcpAction] = newAction // Ignore readonly commands
 			feedbacks[rcpAction] = feedbackFuncs.createFeedbackFromAction(this, newAction)
 		}
 
 		this.setActionDefinitions(commands)
 		this.setFeedbackDefinitions(feedbacks)
-
-		//		this.log('info','******** RCP COMMAND LIST *********');
-		//		Object.entries(commands).forEach(([key, value]) => this.log('info',`${value.name.padEnd(36, '\u00A0')} ${key}`));
-		//		this.log('info','***** END OF COMMAND LIST *****')
 	}
 
 	// Create the preset definitions
@@ -234,11 +249,9 @@ console.log("\n\n\nSetting Variable ", matches, " to ", data, "\n\n\n")
 					bgcolor: combineRgb(0, 0, 0),
 				},
 				steps: [
-					{ 
-						down: [
-							{ actionId: 'internal:Action Recorder: Set connections' }
-						]
-					}
+					{
+						down: [{ actionId: 'internal:Action Recorder: Set connections' }],
+					},
 				],
 				feedbacks: [
 					{
@@ -257,59 +270,59 @@ console.log("\n\n\nSetting Variable ", matches, " to ", data, "\n\n\n")
 	}
 
 	// Poll the console for it's status to update buttons via feedback
-	pollrcp() {
-		console.log('\nInside pollrcp()\n')
-
+	pollConsole() {
 		varFuncs.getVars(this)
+		this.dataStore = {}
 		this.subscribeActions()
-		this.subscribeFeedbacks()
+		this.checkFeedbacks()
 	}
 
 	// Add a value to the dataStore
 	addToDataStore(cmd) {
-
-console.log('\n\n\nAddToDataStore: cmd = \n\n', cmd, '\n\n')
-
 		let dsAddr = cmd.Address
-
-		if (cmd.Val == undefined) {
-			cmd.Val = parseInt(cmd.X)
-			cmd.X = undefined
-		}
-
-		let dsX = (cmd.X == undefined) ? 1 : parseInt(cmd.X) + 1
-		let dsY = (cmd.Y == undefined) ? 1 : parseInt(cmd.Y) + 1
+		let dsX = cmd.X == undefined ? 0 : parseInt(cmd.X)
+		let dsY = cmd.Y == undefined ? 0 : parseInt(cmd.Y)
 
 		if (this.dataStore[dsAddr] == undefined) {
 			this.dataStore[dsAddr] = {}
 		}
 		if (this.dataStore[dsAddr][dsX] == undefined) {
 			this.dataStore[dsAddr][dsX] = {}
-
 		}
-		this.dataStore[dsAddr][dsX][dsY] = cmd.Val
-
-console.log(`Adding: [${dsAddr}][${dsX}][${dsY}] = "${cmd.Val}" to dataStore. dataStore = \n`, this.dataStore, '\n\n\n')
-
+		this.dataStore[dsAddr][dsX][dsY] = cmd.Val		
 	}
 
-	
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
 	async getFromDataStore(cmd) {
 		let data = undefined
 
-		if (this.dataStore[cmd.Address] !== undefined && this.dataStore[cmd.Address][cmd.X] !== undefined) {
-			data = parseInt(instance.dataStore[cmd.Address][cmd.X][cmd.Y])
-		} else {
-			let req = (await actionFunctions.parseCmd(instance, 'get', cmd.Address, cmd)).replace(
-				'MIXER_',
-				'MIXER:'
-			)
-			this.sendCmd(req) // Get the current value
+		if (cmd !== undefined && cmd.Address !== undefined && cmd.options !== undefined) {
+			if (
+				this.dataStore[cmd.Address] !== undefined &&
+				this.dataStore[cmd.Address][cmd.options.X] !== undefined &&
+				this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y] !== undefined
+			) {
+				data = this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y]
+				return data
+			}
+
+			if (cmd.Address.startsWith('MIXER:Lib/Scene')) return
+
+			if (this.reqStack.length == 0) {
+				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
+				let req = `get ${cmd.Address} ${cmd.options.X} ${cmd.options.Y}`
+				this.sendCmd(req) // Get the current value
+			} else {
+				let i = this.reqStack.findIndex((c) => 
+					(c.Address == cmd.Address && c.X == cmd.options.X && c.Y == cmd.options.Y)
+				)
+				if (i == -1) {
+					this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
+				}
+			}
 		}
 		return data
 	}
-
 
 	// Track whether actions are being recorded
 	handleStartStopRecordActions(isRecording) {
@@ -317,33 +330,28 @@ console.log(`Adding: [${dsAddr}][${dsX}][${dsY}] = "${cmd.Val}" to dataStore. da
 	}
 
 	// Add a command to the Action Recorder
-	addToActionRecording(c) {
-		let foundActionIdx = -1
-
-		let cX = parseInt(c.cmd.X)
-		let cY = parseInt(c.cmd.Y)
+	async addToActionRecording(c) {
+		let aId = c.rcpCmd.Address.replace(/:/g, '_')
+		let cX = parseInt(c.options.X) + 1
+		let cY = parseInt(c.options.Y) + 1
 		let cV
 
-		switch (c.rcp.Type) {
+		switch (c.rcpCmd.Type) {
 			case 'integer':
 			case 'binary':
-				cX++
-				cY++
-				cV = parseInt(c.cmd.Val)
+				cV = c.options.Val == c.rcpCmd.Min ? '-Inf' : c.options.Val / c.rcpCmd.Scale
 				break
 			case 'string':
-				cX++
-				cY++
-				cV = c.cmd.Val
+				cV = c.options.Val
 				break
 		}
 
 		this.recordAction(
 			{
-				actionId: c.rcp.Address,
+				actionId: aId,
 				options: { X: cX, Y: cY, Val: cV },
 			},
-			`${c.rcp.Address} ${cX} ${cY}` // uniqueId to stop duplicates
+			`${aId} ${cX} ${cY}` // uniqueId to stop duplicates
 		)
 	}
 }

@@ -27,7 +27,6 @@ module.exports = {
 		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
 		instance.colorCommands = []
-		instance.levelCommmands = []
 
 		let fname = ''
 		let rcpCommands
@@ -75,19 +74,16 @@ module.exports = {
 
 				for (var j = 0; j < line.length; j++) {
 					// Get rid of any double quotes around the strings and change the colon to underscore
-					rcpCommand[params[j]] = line[j].replace(/"/g, '').replace(/:/g, '_')
+					rcpCommand[params[j]] = line[j].replace(/"/g, '') // .replace(/:/g, '_')
 				}
 
 				cmds.push(rcpCommand)
 
 				if (params[0] == 'Ok') {
 					// Only do this on initial command list creation
-					switch (rcpCommand.Address.slice(-4)) {
-						case 'evel':
-							instance.levelCommands.push(rcpCommand.Address)
-							break
-						case 'olor':
-							instance.colorCommands.push(rcpCommand.Address)
+					let rcpName = rcpCommand.Address.slice(rcpCommand.Address.indexOf('/') + 1) // String after "MIXER:Current/"
+					if (rcpName.endsWith('Color')) {
+						instance.colorCommands.push(rcpName)
 					}
 				}
 			}

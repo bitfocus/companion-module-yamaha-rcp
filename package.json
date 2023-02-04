@@ -7,7 +7,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"format": "prettier -w ."
+		"format": "prettier -w .",
+		"lint:raw": "eslint --ext .ts --ext .js --ignore-pattern dist --ignore-pattern pkg",
+		"lint": "yarn lint:raw ."
 	},
 	"repository": {
 		"type": "git",
@@ -18,7 +20,7 @@
 		"@companion-module/tools": "^0.5.0"
 	},
 	"dependencies": {
-		"@companion-module/base": "~0.6.1"
+		"@companion-module/base": "~1.1.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }

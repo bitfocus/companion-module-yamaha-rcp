@@ -3,7 +3,6 @@
 */
 
 module.exports = {
-
 	// Upgrade  1.x > 3.0.0, changes scene action parameter format
 	upg1xxto300: (context, config, actions, feedbacks) => {
 		var paramFuncs = require('./paramFuncs')
@@ -23,16 +22,17 @@ module.exports = {
 
 			if (id == 1000) {
 				newAction = rcpCommands.find((i) => i.Index == id)
+				let newName
 
 				if (newAction !== undefined) {
 					newName = newAction.Address
-					console.log(`Yamaha-RCP: Updating ${(isAction) ? 'Action' : 'Feedback'} #${id} (${newName}...)`)
+					console.log(`Yamaha-RCP: Updating ${isAction ? 'Action' : 'Feedback'} #${id} (${newName}...)`)
 					action.Val = action.X
 					action.X = 0
 					action.label = this.id + ':' + newName
 					changed = true
 				} else {
-					console.log(`Yamaha-RCP: Action ${name} not found in list!`)
+					console.log(`Yamaha-RCP: Action ${newName} not found in list!`)
 				}
 			}
 			return changed

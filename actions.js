@@ -2,23 +2,23 @@ module.exports = {
 	// Create single Action/Feedback
 	createAction: (instance, rcpCmd) => {
 		const rcpNames = require('./rcpNames.json')
-	
+
 		let newAction = {}
 		let paramsToAdd = []
-		let rcpLabel = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
+		let actionName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 
-		// Add the commands from the data file. Action id's (action.action) are the rcp command text (Address)
-		let rcpLabels = rcpLabel.split('/')
-		let rcpLabelIdx = rcpLabel.startsWith('Cue') ? 1 : 0
+		// Add the commands from the data file. Action id's (action.actionId) are the rcp command text (Address)
+		let actionNameParts = actionName.split('/')
+		let rcpNameIdx = actionName.startsWith('Cue') ? 1 : 0
 
-		newAction = { name: rcpLabel, options: [] }
-				
+		newAction = { name: actionName, options: [] }
+
 		// X parameter - always an integer
 		if (rcpCmd.X > 1) {
-			if (rcpLabel.startsWith('InCh') || rcpLabel.startsWith('Cue/InCh')) {
+			if (actionName.startsWith('InCh') || actionName.startsWith('Cue/InCh')) {
 				paramsToAdd.push({
 					type: 'dropdown',
-					label: rcpLabels[rcpLabelIdx],
+					label: actionNameParts[rcpNameIdx],
 					id: 'X',
 					default: 1,
 					minChoicesForSearch: 0,
@@ -27,17 +27,15 @@ module.exports = {
 				})
 			} else {
 				paramsToAdd.push({
-					type: 'number',
-					label: rcpLabels[rcpLabelIdx],
+					type: 'textinput',
+					label: actionNameParts[rcpNameIdx],
 					id: 'X',
-					min: 1,
-					max: rcpCmd.X,
 					default: 1,
 					required: true,
-					range: false,
+					useVariables: true,
 				})
 			}
-			rcpLabelIdx++
+			rcpNameIdx++
 		}
 
 		// Y Parameter - always an integer
@@ -45,158 +43,155 @@ module.exports = {
 			if (instance.config.model == 'TF' && rcpCmd.Index == 1000) {
 				paramsToAdd.push({
 					type: 'dropdown',
-					label: rcpLabels[rcpLabelIdx],
+					label: actionNameParts[rcpNameIdx],
 					id: 'Y',
 					default: 1,
 					choices: [
 						{ id: 1, label: 'A' },
 						{ id: 2, label: 'B' },
 					],
-					allowCustom: true
+					allowCustom: true,
 				})
 			} else {
 				paramsToAdd.push({
 					type: 'textinput',
-					label: rcpLabels[rcpLabelIdx],
+					label: actionNameParts[rcpNameIdx],
 					id: 'Y',
 					default: '1',
 					required: true,
-					useVariables: true
+					useVariables: true,
 				})
 			}
 		}
 
-		if (rcpLabelIdx < rcpLabels.length - 1) {
-			rcpLabelIdx++
+		if (rcpNameIdx < actionNameParts.length - 1) {
+			rcpNameIdx++
 		}
-
 
 		// Val Parameter - integer, binary or string
-		switch (rcpCmd.Type) {
-			case 'integer':
-
-				if (rcpCmd.Max == 1) {
-					// Boolean
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: 'State',
-						id: 'Val',
-						default: 'Toggle',
-						minChoicesForSearch: 0,
-						choices: [
-							{ label: 'On', id: 1 },
-							{ label: 'Off', id: 0 },
-							{ label: 'Toggle', id: 'Toggle' },
-						],
-						allowCustom: true
-					})
-				} else {
-					paramsToAdd.push({
-						type: 'textinput',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						required: true,
-						useVariables: true,
-					})
-					if (rcpCmd.Index != 1000) {
+		if (!(rcpCmd.Min == 0 && rcpCmd.Max == 0)) {
+			// If Min & Max are both 0 then it has no value parameter
+			switch (rcpCmd.Type) {
+				case 'integer':
+					if (rcpCmd.Max == 1) {
+						// Boolean
 						paramsToAdd.push({
-							type: 'checkbox',
-							label: 'Relative',
-							id: 'Rel',
-							default: false,
-						})						
+							type: 'dropdown',
+							label: 'State',
+							id: 'Val',
+							default: 'Toggle',
+							minChoicesForSearch: 0,
+							choices: [
+								{ label: 'On', id: 1 },
+								{ label: 'Off', id: 0 },
+								{ label: 'Toggle', id: 'Toggle' },
+							],
+							allowCustom: true,
+						})
+					} else {
+						paramsToAdd.push({
+							type: 'textinput',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
+							required: true,
+							useVariables: true,
+						})
+						if (rcpCmd.Index != 1000) {
+							paramsToAdd.push({
+								type: 'checkbox',
+								label: 'Relative',
+								id: 'Rel',
+								default: false,
+							})
+						}
 					}
-				}
 
-				break
+					break
 
-			case 'string':
-			case 'binary':
-				if (rcpLabel.startsWith('CustomFaderBank')) {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: rcpNames.customChNames,
-					})
-				} else if (rcpLabel.endsWith('Color')) {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: (instance.config.model == 'TF') ? rcpNames.chColorsTF : rcpNames.chColors,
-					})
-				} else if (rcpLabel.endsWith('Icon')) {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: rcpNames.chIcons,
-					})
-				} else if (rcpLabel == 'InCh/Patch') {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: rcpNames.inChPatch,
-					})
-				} else if (rcpLabel == 'DanteOutPort/Patch') {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: rcpNames.danteOutPatch,
-					})
-				} else if (rcpLabel == 'OmniOutPort/Patch') {
-					paramsToAdd.push({
-						type: 'dropdown',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						minChoicesForSearch: 0,
-						choices: rcpNames.omniOutPatch,
-					})
-				} else if (instance.config.model == 'PM' && rcpCmd.Index == 1000) {
-					paramsToAdd.push({
-						type: 'textinput',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
-						useVariables: true
-					})
-	
-				} else {
-					paramsToAdd.push({
-						type: 'textinput',
-						label: rcpLabels[rcpLabelIdx],
-						id: 'Val',
-						default: rcpCmd.Default,
-						regex: '',
-						useVariables: true
-					})
-				}
+				case 'string':
+				case 'binary':
+					if (actionName.startsWith('CustomFaderBank')) {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: rcpNames.customChNames,
+						})
+					} else if (actionName.endsWith('Color')) {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: instance.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors,
+						})
+					} else if (actionName.endsWith('Icon')) {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: rcpNames.chIcons,
+						})
+					} else if (actionName == 'InCh/Patch') {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: rcpNames.inChPatch,
+						})
+					} else if (actionName == 'DanteOutPort/Patch') {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: rcpNames.danteOutPatch,
+						})
+					} else if (actionName == 'OmniOutPort/Patch') {
+						paramsToAdd.push({
+							type: 'dropdown',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							minChoicesForSearch: 0,
+							choices: rcpNames.omniOutPatch,
+						})
+					} else if (instance.config.model == 'PM' && rcpCmd.Index == 1000) {
+						paramsToAdd.push({
+							type: 'textinput',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
+							useVariables: true,
+						})
+					} else {
+						paramsToAdd.push({
+							type: 'textinput',
+							label: actionNameParts[rcpNameIdx],
+							id: 'Val',
+							default: rcpCmd.Default,
+							regex: '',
+							useVariables: true,
+						})
+					}
+			}
 		}
-		
+
 		// Make sure the current value is stored in dataStore[]
-		if (rcpCmd.Index != 1000) {
+		if (rcpCmd.Index < 1000) {
 			newAction.subscribe = async (action) => {
-				let req = (await module.exports.parseCmd(instance, 'get', action.actionId, action.options)).replace(
-					'MIXER_',
-					'MIXER:'
-				)
-				instance.sendCmd(req) // Get the current value
+				let options = await module.exports.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
+				await instance.getFromDataStore({ Address: rcpCmd.Address, options: options })
 			}
 		}
 
@@ -205,85 +200,83 @@ module.exports = {
 		return newAction
 	},
 
-	// Create the proper command string for an action or poll
-	parseCmd: async (instance, prefix, rcpCmd, opt) => {
+	// Create the proper command string to send to the console
+	fmtCmd: async (instance, prefix, cmdToFmt) => {
+		if (cmdToFmt == undefined) return
 
-console.log('\n\n\nparseCmd: rcpCmd (incoming) = \n', rcpCmd, 'opt: ', opt)
-
-		if (rcpCmd == undefined || opt == undefined) return
-
-		let rcpCommand = instance.rcpCommands.find((cmd) => cmd.Address == rcpCmd)
-		if (rcpCommand == undefined) {
-			instance.log('debug', `PARSECMD: Unrecognized command. '${rcpCmd}'`)
-			return
-		}
 		let cmdStart = prefix
-		let cmdName = rcpCommand.Address
+		let cmdName = cmdToFmt.rcpCmd.Address
+		let options = await module.exports.parseOptions(instance, instance, cmdToFmt)
 
-		let optX = (opt.X == undefined) ? 1 : parseInt(await instance.parseVariablesInString(opt.X)) - 1
-		let optY = (opt.Y == undefined) ? 0 : parseInt(await instance.parseVariablesInString(opt.Y)) - 1
-		let optVal = await instance.parseVariablesInString(opt.Val)
-
-console.log("\n\nrcpCommand (template) = \n", rcpCommand, '\n')
-console.log('opt.X is ', opt.X, ', optX is ', optX)
-console.log('opt.Y is ', opt.Y, ', optY is ', optY)
-console.log('opt.Val is ',opt.Val, ', optVal is ', optVal, "\n\n")
-
-		if (rcpCommand.Index == 1000) {
-
+		if (cmdToFmt.rcpCmd.Index == 1000) {
+			cmdName = 'MIXER:Lib/Scene'
 			switch (instance.config.model) {
 				case 'TF':
-					cmdName = `scene_${(optY == 0) ? 'a' : 'b'}`
+					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
 				case 'CL/QL':
-					cmdStart = (prefix == 'set') ? 'ssrecall_ex' : 'sscurrent_ex'
+					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
 					break
 				case 'PM':
-					cmdStart = (prefix == 'set') ? 'ssrecallt_ex' : 'sscurrentt_ex'
+					cmdStart = prefix == 'set' ? 'ssrecallt_ex' : 'sscurrentt_ex'
 			}
-
-			optX = ''
-			optY = ''
+			options.X = ''
+			options.Y = ''
 		}
-		
+
+		if (cmdToFmt.rcpCmd.Index > 1000) {
+			cmdStart = 'event'
+			options.X = ''
+			options.Y = ''
+		}
+
 		let cmdStr = `${cmdStart} ${cmdName}`
-		if (prefix == 'set') {
+		if (prefix == 'set' && cmdToFmt.rcpCmd.Index <= 1000) {
 			// if it's not "set" then it's a "get" which doesn't have a Value
-			switch (rcpCommand.Type) {
-				case 'integer':
-				case 'binary':
-					if (optVal == 'Toggle') {
-						if (instance.dataStore[rcpCmd] !== undefined && instance.dataStore[rcpCmd][optX] !== undefined) {
-							optVal = 1 - parseInt(instance.dataStore[rcpCmd][optX][optY + 1])
-						}
-					} else {
-						optVal = parseInt(optVal)
-
-						if (opt.Rel != undefined && opt.Rel == true) {
-							// Relative selected?
-							if (instance.dataStore[rcpCmd] !== undefined && instance.dataStore[rcpCmd][optX] !== undefined) {
-								let curVal = parseInt(instance.dataStore[rcpCmd][optX][optY + 1])
-								// Handle bottom of range
-								if (curVal == -32768 && optVal > 0) {
-									curVal = -9600
-								} else if (curVal == -9600 && optVal < 0) {
-									curVal = -32768
-								}
-								optVal = curVal + optVal
-							}
-						}
-					}
-
-					break
-
-				case 'string':
-					optVal = `"${optVal}"` // put quotes around the string
+			if (cmdToFmt.rcpCmd.Type == 'string') {
+				options.Val = `"${options.Val}"` // put quotes around the string
 			}
 		} else {
-			optVal = ''
-		}	
+			options.Val = '' // "get" command, so no Value
+		}
+		//	console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
+		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
+	},
 
-console.log(`\n\n\nFormatted Command: ${cmdStr} ${optX} ${optY} ${optVal}`.trim()) // Command string to send to console
+	// Create the proper command string for an action or poll
+	parseOptions: async (instance, context, cmdToParse) => {
+		const varFuncs = require('./variables.js')
+		let parsedOptions = {}
+		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
+		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
+		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val)
 
-		return `${cmdStr} ${optX} ${optY} ${optVal}`.trim() // Command string to send to console
-	}
+		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
+
+		if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
+
+		if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary') {
+			if (parsedOptions.Val == 'Toggle') {
+				parsedOptions.Val = 1 - parseInt(data)
+				return parsedOptions
+			}
+
+			parsedOptions.Val = parseInt(
+				parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale
+			)
+
+			if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
+				// Relative selected?
+				let curVal = parseInt(data)
+
+				// Handle bottom of range
+				if (curVal == -32768 && parsedOptions.Val > 0) {
+					curVal = -9600
+				} else if (curVal == -9600 && parsedOptions.Val < 0) {
+					curVal = -32768
+				}
+				parsedOptions.Val = curVal + parsedOptions.Val
+			}
+		}
+		return parsedOptions
+	},
 }
