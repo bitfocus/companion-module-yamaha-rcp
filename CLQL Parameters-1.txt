@@ -131,7 +131,7 @@ OK prminfo 126 "MIXER:Current/Cue/FaderCueRelease" 1 1 0 1 0 "" integer any rw 1
 -- prminfo 130 "MIXER:Current/Cue/DCA/Unity" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 131 "MIXER:Current/Cue/OutputLevel" 1 1 -32768 1000 0 "" integer any rw 1
 OK prminfo 132 "MIXER:Current/Cue/ActiveCue" 1 1 0 10 "None" "" string any r 1
-OK prminfo 133 "MIXER:Current/Cue/StIn/On" 16 1 0 1 0 "" integer any rw 1
+-- prminfo 133 "MIXER:Current/Cue/StIn/On" 16 1 0 1 0 "" integer any rw 1
 OK prminfo 134 "MIXER:Current/Cue/StInCh/On" 16 1 0 1 0 "" integer any rw 1
 OK prminfo 135 "MIXER:Current/Cue/Mtrx/On" 8 1 0 1 0 "" integer any rw 1
 OK prminfo 136 "MIXER:Current/Cue/St/On" 3 1 0 1 0 "" integer any rw 1

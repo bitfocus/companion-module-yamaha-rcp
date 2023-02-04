@@ -131,7 +131,6 @@ class instance extends InstanceBase {
 					if (line.length == 0) {
 						continue
 					}
-					this.log('debug', `Received: '${line}'\treqStack = ${this.reqStack.length}`)
 					receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
 
 					for (let i = 0; i < receivedcmds.length; i++) {
