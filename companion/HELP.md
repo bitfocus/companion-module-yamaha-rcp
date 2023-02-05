@@ -14,7 +14,7 @@ _Andrew Broughton_
 
 > Macros use the new Action Recorder feature in v3, and will only work while connected to a console.
 
-> Drag the "Record RCP Macro" Preset to your page, press and hold it for 1 second to reset it. Press and hold it again to start recording. When it shows "REC RCP Macro", start doing stuff on the console, then press it again to stop recording. All the actions you performed are now stored to that button. The button's name will change to **New Macro**
+> Press and hold the **REC RCP Macro** button for 1 second to reset it. Press and hold it again to start recording. When it shows **REC Step: 0**, start doing stuff on the console. The Steps will increase as you add operations. Press it again to stop recording. All the actions you performed are now stored to that button. The button's name will change to **New Macro**
 
 > Don't forget that you can create a macro by pressing a SD button (while recording) that already has actions on it while a console is connected.The new Macro will have those commands in it as well as any you added before you pressed the button or after!
 
