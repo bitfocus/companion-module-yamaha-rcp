@@ -74,7 +74,7 @@ module.exports = {
 
 				for (var j = 0; j < line.length; j++) {
 					// Get rid of any double quotes around the strings and change the colon to underscore
-					rcpCommand[params[j]] = line[j].replace(/"/g, '') // .replace(/:/g, '_')
+					rcpCommand[params[j]] = line[j].replace(/"/g, '')
 				}
 
 				cmds.push(rcpCommand)

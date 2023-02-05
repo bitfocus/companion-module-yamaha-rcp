@@ -81,7 +81,7 @@ class instance extends InstanceBase {
 
 		this.updateActions() // Re-do the actions once the console is chosen
 		varFuncs.initVars(this)
-		this.createPresets()
+		//this.createPresets()
 		this.initTCP()
 	}
 
@@ -131,6 +131,7 @@ class instance extends InstanceBase {
 					if (line.length == 0) {
 						continue
 					}
+					this.log('debug', `Received: '${line}'`)
 					receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
 
 					for (let i = 0; i < receivedcmds.length; i++) {
@@ -142,6 +143,8 @@ class instance extends InstanceBase {
 						)
 						if (reqIdx > -1) {
 							this.reqStack.splice(reqIdx, 1) // Remove it!
+						} else {
+							this.reqStack.shift() // Just in case it's an invalid command stuck in there
 						}
 						if (this.reqStack.length > 0) { // More to send?
 							let cmdToSend = this.reqStack[0] // Oldest
@@ -163,7 +166,7 @@ class instance extends InstanceBase {
 						}
 
 						if (curCmd.Address.startsWith('MIXER:Lib/Scene')) {
-							if (curCmd.Status == 'OK' && curCmd.Command.startsWith('ssrecall')) {
+							if (curCmd.Status == 'NOTIFY' && curCmd.Command.startsWith('sscurrent')) {
 								this.pollConsole()
 							}
 							varFuncs.setVar(this, curCmd)
@@ -270,7 +273,7 @@ class instance extends InstanceBase {
 
 	// Poll the console for it's status to update buttons via feedback
 	pollConsole() {
-		varFuncs.getVars(this)
+		//varFuncs.getVars(this)
 		this.dataStore = {}
 		this.subscribeActions()
 		this.checkFeedbacks()
@@ -288,7 +291,7 @@ class instance extends InstanceBase {
 		if (this.dataStore[dsAddr][dsX] == undefined) {
 			this.dataStore[dsAddr][dsX] = {}
 		}
-		this.dataStore[dsAddr][dsX][dsY] = cmd.Val		
+		this.dataStore[dsAddr][dsX][dsY] = cmd.Val
 	}
 
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.

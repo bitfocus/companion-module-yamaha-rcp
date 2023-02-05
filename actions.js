@@ -249,6 +249,8 @@ module.exports = {
 		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
 		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
 		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val)
+		parsedOptions.X = Math.max(parsedOptions.X, 0)
+		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 
 		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
 
@@ -276,6 +278,7 @@ module.exports = {
 				}
 				parsedOptions.Val = curVal + parsedOptions.Val
 			}
+			parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
 		}
 		return parsedOptions
 	},
