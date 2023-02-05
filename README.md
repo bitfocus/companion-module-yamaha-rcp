@@ -21,4 +21,8 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-v2.0.0 v3 Rewrite
+v3.0.0 Complete Rewrite for v3.
+- more variable support, including new internal variables, custom variable support and auto-created internal variables
+- Select "Auto-Create Variable" to create a variable in the form **CommandName_Ch#** or **CommandName_Ch#_Mix#**
+- Use **@(internal:custom_MyCustomVar)** in the value field to update a custom variable within a feedback. Custom variable must already exist.
+- dB values are now entered as actual dB. Off is -Inf

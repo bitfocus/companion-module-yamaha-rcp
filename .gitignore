@@ -3,3 +3,7 @@ companion-module-yamaha-rcp-v3.code-workspace
 .vscode
 yarn.lock
 .eslintrc.cjs
+pkg.tgz
+build-config.cjs
+package-lock.json
+pkg/main.js
