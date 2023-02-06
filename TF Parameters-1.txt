@@ -107,3 +107,5 @@ OK prminfo 102 "MIXER:Current/St/PanMode" 2 0 0 1 0 "" integer any r 1
 OK prminfo 106 "MIXER:Current/FxRtnCh/Label/Category" 4 0 0 6 0 "" binary any r 1
 OK prminfo 107 "MIXER:Current/MuteMaster/Label/Name" 6 0 0 8 "MUTE 1" "" string any r 1
 OK scninfo 1000 "MIXER:Lib/Bank/Scene" 1 2 0 100 0 "" integer any rw 1
+OK scninfo 1001 "MIXER:Lib/Scene/RecallInc" 0 0 0 0 0 "" integer any rw 1
+OK scninfo 1002 "MIXER:Lib/Scene/RecallDec" 0 0 0 0 0 "" integer any rw 1

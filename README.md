@@ -26,3 +26,4 @@ v3.0.0 Complete Rewrite for v3.
 - Select "Auto-Create Variable" to create a variable in the form **CommandName_Ch#** or **CommandName_Ch#_Mix#**
 - Use **@(internal:custom_MyCustomVar)** in the value field to update a custom variable within a feedback. Custom variable must already exist.
 - dB values are now entered as actual dB. Off is -Inf
+- Added RecallInc (Recall next Scene) and RecallDec (Recall previous Scene) functions
