@@ -6,4 +6,4 @@ yarn.lock
 pkg.tgz
 build-config.cjs
 package-lock.json
-pkg/main.js
+pkg

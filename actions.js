@@ -262,9 +262,7 @@ module.exports = {
 				return parsedOptions
 			}
 
-			parsedOptions.Val = parseInt(
-				parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale
-			)
+			parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
 
 			if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
 				// Relative selected?

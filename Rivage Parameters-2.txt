@@ -392,5 +392,5 @@ OK prminfo 390 "MIXER:Setup/Oscillator/Level" 2 1 -9600 0 -4000 "dB" integer kno
 OK prminfo 391 "MIXER:Setup/Oscillator/On" 1 1 0 1 0 "" integer latchsw rw 1
 OK prminfo 392 "MIXER:Setup/Oscillator/Type" 1 1 0 0 "PINK NOISE" "" string list rw 1
 OK scninfo 1000 "MIXER:Lib/Scene" 1 1 0 500 0 "" string any rw 1
-OK scninfo 1001 "MIXER:Lib/Scene/RecallInc" 0 0 0 0 0 "" integer any rw 1
-OK scninfo 1002 "MIXER:Lib/Scene/RecallDec" 0 0 0 0 0 "" integer any rw 1
+OK scninfo 1001 "MIXER:Lib/Scene/RecallInc" 0 0 0 0 0 "" string any rw 1
+OK scninfo 1002 "MIXER:Lib/Scene/RecallDec" 0 0 0 0 0 "" string any rw 1

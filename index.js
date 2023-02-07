@@ -189,7 +189,7 @@ class instance extends InstanceBase {
 	sendCmd(c) {
 		if (c !== undefined) {
 			c = c.trim()
-			this.log('debug', `Sending : '${c}' to ${this.getVariableValue('modelName')} @ ${this.config.host}`)
+			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${this.config.host}`)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the console

@@ -21,6 +21,10 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
+3.0.1 Bug fixes
+- Fixed module stopped responding if invalid values passed in actions
+- Fixed an error when using RecallInc and RecallDec
+
 v3.0.0 Complete Rewrite for v3.
 - more variable support, including new internal variables, custom variable support and auto-created internal variables
 - Select "Auto-Create Variable" to create a variable in the form **CommandName_Ch#** or **CommandName_Ch#_Mix#**
