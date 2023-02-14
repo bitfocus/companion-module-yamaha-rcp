@@ -46,7 +46,7 @@ module.exports = {
 
 		newFeedback.callback = async (event, context) => {
 			let rcpCommand = instance.findRcpCmd(event.feedbackId)
-			let options = await actionFuncs.parseOptions(instance, context, { rcpCmd: rcpCommand, options: event.options })
+			let options = await instance.parseOptions(instance, context, { rcpCmd: rcpCommand, options: event.options })
 			let data = await instance.getFromDataStore({ Address: rcpCommand.Address, options: options })
 			if (options && data == options.Val) {
 				return true

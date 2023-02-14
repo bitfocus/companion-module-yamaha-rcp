@@ -42,7 +42,13 @@ module.exports = {
 				break
 			case 'sscurrent_ex':
 				instance.setVariableValues({ curScene: msg.X })
-				instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.X}`) // Request Current Scene Info once we know what scene we have
+				// Request Current Scene Info once we know what scene we have
+				instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.X}`) 
+				break
+			case 'sscurrentt_ex':
+				instance.setVariableValues({ curScene: msg.X })
+				// Request Current Scene Info once we know what scene we have
+				instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${msg.X}"`)
 				break
 			case 'ssinfo_ex':
 				instance.setVariableValues({ curSceneName: msg.Val.trim() })

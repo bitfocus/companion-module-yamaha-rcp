@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Aug 9, 2022 Version 3.0.0 (v3)
+// Feb 10, 2023 Version 3.0.2 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -87,9 +87,9 @@ class instance extends InstanceBase {
 
 	// Initialize TCP
 	initTCP() {
-		let receivebuffer = ''
+		let receiveBuffer = ''
 		let receivedLines = []
-		let receivedcmds = []
+		let receivedCmds = []
 		let foundCmd = {}
 
 		if (this.socket !== undefined) {
@@ -114,17 +114,17 @@ class instance extends InstanceBase {
 			})
 
 			this.socket.on('data', (chunk) => {
-				receivebuffer += chunk
-				receivedLines = receivebuffer.split('\x0A') // Split by line break
+				receiveBuffer += chunk
+				receivedLines = receiveBuffer.split('\x0A') // Split by line break
 				if (receivedLines.length == 0) {
 					return // No messages
 				}
 
-				if (receivebuffer.endsWith('\x0A')) {
-					receivebuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
+				if (receiveBuffer.endsWith('\x0A')) {
+					receiveBuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
 					receivedLines.splice(receivedLines.length - 1) // Remove it.
 				} else {
-					receivebuffer = ''
+					receiveBuffer = ''
 				}
 
 				for (let line of receivedLines) {
@@ -132,10 +132,10 @@ class instance extends InstanceBase {
 						continue
 					}
 					this.log('debug', `Received: '${line}'`)
-					receivedcmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
+					receivedCmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
 
-					for (let i = 0; i < receivedcmds.length; i++) {
-						let curCmd = JSON.parse(JSON.stringify(receivedcmds[i])) // deep clone
+					for (let i = 0; i < receivedCmds.length; i++) {
+						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
 						let cmdToFind = curCmd.Address
 
 						let reqIdx = this.reqStack.findIndex((c) => 
@@ -173,7 +173,7 @@ class instance extends InstanceBase {
 							continue
 						}
 
-						if (curCmd.Command == 'devinfo') {
+						if (curCmd.Command == 'devinfo' || curCmd.Command == 'scpmode') {
 							varFuncs.setVar(this, curCmd) // Check and set module vars (message is not a param cmd)
 							continue
 						}
@@ -186,26 +186,6 @@ class instance extends InstanceBase {
 		}
 	}
 
-	sendCmd(c) {
-		if (c !== undefined) {
-			c = c.trim()
-			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${this.config.host}`)
-
-			if (this.socket !== undefined && this.socket.isConnected) {
-				this.socket.send(`${c}\n`) // send the message to the console
-			} else {
-				this.log('info', 'Socket not connected :(')
-			}
-		}
-	}
-
-	findRcpCmd(cmdName) {
-		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == cmdName)
-		if (rcpCommand == undefined) {
-			this.log('debug', `FINDCMD: Unrecognized command. '${cmdName}'`)
-		}
-		return rcpCommand
-	}
 
 	// Create the Actions & Feedbacks
 	updateActions() {
@@ -221,7 +201,7 @@ class instance extends InstanceBase {
 
 			newAction.callback = async (event) => {
 				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
-				let cmd = await actionFuncs.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: event.options })
+				let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: event.options })
 				if (cmd !== undefined) {
 					this.sendCmd(cmd)
 				}
@@ -269,6 +249,58 @@ class instance extends InstanceBase {
 		]
 
 		this.setPresetDefinitions(this.rcpPresets)
+	}
+
+	// Track whether actions are being recorded
+	handleStartStopRecordActions(isRecording) {
+		this.isRecordingActions = isRecording
+	}
+
+	// Add a command to the Action Recorder
+	async addToActionRecording(c) {
+		let aId = c.rcpCmd.Address.replace(/:/g, '_')
+		let cX = parseInt(c.options.X) + 1
+		let cY = parseInt(c.options.Y) + 1
+		let cV
+
+		switch (c.rcpCmd.Type) {
+			case 'integer':
+			case 'binary':
+				cV = c.options.Val == c.rcpCmd.Min ? '-Inf' : c.options.Val / c.rcpCmd.Scale
+				break
+			case 'string':
+				cV = c.options.Val
+				break
+		}
+
+		this.recordAction(
+			{
+				actionId: aId,
+				options: { X: cX, Y: cY, Val: cV },
+			},
+			`${aId} ${cX} ${cY}` // uniqueId to stop duplicates
+		)
+	}
+
+	sendCmd(c) {
+		if (c !== undefined) {
+			c = c.trim()
+			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${this.config.host}`)
+
+			if (this.socket !== undefined && this.socket.isConnected) {
+				this.socket.send(`${c}\n`) // send the message to the console
+			} else {
+				this.log('info', 'Socket not connected :(')
+			}
+		}
+	}
+
+	findRcpCmd(cmdName) {
+		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == cmdName)
+		if (rcpCommand == undefined) {
+			this.log('debug', `FINDCMD: Unrecognized command. '${cmdName}'`)
+		}
+		return rcpCommand
 	}
 
 	// Poll the console for it's status to update buttons via feedback
@@ -326,35 +358,85 @@ class instance extends InstanceBase {
 		return data
 	}
 
-	// Track whether actions are being recorded
-	handleStartStopRecordActions(isRecording) {
-		this.isRecordingActions = isRecording
-	}
 
-	// Add a command to the Action Recorder
-	async addToActionRecording(c) {
-		let aId = c.rcpCmd.Address.replace(/:/g, '_')
-		let cX = parseInt(c.options.X) + 1
-		let cY = parseInt(c.options.Y) + 1
-		let cV
+	// Create the proper command string to send to the console
+	async fmtCmd(instance, prefix, cmdToFmt) {
+		if (cmdToFmt == undefined) return
 
-		switch (c.rcpCmd.Type) {
-			case 'integer':
-			case 'binary':
-				cV = c.options.Val == c.rcpCmd.Min ? '-Inf' : c.options.Val / c.rcpCmd.Scale
-				break
-			case 'string':
-				cV = c.options.Val
-				break
+		let cmdStart = prefix
+		let cmdName = cmdToFmt.rcpCmd.Address
+		let options = await this.parseOptions(instance, instance, cmdToFmt)
+
+		if (cmdToFmt.rcpCmd.Index == 1000) {
+			cmdName = 'MIXER:Lib/Scene'
+			switch (instance.config.model) {
+				case 'TF':
+					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
+				case 'CL/QL':
+					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
+					break
+				case 'PM':
+					cmdStart = prefix == 'set' ? 'ssrecallt_ex' : 'sscurrentt_ex'
+			}
+			options.X = ''
+			options.Y = ''
 		}
 
-		this.recordAction(
-			{
-				actionId: aId,
-				options: { X: cX, Y: cY, Val: cV },
-			},
-			`${aId} ${cX} ${cY}` // uniqueId to stop duplicates
-		)
+		if (cmdToFmt.rcpCmd.Index > 1000) { // RecallInc/Dec
+			cmdStart = 'event'
+			options.X = ''
+			options.Y = ''
+		}
+
+		let cmdStr = `${cmdStart} ${cmdName}`
+		if (prefix == 'set' && cmdToFmt.rcpCmd.Index <= 1000) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
+			if (cmdToFmt.rcpCmd.Type == 'string') {
+				options.Val = `"${options.Val}"` // put quotes around the string
+			}
+		} else {
+			options.Val = '' // "get" command, so no Value
+		}
+		//	console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
+		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
+	}
+
+	// Create the proper command string for an action or poll
+	async parseOptions(instance, context, cmdToParse) {
+		const varFuncs = require('./variables.js')
+		let parsedOptions = {}
+		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
+		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
+		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val)
+		parsedOptions.X = Math.max(parsedOptions.X, 0)
+		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
+
+		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
+
+		if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
+
+		if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary') {
+			if (parsedOptions.Val == 'Toggle') {
+				parsedOptions.Val = 1 - parseInt(data)
+				return parsedOptions
+			}
+
+			parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
+
+			if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
+				// Relative selected?
+				let curVal = parseInt(data)
+
+				// Handle bottom of range
+				if (curVal == -32768 && parsedOptions.Val > 0) {
+					curVal = -9600
+				} else if (curVal == -9600 && parsedOptions.Val < 0) {
+					curVal = -32768
+				}
+				parsedOptions.Val = curVal + parsedOptions.Val
+			}
+			parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
+		}
+		return parsedOptions
 	}
 }
 

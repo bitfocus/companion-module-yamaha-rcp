@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.0.1 - for Companion v3
+## Yamaha Remote Control Protocol v3.0.2 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -20,6 +20,10 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.0.2
+- Removed RecallInc/Dec for Rivage (not yet supported)
+- Fix for getting Scene Info on Rivage
 
 3.0.1 Bug fixes
 - Fixed module stopped responding if invalid values passed in actions

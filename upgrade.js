@@ -2,12 +2,12 @@
 // Do the upgrades of actions, release actions and feedback
 */
 
-module.exports = {
+module.exports = [
 	// Upgrade  1.x > 3.0.0, changes scene action parameter format
-	upg1xxto300: (context, config, actions, feedbacks) => {
+	(context, config, actions, feedbacks) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('Yamaha-RCP: Running 1.x-> 3.0.0 Upgrade.')
+		console.log('Yamaha-RCP: Running 1.x-> 3.0.x Upgrade.')
 		var changed = false
 
 		if (config != null) {
@@ -50,4 +50,4 @@ module.exports = {
 
 		return changed
 	},
-}
+]

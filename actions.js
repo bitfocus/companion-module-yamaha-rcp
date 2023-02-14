@@ -190,7 +190,7 @@ module.exports = {
 		// Make sure the current value is stored in dataStore[]
 		if (rcpCmd.Index < 1000) {
 			newAction.subscribe = async (action) => {
-				let options = await module.exports.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
+				let options = await instance.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
 				await instance.getFromDataStore({ Address: rcpCmd.Address, options: options })
 			}
 		}
@@ -200,84 +200,4 @@ module.exports = {
 		return newAction
 	},
 
-	// Create the proper command string to send to the console
-	fmtCmd: async (instance, prefix, cmdToFmt) => {
-		if (cmdToFmt == undefined) return
-
-		let cmdStart = prefix
-		let cmdName = cmdToFmt.rcpCmd.Address
-		let options = await module.exports.parseOptions(instance, instance, cmdToFmt)
-
-		if (cmdToFmt.rcpCmd.Index == 1000) {
-			cmdName = 'MIXER:Lib/Scene'
-			switch (instance.config.model) {
-				case 'TF':
-					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
-				case 'CL/QL':
-					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
-					break
-				case 'PM':
-					cmdStart = prefix == 'set' ? 'ssrecallt_ex' : 'sscurrentt_ex'
-			}
-			options.X = ''
-			options.Y = ''
-		}
-
-		if (cmdToFmt.rcpCmd.Index > 1000) {
-			cmdStart = 'event'
-			options.X = ''
-			options.Y = ''
-		}
-
-		let cmdStr = `${cmdStart} ${cmdName}`
-		if (prefix == 'set' && cmdToFmt.rcpCmd.Index <= 1000) {
-			// if it's not "set" then it's a "get" which doesn't have a Value
-			if (cmdToFmt.rcpCmd.Type == 'string') {
-				options.Val = `"${options.Val}"` // put quotes around the string
-			}
-		} else {
-			options.Val = '' // "get" command, so no Value
-		}
-		//	console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
-		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
-	},
-
-	// Create the proper command string for an action or poll
-	parseOptions: async (instance, context, cmdToParse) => {
-		const varFuncs = require('./variables.js')
-		let parsedOptions = {}
-		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
-		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
-		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val)
-		parsedOptions.X = Math.max(parsedOptions.X, 0)
-		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-
-		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
-
-		if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
-
-		if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary') {
-			if (parsedOptions.Val == 'Toggle') {
-				parsedOptions.Val = 1 - parseInt(data)
-				return parsedOptions
-			}
-
-			parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
-
-			if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
-				// Relative selected?
-				let curVal = parseInt(data)
-
-				// Handle bottom of range
-				if (curVal == -32768 && parsedOptions.Val > 0) {
-					curVal = -9600
-				} else if (curVal == -9600 && parsedOptions.Val < 0) {
-					curVal = -32768
-				}
-				parsedOptions.Val = curVal + parsedOptions.Val
-			}
-			parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
-		}
-		return parsedOptions
-	},
 }
