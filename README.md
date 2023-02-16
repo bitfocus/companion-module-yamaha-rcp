@@ -22,8 +22,9 @@ _Andrew Broughton_
 **REVISION HISTORY**
 
 3.0.2
-- Removed RecallInc/Dec for Rivage (not yet supported)
-- Fix for getting Scene Info on Rivage
+- Removed RecallInc/Dec for Rivage (not supported)
+- Removed Cued Channel Variables for TF (not supported)
+- Fix for getting Scene Info on Rivage & TF
 
 3.0.1 Bug fixes
 - Fixed module stopped responding if invalid values passed in actions

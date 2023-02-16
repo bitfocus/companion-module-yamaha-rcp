@@ -5,23 +5,42 @@ module.exports = {
 			{ variableId: 'curScene', name: 'Current Scene Number' },
 			{ variableId: 'curSceneName', name: 'Current Scene Name' },
 			{ variableId: 'curSceneComment', name: 'Current Scene Comment' },
-			{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
-			{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' },
-			{ variableId: 'cuedMixes', name: 'Mixes Cued' },
-			{ variableId: 'cuedDCAs', name: 'DCAs Cued' },
-
 		]
+		switch (instance.config.model) {
+			case 'CL/QL': {
+				instance.variables.push(
+					{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' }
+				)
+			}			
+			case 'PM': {
+				instance.variables.push(
+					{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
+					{ variableId: 'cuedMixes', name: 'Mixes Cued' },
+					{ variableId: 'cuedDCAs', name: 'DCAs Cued' }
+				)
+			}
+		}
 		instance.setVariableDefinitions(instance.variables)
 	},
 
 	// Get info from a connected console
 	getVars: (instance) => {
 		instance.sendCmd('devinfo productname') // Request Console Model
-		if (instance.config.model == 'PM') {
-			instance.sendCmd(`scpmode sstype "text"`) // Scene numbers are text on Rivage
-			instance.sendCmd('sscurrentt_ex MIXER:Lib/Scene') // Request Current Scene Number
-		} else {
-			instance.sendCmd('sscurrent_ex MIXER:Lib/Scene')
+		switch (instance.config.model) {
+			case 'CL/QL': {
+				instance.sendCmd('sscurrent_ex MIXER:Lib/Scene') 	// Request Current Scene Number
+				break
+			}
+			case 'TF': {
+				instance.sendCmd('sscurrent_ex scene_a')			// TF uses 2 "banks", with no way to determine which is active
+				instance.sendCmd('sscurrent_ex scene_b')			// except when asking for the opposite back, you'll get an error
+				break
+			}
+			case 'PM': {
+				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage
+				instance.sendCmd('sscurrentt_ex MIXER:Lib/Scene')
+				break
+			}
 		}
 	},
 
@@ -43,7 +62,8 @@ module.exports = {
 			case 'sscurrent_ex':
 				instance.setVariableValues({ curScene: msg.X })
 				// Request Current Scene Info once we know what scene we have
-				instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.X}`) 
+				let infoMsg = (instance.config.model == "TF") ? `${msg.X} ${msg.Y}` : msg.X
+				instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${infoMsg}`) 
 				break
 			case 'sscurrentt_ex':
 				instance.setVariableValues({ curScene: msg.X })
@@ -51,6 +71,7 @@ module.exports = {
 				instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${msg.X}"`)
 				break
 			case 'ssinfo_ex':
+			case 'ssinfot_ex':
 				instance.setVariableValues({ curSceneName: msg.Val.trim() })
 				instance.setVariableValues({ curSceneComment: msg.TxtVal.trim() })
 				break
