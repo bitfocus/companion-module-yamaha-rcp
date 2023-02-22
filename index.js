@@ -165,7 +165,7 @@ class instance extends InstanceBase {
 							continue
 						}
 
-						if (curCmd.Address.startsWith('MIXER:Lib/Scene')) {
+						if (curCmd.Address.startsWith('MIXER:Lib/Scene') || curCmd.Address.startsWith('scene')) {
 							if (curCmd.Status == 'NOTIFY' && curCmd.Command.startsWith('sscurrent')) {
 								this.pollConsole()
 							}

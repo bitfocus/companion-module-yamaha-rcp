@@ -128,11 +128,13 @@ module.exports = {
 		let varToAdd = { variableId: varName, name: varName }
 		let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
 
+/* 		// Remove
 		if (!cmd.options.createVariable && varIndex != -1) {
 			instance.variables.splice(varIndex, 1)
 			instance.setVariableDefinitions(instance.variables)
 		}
-
+ */
+		// Add
 		if (cmd.options.createVariable) {
 			if (varIndex == -1) {
 				instance.variables.push(varToAdd)

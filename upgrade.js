@@ -25,67 +25,87 @@ module.exports = [
 	upg2xxto30x = (context, props) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('Yamaha-RCP Upgrade: Running 2.x -> 3.0.x Upgrade.')
+		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.0.x Upgrade.')
 		var updates = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: []
 		}
 
-		console.log('context = ', context, '\n\n')
-		console.log('props = ', props, '\n\n')
+//console.log('context = ', context, '\n\n')
+//console.log('props = ', props, '\n\n')
 		
-		var configToUse = (context != null) ? context : props
-		if (configToUse.config == null) {
-			console.log('Yamaha-RCP Upgrade: NO CONFIG FOUND!\n\n')
+		if (context.currentConfig == null) {
+			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
 			return updates
 		}
 
-		console.log('\nYamaha-RCP Upgrade: Config Ok, Getting Parameters...')
+		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
 
-		if (props.config != null) { // full import
-			var rcpCommands = paramFuncs.getParams(props)
-		} else if (context.config != null) { // partial import
-			var rcpCommands = paramFuncs.getParams(context)
-		}
+		var rcpCommands = paramFuncs.getParams({config: context.currentConfig})
+
+		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
-console.log('Yamaha-RCP Upgrade: Checking: ', action)
+//console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
-			let newAction = undefined
-			let actionAddress = isAction ? action.action : action.type
-			if (actionAddress == 'MIXER_Lib/Scene') {
-				actionAddress = 'MIXER:Lib/Scene/Recall'
-			}
+			let rcpCmd = undefined
+			let actionAddress = isAction ? action.actionId : action.feedbackId
 
-			newAction = rcpCommands.find((i) => i.Address == actionAddress)
+			rcpCmd = rcpCommands.find((i) => i.Address.replace(/:/g, '_') == actionAddress)
+//console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
 
-			if (newAction !== undefined) {
-				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? 'Action' : 'Feedback'} ${newAction.Address}...)`)
+			if (rcpCmd !== undefined) {
+				let newAction = JSON.parse(JSON.stringify(action))
+				let changed = false
 
-				switch (newAction.Address) {
-					case 'MIXER:Lib/Scene': {
-						newAction.Val = action.X
-						newAction.X = 0
+				switch (actionAddress) {
+					case 'MIXER_Lib/Scene': {
+						if (isAction) {
+							newAction.actionId = 'MIXER_Lib/Scene/Recall'
+						} else {
+							newAction.feedbackId = 'MIXER_Lib/Scene/Recall'
+						}
+						newAction.options.Val = action.options.X
+						newAction.options.X = 0
+						changed = true
 					}
 				}
-				(isAction) ? updates.updatedActions.push(newAction) : updates.updatedFeedbacks.push(newAction)
-			} else {
-				console.log(`Yamaha-RCP Upgrade: Action ${newName} not found in list!`)
+
+				if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') {
+					newAction.options.Val = action.options.Val == rcpCmd.Min ? '-Inf' : action.options.Val / rcpCmd.Scale
+					changed = true
+				}
+
+				if (changed) {
+					console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + actionAddress + "' -> '" + newAction.actionId : "Feedback '" + actionAddress + "' -> '" + newAction.feedbackId}' ...`)
+					console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
+
+/* 					if (isAction) {
+						updates.updatedActions.push(newAction) 
+					} else {
+						updates.updatedFeedbacks.push(newAction)
+					}
+ */				}
+
+				return
 			}
+			
+			console.log(`Yamaha-RCP Upgrade: Action ${actionAddress} not found in list!`)
+
 		}
 
-		console.log('\nYamaha-RCP Upgrade: Checking actions...')
+//		console.log('\nYamaha-RCP Upgrade: Checking actions...')
 		for (let k in props.actions) {
 			checkUpgrade(props.actions[k], true)
 		}
-		console.log('\n')
+//		console.log('\n')
 
-		console.log('Yamaha-RCP Upgrade: Checking feedbacks...')
+//		console.log('Yamaha-RCP Upgrade: Checking feedbacks...')
 		for (let k in props.feedbacks) {
 			checkUpgrade(props.feedbacks[k], false)
 		}
-		console.log('\n')
+//		console.log('\n')
 
 		return updates
 	},

@@ -20,7 +20,7 @@
 		"@companion-module/tools": "^1.0.0"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.1.1"
+		"@companion-module/base": "~1.2.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
