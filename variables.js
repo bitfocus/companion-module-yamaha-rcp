@@ -60,15 +60,19 @@ module.exports = {
 			case 'ssrecall_ex':
 				break
 			case 'sscurrent_ex':
-				instance.setVariableValues({ curScene: msg.X })
 				// Request Current Scene Info once we know what scene we have
-				let infoMsg = (instance.config.model == "TF") ? `${msg.X} ${msg.Y}` : msg.X
-				instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${infoMsg}`) 
+				if (instance.config.model == 'TF') {
+					instance.setVariableValues({ curScene: `${ msg.Address.toUpperCase().slice(-1) }${ msg.X.toString().padStart(2, "0") }`})
+					instance.sendCmd(`ssinfo_ex ${msg.Address} ${msg.X }`)
+				} else {
+					instance.setVariableValues({ curScene: msg.X })
+					instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.X }`)
+				}
 				break
 			case 'sscurrentt_ex':
 				instance.setVariableValues({ curScene: msg.X })
 				// Request Current Scene Info once we know what scene we have
-				instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${msg.X}"`)
+				instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.X }"`)
 				break
 			case 'ssinfo_ex':
 			case 'ssinfot_ex':
@@ -128,12 +132,6 @@ module.exports = {
 		let varToAdd = { variableId: varName, name: varName }
 		let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
 
-/* 		// Remove
-		if (!cmd.options.createVariable && varIndex != -1) {
-			instance.variables.splice(varIndex, 1)
-			instance.setVariableDefinitions(instance.variables)
-		}
- */
 		// Add
 		if (cmd.options.createVariable) {
 			if (varIndex == -1) {

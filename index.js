@@ -340,7 +340,7 @@ class instance extends InstanceBase {
 				return data
 			}
 
-			if (cmd.Address.startsWith('MIXER:Lib/Scene')) return
+			if (cmd.Address.startsWith('MIXER:Lib')) return
 
 			if (this.reqStack.length == 0) {
 				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})

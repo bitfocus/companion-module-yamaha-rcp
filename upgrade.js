@@ -41,52 +41,53 @@ module.exports = [
 		}
 
 		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
-
 		var rcpCommands = paramFuncs.getParams({config: context.currentConfig})
-
 		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
-//console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
+console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
+			let changed = false
 			let rcpCmd = undefined
+			let newAction = JSON.parse(JSON.stringify(action))
 			let actionAddress = isAction ? action.actionId : action.feedbackId
+
+			if (actionAddress.startsWith('MIXER_Lib')) {
+				actionAddress = 'MIXER_Lib/Scene/Recall'
+				newAction.options.Val = action.options.X
+				newAction.options.X = 0
+				changed = true
+			}
+
+			if (actionAddress.startsWith('scene')) {
+				actionAddress = 'MIXER_Lib/Bank/Scene/Recall'
+				newAction.options.Val = action.options.X
+				newAction.options.X = 0
+				newAction.options.Y = action.options.Y == 'a' ? 1 : 2
+			}
 
 			rcpCmd = rcpCommands.find((i) => i.Address.replace(/:/g, '_') == actionAddress)
 //console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
 
 			if (rcpCmd !== undefined) {
-				let newAction = JSON.parse(JSON.stringify(action))
-				let changed = false
-
-				switch (actionAddress) {
-					case 'MIXER_Lib/Scene': {
-						if (isAction) {
-							newAction.actionId = 'MIXER_Lib/Scene/Recall'
-						} else {
-							newAction.feedbackId = 'MIXER_Lib/Scene/Recall'
-						}
-						newAction.options.Val = action.options.X
-						newAction.options.X = 0
-						changed = true
-					}
-				}
 
 				if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') {
-					newAction.options.Val = action.options.Val == rcpCmd.Min ? '-Inf' : action.options.Val / rcpCmd.Scale
+					newAction.options.Val = newAction.options.Val == rcpCmd.Min ? '-Inf' : newAction.options.Val / rcpCmd.Scale
 					changed = true
 				}
 
 				if (changed) {
-					console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + actionAddress + "' -> '" + newAction.actionId : "Feedback '" + actionAddress + "' -> '" + newAction.feedbackId}' ...`)
+					console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + newAction.actionId + "' -> '" + actionAddress : "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress}' ...`)
 					console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
 
-/* 					if (isAction) {
+					if (isAction) {
+						newAction.actionId = actionAddress
 						updates.updatedActions.push(newAction) 
 					} else {
+						newAction.feedbackId = actionAddress
 						updates.updatedFeedbacks.push(newAction)
 					}
- */				}
+ 				}
 
 				return
 			}
