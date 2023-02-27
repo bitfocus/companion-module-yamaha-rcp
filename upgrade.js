@@ -21,7 +21,7 @@ module.exports = [
 		updatedFeedbacks: [],
 	}),
 
-	// Upgrade  2.x > 3.0.0, changes scene action parameter format
+	// Upgrade  2.x > 3.0.x, changes scene action parameter format
 	upg2xxto30x = (context, props) => {
 		var paramFuncs = require('./paramFuncs')
 
