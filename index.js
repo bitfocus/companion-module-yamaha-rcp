@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Feb 10, 2023 Version 3.0.3 (v3) 
+// Mar 7, 2023 Version 3.0.4 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -133,24 +133,13 @@ class instance extends InstanceBase {
 					}
 					this.log('debug', `Received: '${line}'`)
 					receivedCmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
+					if (receivedCmds.length == 0) this.processReqStack()
 
 					for (let i = 0; i < receivedCmds.length; i++) {
 						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
 						let cmdToFind = curCmd.Address
 
-						let reqIdx = this.reqStack.findIndex((c) => 
-							(c.Address == curCmd.Address && c.X == (curCmd.X || 0) && c.Y == (curCmd.Y || 0))
-						)
-						if (reqIdx > -1) {
-							this.reqStack.splice(reqIdx, 1) // Remove it!
-						} else {
-							this.reqStack.shift() // Just in case it's an invalid command stuck in there
-						}
-						if (this.reqStack.length > 0) { // More to send?
-							let cmdToSend = this.reqStack[0] // Oldest
-							let req = `get ${cmdToSend.Address} ${cmdToSend.X} ${cmdToSend.Y}`
-							this.sendCmd(req)
-						}
+						this.processReqStack(curCmd)
 
 						foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
 						if (foundCmd != undefined) {
@@ -186,6 +175,24 @@ class instance extends InstanceBase {
 		}
 	}
 
+	processReqStack(cmd = {Address: '', X: 0, Y: 0}) {
+		if (this.reqStack == undefined || this.reqStack.length == 0) return
+
+		let reqIdx = this.reqStack.findIndex((c) => 
+			(c.Address == cmd.Address && c.X == (cmd.X || 0) && c.Y == (cmd.Y || 0))
+		)
+		if (reqIdx > -1) {
+			this.reqStack.splice(reqIdx, 1) // Got value from matching request so remove it!
+		} else {
+			this.reqStack.shift() // Just in case it's an invalid command stuck in there
+		}
+
+		if (this.reqStack.length > 0) { // More to send?
+			let cmdToSend = this.reqStack[0] // Oldest
+			let req = `get ${cmdToSend.Address} ${cmdToSend.X} ${cmdToSend.Y}`
+			this.sendCmd(req)
+		}
+	}
 
 	// Create the Actions & Feedbacks
 	updateActions() {
@@ -340,7 +347,7 @@ class instance extends InstanceBase {
 				return data
 			}
 
-			if (cmd.Address.startsWith('MIXER:Lib')) return
+			if (cmd.Address.startsWith('MIXER:Lib')) return data
 
 			if (this.reqStack.length == 0) {
 				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
@@ -406,7 +413,7 @@ class instance extends InstanceBase {
 		let parsedOptions = {}
 		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
 		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
-		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val)
+		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
 		parsedOptions.X = Math.max(parsedOptions.X, 0)
 		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 

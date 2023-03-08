@@ -1,5 +1,5 @@
 /*
-// Do the upgrades of actions, release actions and feedback 
+// Do the upgrades of actions, release actions and feedback
 */
 
 module.exports = [

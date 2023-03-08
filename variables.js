@@ -119,6 +119,7 @@ module.exports = {
 	},
 
 	fbCreatesVar: (instance, cmd, options, data) => {
+
 		let cmdName = cmd.rcpCmd.Address.slice(cmd.rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
 		let varName = `V_${cmdName}`
 		varName = varName + (cmd.options.X ? `_${cmd.options.X}` : '')
