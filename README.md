@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.0.4 - for Companion v3
+## Yamaha Remote Control Protocol v3.1.0 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -20,6 +20,13 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.1.0
+- Add support for DM3 console
+- Add support for using variables in Strip Colors
+
+3.0.5
+- Fix name bug for Rivage
 
 3.0.4
 - Better handling of unexpected messages being returned from console

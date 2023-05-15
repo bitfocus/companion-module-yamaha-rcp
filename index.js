@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Mar 7, 2023 Version 3.0.4 (v3)
+// May 15, 2023 Version 3.1.0 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -68,6 +68,7 @@ class instance extends InstanceBase {
 				choices: [
 					{ id: 'CL/QL', label: 'CL/QL Console' },
 					{ id: 'TF', label: 'TF Console' },
+					{ id: 'DM', label: 'DM3 Console' },
 					{ id: 'PM', label: 'Rivage Console' },
 				],
 			},
@@ -206,11 +207,20 @@ class instance extends InstanceBase {
 			rcpAction = rcpCommand.Address.replace(/:/g, '_') // Change the : to _ as companion doesn't like colons in names
 			let newAction = actionFuncs.createAction(this, rcpCommand)
 
-			newAction.callback = async (event) => {
+			newAction.callback = async (event, context) => {
 				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
-				let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: event.options })
-				if (cmd !== undefined) {
-					this.sendCmd(cmd)
+				let XArr = JSON.parse(await context.parseVariablesInString(event.options.X))
+				if (!Array.isArray(XArr)) {
+					XArr = [XArr]
+				}
+//console.log('action callback: XArr = ', XArr, 'isArray? ', Array.isArray(XArr))
+				for (let X of XArr) {
+					let opt = event.options
+					opt.X = X
+					let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: opt })
+					if (cmd !== undefined) {
+						this.sendCmd(cmd)
+					}					
 				}
 			}
 
@@ -403,20 +413,22 @@ class instance extends InstanceBase {
 		} else {
 			options.Val = '' // "get" command, so no Value
 		}
-		//	console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
+//console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
 		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
 	}
 
 	// Create the proper command string for an action or poll
 	async parseOptions(instance, context, cmdToParse) {
 		const varFuncs = require('./variables.js')
+//console.log('parseOptions: cmdToParse= ', cmdToParse)
 		let parsedOptions = {}
 		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
 		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
-		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
+		if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
 		parsedOptions.X = Math.max(parsedOptions.X, 0)
 		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-
+		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
+//console.log('\nparseOptions: parsedOptions= ', parsedOptions)
 		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
 
 		if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?

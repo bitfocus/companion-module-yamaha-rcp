@@ -39,6 +39,9 @@ module.exports = {
 			case 'TF':
 				fname = 'TF Parameters-1.txt'
 				break
+			case 'DM':
+				fname = 'DM Parameters-1.txt'
+				break
 			case 'PM':
 				fname = 'Rivage Parameters-2.txt'
 		}

@@ -40,7 +40,11 @@ module.exports = {
 
 		// Y Parameter - always an integer
 		if (rcpCmd.Y > 1) {
-			if (instance.config.model == 'TF' && rcpCmd.Index == 1000) {
+			if (actionNameParts[rcpNameIdx] == 'PEQ') {
+				rcpNameIdx++
+			}
+			
+			if ((instance.config.model == 'TF' || instance.config.model == 'DM') && rcpCmd.Index == 1000) {
 				paramsToAdd.push({
 					type: 'dropdown',
 					label: actionNameParts[rcpNameIdx],
@@ -69,8 +73,8 @@ module.exports = {
 		}
 
 		// Val Parameter - integer, binary or string
-		if (!(rcpCmd.Min == 0 && rcpCmd.Max == 0)) {
-			// If Min & Max are both 0 then it has no value parameter
+		if (rcpCmd.Index <= 1000) {
+			// If write-only then it has no value parameter
 			switch (rcpCmd.Type) {
 				case 'integer':
 					if (rcpCmd.Max == 1) {
@@ -128,6 +132,7 @@ module.exports = {
 							default: rcpCmd.Default,
 							minChoicesForSearch: 0,
 							choices: instance.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors,
+							allowCustom: true,
 						})
 					} else if (actionName.endsWith('Icon')) {
 						paramsToAdd.push({
@@ -137,6 +142,7 @@ module.exports = {
 							default: rcpCmd.Default,
 							minChoicesForSearch: 0,
 							choices: rcpNames.chIcons,
+							allowCustom: true,
 						})
 					} else if (actionName == 'InCh/Patch') {
 						paramsToAdd.push({

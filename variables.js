@@ -21,6 +21,7 @@ module.exports = {
 			}
 		}
 		instance.setVariableDefinitions(instance.variables)
+		instance.setVariableValues({ cuedStInChannels: '[]', cuedInChannels: '[]', cuedMixes: '[]', cuedDCAs: '[]' })
 	},
 
 	// Get info from a connected console
@@ -101,10 +102,11 @@ module.exports = {
 				}
 
 				let ch = JSON.parse(instance.getVariableValue(varName) || '[]')
-				let chIdx = ch.indexOf(msg.X)
+				let XBase1 = parseInt(msg.X) + 1	// Actual channel/Mix/DCA numbers starting at 1
+				let chIdx = ch.indexOf(XBase1)
 				if (msg.Val == 1) {
 					if (chIdx == -1) {
-						ch.push(msg.X)
+						ch.push(XBase1)
 					}
 				} else {
 					if (chIdx > -1) {

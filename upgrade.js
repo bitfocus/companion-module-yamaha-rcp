@@ -31,9 +31,6 @@ module.exports = [
 			updatedActions: [],
 			updatedFeedbacks: []
 		}
-
-//console.log('context = ', context, '\n\n')
-//console.log('props = ', props, '\n\n')
 		
 		if (context.currentConfig == null) {
 			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
@@ -45,7 +42,7 @@ module.exports = [
 		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
-console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
+		console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
 			let changed = false
 			let rcpCmd = undefined
@@ -96,17 +93,13 @@ console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
 		}
 
-//		console.log('\nYamaha-RCP Upgrade: Checking actions...')
 		for (let k in props.actions) {
 			checkUpgrade(props.actions[k], true)
 		}
-//		console.log('\n')
 
-//		console.log('Yamaha-RCP Upgrade: Checking feedbacks...')
 		for (let k in props.feedbacks) {
 			checkUpgrade(props.feedbacks[k], false)
 		}
-//		console.log('\n')
 
 		return updates
 	},

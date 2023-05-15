@@ -32,6 +32,13 @@ module.exports = {
 				id: 'createVariable',
 				default: false,
 			})
+/*
+			newFeedback.options.push({
+				type: 'custom-variable',
+				label: 'Set Value to Variable',
+				id: 'varToSet'
+			})
+*/
 		}
 
 		newFeedback.defaultStyle = {
