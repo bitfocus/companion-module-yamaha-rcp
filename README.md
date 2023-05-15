@@ -24,6 +24,7 @@ _Andrew Broughton_
 3.1.0
 - Add support for DM3 console
 - Add support for using variables in Strip Colors
+- Initial support for actions on Cued Strips
 
 3.0.5
 - Fix name bug for Rivage
