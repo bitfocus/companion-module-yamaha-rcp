@@ -209,7 +209,8 @@ class instance extends InstanceBase {
 
 			newAction.callback = async (event, context) => {
 				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
-				let XArr = JSON.parse(await context.parseVariablesInString(event.options.X))
+console.log('action callback: event = ', event, 'foundCmd = ', foundCmd)
+				let XArr = JSON.parse(await context.parseVariablesInString(event.options.X || 0))
 				if (!Array.isArray(XArr)) {
 					XArr = [XArr]
 				}
@@ -388,6 +389,7 @@ class instance extends InstanceBase {
 			cmdName = 'MIXER:Lib/Scene'
 			switch (instance.config.model) {
 				case 'TF':
+				case 'DM':
 					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
 				case 'CL/QL':
 					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
