@@ -7,6 +7,7 @@
 - QL1/5
 - TF1/3/5
 - TF-Rack
+- DM3
 
 **Available commands**
 
