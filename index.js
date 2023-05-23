@@ -209,7 +209,7 @@ class instance extends InstanceBase {
 
 			newAction.callback = async (event, context) => {
 				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
-console.log('action callback: event = ', event, 'foundCmd = ', foundCmd)
+//console.log('action callback: event = ', event, 'foundCmd = ', foundCmd)
 				let XArr = JSON.parse(await context.parseVariablesInString(event.options.X || 0))
 				if (!Array.isArray(XArr)) {
 					XArr = [XArr]
