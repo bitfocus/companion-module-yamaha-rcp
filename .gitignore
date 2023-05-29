@@ -4,4 +4,3 @@ node_modules
 pkg.tgz
 package-lock.json
 pkg
-.DS_Store
