@@ -2,186 +2,105 @@
 // Do the upgrades of actions, release actions and feedback
 */
 
-module.exports = {
-	// Upgrade  1.0.x > 1.1.0
-	upg111to112: (context, config, actions, feedbacks) => {
-		var changed = false
-		console.log('Yamaha-SCP: Running 1.1.1 -> 1.1.2 Upgrade.')
+module.exports = [
+	upg111to112 = () => ({
+		updatedConfig: null,
+		updatedActions: [],
+		updatedFeedbacks: [],
+	}),
 
-		let checkUpgrade = (action, changed) => {
-			let newAction = ''
+	upg112to113 = () => ({
+		updatedConfig: null,
+		updatedActions: [],
+		updatedFeedbacks: [],
+	}),
 
-			switch (action.action) {
-				case 'InChOn':
-					// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 1';
-					newAction = 186
-					action.options.X = actions.options.Ch
-					action.options.Val = 1
-					break
-				case 'InChOff':
-					// cmd = 'set MIXER:Current/InCh/Fader/On '+ opt.Ch + ' 0 0';
-					newAction = 186
-					action.options.X = actions.options.Ch
-					action.options.Val = 0
-					break
-				case 'InChLevel':
-					// cmd = 'set MIXER:Current/InCh/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction = 184
-					action.options.X = action.options.Ch
-					action.options.Val = action.options.ChAct
-					break
-				case ('AuxOn', 'MixOn'):
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 1';
-					newAction = 187
-					action.options.X = action.options.Ch
-					action.options.Val = 1
-					break
-				case ('AuxOff', 'MixOff'):
-					// cmd = 'set MIXER:Current/Mix/Fader/On '+ opt.Ch + ' 0 0';
-					newAction = 187
-					action.options.X = action.options.Ch
-					action.options.Val = 0
-					break
-				case ('AuxLevel', 'MixLevel'):
-					// cmd = 'set MIXER:Current/Mix/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction = 185
-					action.options.X = action.options.Ch
-					action.options.Val = action.options.ChAct
-					break
-				case 'MtrxOn':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 1';
-					newAction = 7
-					action.options.X = action.options.Ch
-					action.options.Val = 1
-					break
-				case 'MtrxOff':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/On '+ opt.Ch + ' 0 0';
-					newAction = 7
-					action.options.X = action.options.Ch
-					action.options.Val = 0
-					break
-				case 'MtrxLevel':
-					// cmd = 'set MIXER:Current/Mtrx/Fader/Level ' + opt.Ch + ' 0 ' + opt.ChAct;
-					newAction = 2
-					action.options.X = action.options.Ch
-					action.options.Val = action.options.ChAct
-					break
-				case 'TFRecall':
-					// cmd = 'ssrecall_ex scene_'+ opt.Bank + ' ' + opt.Scene;
-					newAction = 1000
-					action.options.X = action.options.Scene
-					action.options.Y = action.options.Bank
-					break
-				case 'CLQLRecall':
-					// cmd = 'ssrecall_ex MIXER:Lib/Scene ' + opt.Scene;
-					newAction = 1000
-					action.options.X = action.options.Scene
-					break
-			}
+	upg113to160 = () => ({
+		updatedConfig: null,
+		updatedActions: [],
+		updatedFeedbacks: [],
+	}),
 
-			if (newAction != '') {
-				console.log(`Yamaha-SCP: Action ${action.action} => scp_${newAction}`)
-				action.action = 'scp_' + newAction
-				action.label = this.id + ':' + action.action
-				changed = true
-			}
-
-			return changed
-		}
-
-		for (let k in actions) {
-			changed = checkUpgrade(actions[k], changed)
-		}
-
-		return changed
-	},
-
-	// Upgrade  1.1.2 > 1.1.3, adds "scp_" in front of action names (for no real reason...)
-	upg112to113: (context, config, actions, feedbacks) => {
-		console.log('Yamaha-SCP: Running 1.1.2 -> 1.1.3 Upgrade.')
-		var changed = false
-
-		let checkUpgrade = (action, changed) => {
-			let newAction = ''
-
-			if (action.action != undefined && action.action.slice(0, 4) != 'scp_' && action.action.slice(0, 6) != 'MIXER_') {
-				newAction = action.action
-			}
-
-			if (newAction != '') {
-				console.log(`Yamaha-SCP: Action ${action.action} => scp_${newAction}`)
-				action.action = 'scp_' + newAction
-				action.label = this.id + ':' + action.action
-				changed = true
-			}
-
-			return changed
-		}
-
-		for (let k in actions) {
-			changed = checkUpgrade(actions[k], changed)
-		}
-
-		for (let k in feedbacks) {
-			changed = checkUpgrade(feedbacks[k], changed)
-		}
-
-		return changed
-	},
-
-	// Upgrade  1.1.3 > 1.6.0, changes action names to actual RCP names
-	upg113to160: (context, config, actions, feedbacks) => {
+	// Upgrade  2.x > 3.0.x, changes scene action parameter format
+	upg2xxto30x = (context, props) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('Yamaha-RCP: Running 1.1.3 -> 1.6.x+ Upgrade.')
-		var changed = false
-
-		if (config != null) {
-			console.log("\nYamaha-RCP: Getting Parameters...")
-			var rcpCommands = paramFuncs.getParams(this, config)
+		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.0.x Upgrade.')
+		var updates = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: []
+		}
+		
+		if (context.currentConfig == null) {
+			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
+			return updates
 		}
 
-		let checkUpgrade = (action, isAction, changed) => {
-			let newAction = undefined
+		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
+		var rcpCommands = paramFuncs.getParams({config: context.currentConfig})
+		console.log('\n')
 
-			let name = isAction ? action.action : action.type
+		let checkUpgrade = (action, isAction) => {
+		console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
-			if (name !== undefined && name.slice(0, 4) == 'scp_') {
-				newAction = rcpCommands.find((i) => i.Index == name.slice(4))
+			let changed = false
+			let rcpCmd = undefined
+			let newAction = JSON.parse(JSON.stringify(action))
+			let actionAddress = isAction ? action.actionId : action.feedbackId
 
-				if (newAction !== undefined) {
-					newName = newAction.Address.replace(/:/g, '_')
-					console.log(`Yamaha-RCP: Action ${name} => ${newName}`)
-					isAction ? (action.action = newName) : (action.type = newName)
-					switch (action.options.Val) {
-						case true: {
-							action.options.Val = 1
-							break;
-						}
-						case false: {
-							action.options.Val = 0
-							break;
-						}
-					}
-					action.label = this.id + ':' + newName
-					changed = true
-				} else {
-					console.log(`Yamaha-RCP: Action ${name} not found in list!`)
-				}
+			if (actionAddress.startsWith('MIXER_Lib')) {
+				actionAddress = 'MIXER_Lib/Scene/Recall'
+				newAction.options.Val = action.options.X
+				newAction.options.X = 0
+				changed = true
 			}
-			return changed
+
+			if (actionAddress.startsWith('scene')) {
+				actionAddress = 'MIXER_Lib/Bank/Scene/Recall'
+				newAction.options.Val = action.options.X
+				newAction.options.X = 0
+				newAction.options.Y = action.options.Y == 'a' ? 1 : 2
+			}
+
+			rcpCmd = rcpCommands.find((i) => i.Address.replace(/:/g, '_') == actionAddress)
+//console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
+
+			if (rcpCmd !== undefined) {
+
+				if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') {
+					newAction.options.Val = newAction.options.Val == rcpCmd.Min ? '-Inf' : newAction.options.Val / rcpCmd.Scale
+					changed = true
+				}
+
+				if (changed) {
+					console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + newAction.actionId + "' -> '" + actionAddress : "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress}' ...`)
+					console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
+
+					if (isAction) {
+						newAction.actionId = actionAddress
+						updates.updatedActions.push(newAction) 
+					} else {
+						newAction.feedbackId = actionAddress
+						updates.updatedFeedbacks.push(newAction)
+					}
+ 				}
+
+				return
+			}
+			
+			console.log(`Yamaha-RCP Upgrade: Action ${actionAddress} not found in list!`)
+
 		}
 
-		console.log('\nYamaha-RCP: Checking actions...')
-		for (let k in actions) {
-			changed = checkUpgrade(actions[k], true, changed)
+		for (let k in props.actions) {
+			checkUpgrade(props.actions[k], true)
 		}
 
-		console.log('\nYamaha-RCP: Checking feedbacks...')
-		for (let k in feedbacks) {
-			changed = checkUpgrade(feedbacks[k], false, changed)
+		for (let k in props.feedbacks) {
+			checkUpgrade(props.feedbacks[k], false)
 		}
 
-		return changed
+		return updates
 	},
-}
+]
