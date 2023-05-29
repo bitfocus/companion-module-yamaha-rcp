@@ -1,5 +1,5 @@
 node_modules
-companion-module-yamaha-rcp-v3.code-workspace
+*.code-workspace
 .vscode
 pkg.tgz
 package-lock.json
