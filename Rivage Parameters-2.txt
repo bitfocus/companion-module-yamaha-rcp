@@ -360,11 +360,11 @@ OK prminfo 348 "MIXER:Current/OmniOutPort/Patch" 2 8 0 0 "NONE" "" string list r
 -- prminfo 359 "MIXER:Current/OutputChLink/LinkParams/Mute" 53 1 0 1 1 "" integer latchsw rw 1
 -- prminfo 360 "MIXER:Current/OutputChLink/LinkParams/ToSt" 53 1 0 1 1 "" integer latchsw rw 1
 OK prminfo 361 "MIXER:Current/Mix/Insert/On" 72 2 0 1 0 "" integer latchsw rw 1
-OK prminfo 362 "MIXER:Current/OutputChLink/Mix/Assign" 72 1 0 52 0 "" integer any rw 1
+-- prminfo 362 "MIXER:Current/OutputChLink/Mix/Assign" 72 1 0 52 0 "" integer any rw 1
 OK prminfo 363 "MIXER:Current/Mtrx/Insert/On" 36 2 0 1 0 "" integer latchsw rw 1
-OK prminfo 364 "MIXER:Current/OutputChLink/Mtrx/Assign" 36 1 0 52 0 "" integer any rw 1
-OK prminfo 365 "MIXER:Current/OutputChLink/SendParams/ToMtrx" 53 36 0 1 1 "" integer latchsw rw 1
-OK prminfo 366 "MIXER:Current/St/DCA/Assign" 4 2
+-- prminfo 364 "MIXER:Current/OutputChLink/Mtrx/Assign" 36 1 0 52 0 "" integer any rw 1
+-- prminfo 365 "MIXER:Current/OutputChLink/SendParams/ToMtrx" 53 36 0 1 1 "" integer latchsw rw 1
+OK prminfo 366 "MIXER:Current/St/DCA/Assign" 4 24 0 1 0 "" integer any rw 1
 OK prminfo 367 "MIXER:Current/St/Delay/On" 4 1 0 1 0 "" integer latchsw rw 1
 OK prminfo 368 "MIXER:Current/St/Delay/Time" 4 1 0 1000000 0 "ms" integer knob rw 1000
 -- prminfo 369 "MIXER:Current/St/Dyna1/Threshold" 4 1 -600 0 -80 "" integer knob rw 10
@@ -391,4 +391,4 @@ OK prminfo 389 "MIXER:Setup/MonitorMix/Password" 1 1 0 0 "" "" string any r 1
 OK prminfo 390 "MIXER:Setup/Oscillator/Level" 2 1 -9600 0 -4000 "dB" integer knob rw 100
 OK prminfo 391 "MIXER:Setup/Oscillator/On" 1 1 0 1 0 "" integer latchsw rw 1
 OK prminfo 392 "MIXER:Setup/Oscillator/Type" 1 1 0 0 "PINK NOISE" "" string list rw 1
-OK scninfo 1000 "MIXER:Lib/Scene/Recall" 1 1 0 500 0 "" string any rw 1
+OK scninfo 1000 "MIXER:Lib/Scene/Recall" 1 1 0 500 "1.00" "" string any w 1

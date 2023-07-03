@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.1.0 - for Companion v3
+## Yamaha Remote Control Protocol v3.2.1 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -7,7 +7,9 @@
 - QL1/5
 - TF1/3/5
 - TF-Rack
-- DM3
+- DM3/7
+- RIO 3224/1608 D1 and D2
+- TIO 1608
 
 **Available commands**
 
@@ -21,6 +23,12 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.2.1
+- Add support for RIO and TIO preamps
+
+3.2.0
+- Add support for DM7 console
 
 3.1.0
 - Add support for DM3 console

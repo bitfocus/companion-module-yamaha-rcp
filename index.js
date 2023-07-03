@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// May 15, 2023 Version 3.1.0 (v3)
+// July 2, 2023 Version 3.2.1 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -67,9 +67,12 @@ class instance extends InstanceBase {
 				default: 'CL/QL',
 				choices: [
 					{ id: 'CL/QL', label: 'CL/QL Console' },
+					{ id: 'PM', label: 'Rivage PM Console' },
 					{ id: 'TF', label: 'TF Console' },
-					{ id: 'DM', label: 'DM3 Console' },
-					{ id: 'PM', label: 'Rivage Console' },
+					{ id: 'DM3', label: 'DM3 Console' },
+					{ id: 'DM7', label: 'DM7 Console' },
+					{ id: 'RIO', label: 'RIO Preamp' },
+					{ id: 'TIO', label: 'TIO Preamp' },
 				],
 			},
 		]
@@ -224,13 +227,14 @@ class instance extends InstanceBase {
 					}					
 				}
 			}
-
-			if (rcpCommand.RW == 'rw') commands[rcpAction] = newAction // Ignore readonly commands
-			feedbacks[rcpAction] = feedbackFuncs.createFeedbackFromAction(this, newAction)
+			
+			if (rcpCommand.RW.includes('w')) commands[rcpAction] = newAction // Only inlcude commands that are writable to the console
+			if (rcpCommand.RW.includes('r')) feedbacks[rcpAction] = feedbackFuncs.createFeedbackFromAction(this, newAction) // only include commands that can be read from the console
 		}
 
 		this.setActionDefinitions(commands)
 		this.setFeedbackDefinitions(feedbacks)
+
 	}
 
 	// Create the preset definitions
@@ -386,16 +390,23 @@ class instance extends InstanceBase {
 		let options = await this.parseOptions(instance, instance, cmdToFmt)
 
 		if (cmdToFmt.rcpCmd.Index == 1000) {
-			cmdName = 'MIXER:Lib/Scene'
 			switch (instance.config.model) {
 				case 'TF':
-				case 'DM':
+				case 'DM3':
+					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
 					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
+					break
 				case 'CL/QL':
 					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
+					cmdName = 'MIXER:Lib/Scene'
 					break
 				case 'PM':
 					cmdStart = prefix == 'set' ? 'ssrecallt_ex' : 'sscurrentt_ex'
+					cmdName = 'MIXER:Lib/Scene'
+					break
+				case 'DM7':
+					cmdStart = prefix == 'set' ? 'ssrecallt_ex' : 'sscurrentt_ex'
+					cmdName = `scene_${options.Y == 0 ? 'a' : 'b'}`
 			}
 			options.X = ''
 			options.Y = ''

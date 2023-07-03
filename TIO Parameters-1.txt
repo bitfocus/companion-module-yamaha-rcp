@@ -1,0 +1,6 @@
+OK prminfo 0 "IO:Current/InCh/48VOn" 16 1 0 1 0 "" integer unlatchsw rw 1
+OK prminfo 1 "IO:Current/InCh/HPFOn" 16 1 0 1 0 "" integer unlatchsw rw 1
+OK prminfo 2 "IO:Current/InCh/HPFFreq" 16 1 200 6000 800 "Hz" freq knob rw 10
+OK prminfo 3 "IO:Current/InCh/HAGain" 16 1 -6 66 0 "dB" integer knob rw 1
+OK prminfo 4 "IO:Current/Dev/MuteOn" 1 1 0 0 0 "" integer latchsw rw 1
+OK prminfo 21 "IO:Event/Dev/Identify" 1 1 0 1 0 "" integer any w 1

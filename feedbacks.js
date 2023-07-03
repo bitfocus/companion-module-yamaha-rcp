@@ -5,11 +5,7 @@ module.exports = {
 		const rcpNames = require('./rcpNames.json')
 
 		let newFeedback = JSON.parse(JSON.stringify(action)) // Clone the Action to a matching feedback
-
-		if (newFeedback.name.startsWith('Scene')) {
-			return // Don't add a feedback for Scene commands. Can use the internal variable now to check on scene #
-		}
-
+		
 		if (instance.colorCommands.includes(action.name)) {
 			newFeedback.type = 'advanced' // Old feedback style
 			newFeedback.options.pop()

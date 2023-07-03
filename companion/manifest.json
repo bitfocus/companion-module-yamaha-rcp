@@ -3,7 +3,7 @@
 	"name": "yamaha-rcp",
 	"shortname": "yamaha-rcp",
 	"description": "yamaha-rcp",
-	"version": "0.0.0",
+	"version": "3.2.1",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-yamaha-rcp.git",
 	"bugs": "https://discourse.checkcheckonetwo.com",
@@ -16,6 +16,6 @@
 		"entrypoint": "../index.js"
 	},
 	"manufacturer": "Yamaha",
-	"products": ["CL/QL", "TF", "Rivage"],
+	"products": ["CL/QL", "TF", "Rivage PM", "DM", "RIO", "TIO"],
 	"keywords": ["Yamaha", "Mixer"]
 }

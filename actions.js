@@ -15,7 +15,7 @@ module.exports = {
 
 		// X parameter - always an integer
 		if (rcpCmd.X > 1) {
-			if (actionName.startsWith('InCh') || actionName.startsWith('Cue/InCh')) {
+			if (actionName.startsWith('InCh') || actionName.startsWith('OutCh') || actionName.startsWith('Cue/InCh')) {
 				paramsToAdd.push({
 					type: 'dropdown',
 					label: actionNameParts[rcpNameIdx],
@@ -44,10 +44,22 @@ module.exports = {
 				rcpNameIdx++
 			}
 			
-			if ((instance.config.model == 'TF' || instance.config.model == 'DM') && rcpCmd.Index == 1000) {
+			if ((instance.config.model == 'TF' || instance.config.model == 'DM3' || instance.config.model == 'DM7') && rcpCmd.Index == 1000) {
 				paramsToAdd.push({
 					type: 'dropdown',
 					label: actionNameParts[rcpNameIdx],
+					id: 'Y',
+					default: 1,
+					choices: [
+						{ id: 1, label: 'A' },
+						{ id: 2, label: 'B' },
+					],
+					allowCustom: true,
+				})
+			} else if (actionNameParts[0] == "Cue") {
+				paramsToAdd.push({
+					type: 'dropdown',
+					label: 'Cue Bus',
 					id: 'Y',
 					default: 1,
 					choices: [
@@ -73,12 +85,11 @@ module.exports = {
 		}
 
 		// Val Parameter - integer, binary or string
-		if (rcpCmd.Index <= 1000) {
-			// If write-only then it has no value parameter
+		//if (rcpCmd.Max != 0 || rcpCmd.Min != 0) { // SceneInc and SceneDec have no value parameter
 			switch (rcpCmd.Type) {
 				case 'integer':
-					if (rcpCmd.Max == 1) {
-						// Boolean
+				case 'freq':
+					if (rcpCmd.Max == 1) { // Boolean
 						paramsToAdd.push({
 							type: 'dropdown',
 							label: 'State',
@@ -92,7 +103,7 @@ module.exports = {
 							],
 							allowCustom: true,
 						})
-					} else {
+					} else if (rcpCmd.Max != 0 || rcpCmd.Min != 0) {
 						paramsToAdd.push({
 							type: 'textinput',
 							label: actionNameParts[rcpNameIdx],
@@ -171,7 +182,7 @@ module.exports = {
 							minChoicesForSearch: 0,
 							choices: rcpNames.omniOutPatch,
 						})
-					} else if (instance.config.model == 'PM' && rcpCmd.Index == 1000) {
+					} else if ((instance.config.model == 'PM' || instance.config.model == 'DM7') && rcpCmd.Index == 1000) {
 						paramsToAdd.push({
 							type: 'textinput',
 							label: actionNameParts[rcpNameIdx],
@@ -191,7 +202,7 @@ module.exports = {
 						})
 					}
 			}
-		}
+//		}
 
 		// Make sure the current value is stored in dataStore[]
 		if (rcpCmd.Index < 1000) {

@@ -36,14 +36,24 @@ module.exports = {
 			case 'CL/QL':
 				fname = 'CLQL Parameters-1.txt'
 				break
+			case 'PM':
+				fname = 'Rivage Parameters-2.txt'
+				break
 			case 'TF':
 				fname = 'TF Parameters-1.txt'
 				break
-			case 'DM':
-				fname = 'DM Parameters-1.txt'
+			case 'DM3':
+				fname = 'DM3 Parameters-1.txt'
 				break
-			case 'PM':
-				fname = 'Rivage Parameters-2.txt'
+			case 'DM7':
+				fname = 'DM7 Parameters-1.txt'
+				break
+			case 'RIO':
+				fname = 'RIO Parameters-1.txt'
+				break
+			case 'TIO':
+				fname = 'TIO Parameters-1.txt'
+			
 		}
 
 		// Read the DataFile
@@ -76,7 +86,7 @@ module.exports = {
 				let rcpCommand = {}
 
 				for (var j = 0; j < line.length; j++) {
-					// Get rid of any double quotes around the strings and change the colon to underscore
+					// Get rid of any double quotes around the strings
 					rcpCommand[params[j]] = line[j].replace(/"/g, '')
 				}
 
