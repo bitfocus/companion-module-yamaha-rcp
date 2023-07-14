@@ -37,8 +37,9 @@ module.exports = {
 				instance.sendCmd('sscurrent_ex scene_b')			// except when asking for the opposite back, you'll get an error
 				break
 			}
-			case 'PM': {
-				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage
+			case 'PM':
+			case 'DM7': {
+				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage and DM7
 				instance.sendCmd('sscurrentt_ex MIXER:Lib/Scene')
 				break
 			}
