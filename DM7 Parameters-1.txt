@@ -154,4 +154,4 @@ OK prminfo 152 "MIXER:Setup/Unit/Split/InCh/Num" 2 1 0 72 72 "" integer any r 1
 OK prminfo 153 "MIXER:Setup/Unit/Split/Mix/Num" 2 1 0 48 48 "" integer any r 1
 OK prminfo 154 "MIXER:Setup/Unit/Split/DCA/Num" 2 1 0 24 24 "" integer any r 1
 OK prminfo 155 "MIXER:Setup/Unit/Split/Mute/Num" 2 1 0 12 12 "" integer any r 1
-OK scninfo 1000 "MIXER:Lib/Bank/Scene/Recall" 1 2 0 500 "1.00" "" string any w 1
+OK scninfo 1000 "MIXER:Lib/Bank/Scene/Recall" 1 2 0 500 "1.00" "" string any rw 1

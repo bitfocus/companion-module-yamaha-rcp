@@ -391,4 +391,4 @@ OK prminfo 389 "MIXER:Setup/MonitorMix/Password" 1 1 0 0 "" "" string any r 1
 OK prminfo 390 "MIXER:Setup/Oscillator/Level" 2 1 -9600 0 -4000 "dB" integer knob rw 100
 OK prminfo 391 "MIXER:Setup/Oscillator/On" 1 1 0 1 0 "" integer latchsw rw 1
 OK prminfo 392 "MIXER:Setup/Oscillator/Type" 1 1 0 0 "PINK NOISE" "" string list rw 1
-OK scninfo 1000 "MIXER:Lib/Scene/Recall" 1 1 0 500 "1.00" "" string any w 1
+OK scninfo 1000 "MIXER:Lib/Scene/Recall" 1 1 0 500 "1.00" "" string any rw 1

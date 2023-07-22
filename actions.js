@@ -205,7 +205,7 @@ module.exports = {
 //		}
 
 		// Make sure the current value is stored in dataStore[]
-		if (rcpCmd.Index < 1000) {
+		if (rcpCmd.Index < 1000 && rcpCmd.RW.includes('r')) {
 			newAction.subscribe = async (action) => {
 				let options = await instance.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
 				await instance.getFromDataStore({ Address: rcpCmd.Address, options: options })
