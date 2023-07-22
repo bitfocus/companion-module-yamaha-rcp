@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.2.1 - for Companion v3
+## Yamaha Remote Control Protocol v3.2.2 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,7 +24,7 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-3.2.1
+3.2.2
 - Add support for RIO and TIO preamps
 
 3.2.0

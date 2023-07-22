@@ -38,11 +38,10 @@ module.exports = {
 				break
 			}
 			case 'PM':
-			case 'DM7': {
+			case 'DM7': 
 				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage and DM7
 				instance.sendCmd('sscurrentt_ex MIXER:Lib/Scene')
 				break
-			}
 		}
 	},
 

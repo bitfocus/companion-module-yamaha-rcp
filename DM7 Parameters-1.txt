@@ -144,7 +144,7 @@ OK prminfo 108 "MIXER:Current/MuteGrpCtrl/Label/Name" 12 1 0 64 0 "" string any 
 -- prminfo 143 "MIXER:Current/InCh/PanMode" 72 1 0 1 0 "" integer any r 1
 -- prminfo 144 "MIXER:Current/Mtrx/BusType" 48 1 0 4 0 "" binary any r 1
 -- prminfo 145 "MIXER:Current/St/PanMode" 4 1 0 1 0 "" integer any r 1
--- prminfo 146 "MIXER:Current/St/Role" 4 1 0 7 0 "" binary any r 1
+OK prminfo 146 "MIXER:Current/St/Role" 4 1 0 7 0 "" binary any r 1
 OK prminfo 147 "MIXER:Setup/Unit/Split/On" 1 1 0 1 0 "" integer any r 1
 OK prminfo 148 "MIXER:Setup/Unit/Split/InCh/StartCh" 2 1 0 72 0 "" integer any r 1
 OK prminfo 149 "MIXER:Setup/Unit/Split/Mix/StartCh" 2 1 0 48 0 "" integer any r 1
