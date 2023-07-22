@@ -362,12 +362,13 @@ class instance extends InstanceBase {
 				return data
 			}
 
-			if (cmd.Address.startsWith('MIXER:Lib')) return data
+			let rcpCmd = this.findRcpCmd(cmd.Address.replace(/:/g, '_'))
+			if (rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
 
 			if (this.reqStack.length == 0) {
 				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
 				let req = `get ${cmd.Address} ${cmd.options.X} ${cmd.options.Y}`
-				this.sendCmd(req) // Get the current value
+				this.sendCmd(req) // Get the current value	
 			} else {
 				let i = this.reqStack.findIndex((c) => 
 					(c.Address == cmd.Address && c.X == cmd.options.X && c.Y == cmd.options.Y)
