@@ -351,6 +351,8 @@ class instance extends InstanceBase {
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
 	async getFromDataStore(cmd) {
 		let data = undefined
+		
+		if (cmd == undefined) return data
 
 		if (cmd !== undefined && cmd.Address !== undefined && cmd.options !== undefined) {
 			if (
@@ -363,7 +365,7 @@ class instance extends InstanceBase {
 			}
 
 			let rcpCmd = this.findRcpCmd(cmd.Address.replace(/:/g, '_'))
-			if (rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
+			if (rcpCmd == undefined || rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
 
 			if (this.reqStack.length == 0) {
 				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
