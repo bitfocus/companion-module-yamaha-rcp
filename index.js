@@ -350,37 +350,42 @@ class instance extends InstanceBase {
 
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
 	async getFromDataStore(cmd) {
-		let data = undefined
-		
-		if (cmd == undefined) return data
+		try {
+			let data = undefined
+			
+			if (cmd == undefined) return data
 
-		if (cmd !== undefined && cmd.Address !== undefined && cmd.options !== undefined) {
-			if (
-				this.dataStore[cmd.Address] !== undefined &&
-				this.dataStore[cmd.Address][cmd.options.X] !== undefined &&
-				this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y] !== undefined
-			) {
-				data = this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y]
-				return data
-			}
+			if (cmd !== undefined && cmd.Address !== undefined && cmd.options !== undefined) {
+				if (
+					this.dataStore[cmd.Address] !== undefined &&
+					this.dataStore[cmd.Address][cmd.options.X] !== undefined &&
+					this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y] !== undefined
+				) {
+					data = this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y]
+					return data
+				}
 
-			let rcpCmd = this.findRcpCmd(cmd.Address.replace(/:/g, '_'))
-			if (rcpCmd == undefined || rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
+				let rcpCmd = this.findRcpCmd(cmd.Address.replace(/:/g, '_'))
+				if (rcpCmd == undefined || rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
 
-			if (this.reqStack.length == 0) {
-				this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
-				let req = `get ${cmd.Address} ${cmd.options.X} ${cmd.options.Y}`
-				this.sendCmd(req) // Get the current value	
-			} else {
-				let i = this.reqStack.findIndex((c) => 
-					(c.Address == cmd.Address && c.X == cmd.options.X && c.Y == cmd.options.Y)
-				)
-				if (i == -1) {
+				if (this.reqStack.length == 0) {
 					this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
+					let req = `get ${cmd.Address} ${cmd.options.X} ${cmd.options.Y}`
+					this.sendCmd(req) // Get the current value	
+				} else {
+					let i = this.reqStack.findIndex((c) => 
+						(c.Address == cmd.Address && c.X == cmd.options.X && c.Y == cmd.options.Y)
+					)
+					if (i == -1) {
+						this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
+					}
 				}
 			}
+			return data
+
+		} catch(error) {
+			this.log('error', `getFromDataStore Error: ${error}`)
 		}
-		return data
 	}
 
 
@@ -429,50 +434,56 @@ class instance extends InstanceBase {
 		} else {
 			options.Val = '' // "get" command, so no Value
 		}
-//console.log(`fmtCmd: Formatted String = ${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim())
+
 		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
 	}
 
 	// Create the proper command string for an action or poll
 	async parseOptions(instance, context, cmdToParse) {
-		const varFuncs = require('./variables.js')
-//console.log('parseOptions: cmdToParse= ', cmdToParse)
-		let parsedOptions = {}
-		parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
-		parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
-		if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
-		parsedOptions.X = Math.max(parsedOptions.X, 0)
-		parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-		parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
-//console.log('\nparseOptions: parsedOptions= ', parsedOptions)
-		let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
+		try {
+			const varFuncs = require('./variables.js')
+			let parsedOptions = {}
+			parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
+			parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
 
-		if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
+			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
+			parsedOptions.X = Math.max(parsedOptions.X, 0)
+			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
+			parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
 
-		if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary') {
-			if (parsedOptions.Val == 'Toggle') {
-				parsedOptions.Val = 1 - parseInt(data)
-				return parsedOptions
-			}
+			let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
 
-			parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
+			if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
 
-			if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
-				// Relative selected?
-				let curVal = parseInt(data)
-
-				// Handle bottom of range
-				if (curVal == -32768 && parsedOptions.Val > 0) {
-					curVal = -9600
-				} else if (curVal == -9600 && parsedOptions.Val < 0) {
-					curVal = -32768
+			if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary') {
+				if (parsedOptions.Val == 'Toggle') {
+					parsedOptions.Val = 1 - parseInt(data)
+					return parsedOptions
 				}
-				parsedOptions.Val = curVal + parsedOptions.Val
+
+				parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
+
+				if (cmdToParse.options.Rel != undefined && cmdToParse.options.Rel == true) {
+					// Relative selected?
+					let curVal = parseInt(data)
+
+					// Handle bottom of range
+					if (curVal == -32768 && parsedOptions.Val > 0) {
+						curVal = -9600
+					} else if (curVal == -9600 && parsedOptions.Val < 0) {
+						curVal = -32768
+					}
+					parsedOptions.Val = curVal + parsedOptions.Val
+				}
+				parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
 			}
-			parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
-		}
-		return parsedOptions
+			return parsedOptions
+
+		} catch(error) {
+			this.log('error', `parseOptions Error: ${error}`)
+		}		
 	}
+
 }
 
 runEntrypoint(instance, upgrade)
