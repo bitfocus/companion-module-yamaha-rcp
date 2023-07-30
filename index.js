@@ -480,7 +480,7 @@ class instance extends InstanceBase {
 			return parsedOptions
 
 		} catch(error) {
-			this.log('error', `parseOptions Error: ${error}`)
+			this.log('error', `parseOptions: Error parsing ${cmdToParse}\ndata= ${data}\nError= ${error}`)
 		}		
 	}
 
