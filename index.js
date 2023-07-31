@@ -443,6 +443,7 @@ class instance extends InstanceBase {
 		try {
 			const varFuncs = require('./variables.js')
 			let parsedOptions = {}
+
 			parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
 			parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
 
@@ -451,7 +452,7 @@ class instance extends InstanceBase {
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 			parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
 
-			let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
+			data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
 
 			if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
 
@@ -480,7 +481,7 @@ class instance extends InstanceBase {
 			return parsedOptions
 
 		} catch(error) {
-			this.log('error', `parseOptions: Error parsing ${cmdToParse}\ndata= ${data}\nError= ${error}\nSTACK TRACE:\n${error.stack}`)
+			this.log('error', `parseOptions: Error parsing ${cmdToParse}\ndata= ${data || 'undefined'}\nError= ${error}\nSTACK TRACE:\n${error.stack}`)
 		}		
 	}
 
