@@ -481,7 +481,9 @@ class instance extends InstanceBase {
 			return parsedOptions
 
 		} catch(error) {
-			this.log('error', `parseOptions: Error parsing ${cmdToParse}\ndata= ${data || 'undefined'}\nError= ${error}\nSTACK TRACE:\n${error.stack}`)
+			this.log('error', `parseOptions: Error parsing ${cmdToParse}`)
+			this.log('error', (data == undefined) ? 'data= undefined' : `data= ${data}`)
+			this.log('error', `Error= ${error}\nSTACK TRACE:\n${error.stack}`)
 		}		
 	}
 
