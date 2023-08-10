@@ -440,6 +440,8 @@ class instance extends InstanceBase {
 
 	// Create the proper command string for an action or poll
 	async parseOptions(instance, context, cmdToParse) {
+		let data
+
 		try {
 			const varFuncs = require('./variables.js')
 			let parsedOptions = {}
@@ -452,7 +454,7 @@ class instance extends InstanceBase {
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 			parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
 
-			let data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
+			data = await instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
 
 			if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
 
@@ -481,10 +483,10 @@ class instance extends InstanceBase {
 			return parsedOptions
 
 		} catch(error) {
-			this.log('error', `parseOptions: Error parsing ${cmdToParse}`)
-			this.log('error', (data == undefined) ? 'data= undefined' : `data= ${data}`)
-			this.log('error', `Error= ${error}\nSTACK TRACE:\n${error.stack}`)
-		}		
+			this.log('error', `parseOptions: Error Parsing ${JSON.stringify(cmdToParse, null, 2)}`)
+			this.log(`parseOptions: data = ${(data == undefined) ? 'undefined' : data}`)
+			this.log(`parseOptions: STACK TRACE:\n${error.stack}\n`)
+		}
 	}
 
 }
