@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// July 2, 2023 Version 3.2.2 (v3)
+// Aug 17, 2023 Version 3.2.3 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -212,23 +212,29 @@ class instance extends InstanceBase {
 
 			newAction.callback = async (event, context) => {
 				let foundCmd = this.findRcpCmd(event.actionId) // Find which command
-//console.log('action callback: event = ', event, 'foundCmd = ', foundCmd)
 				let XArr = JSON.parse(await context.parseVariablesInString(event.options.X || 0))
 				if (!Array.isArray(XArr)) {
 					XArr = [XArr]
 				}
-//console.log('action callback: XArr = ', XArr, 'isArray? ', Array.isArray(XArr))
+				let YArr = JSON.parse(await context.parseVariablesInString(event.options.Y || 0))
+				if (!Array.isArray(YArr)) {
+					YArr = [YArr]
+				}
+
 				for (let X of XArr) {
 					let opt = event.options
-					opt.X = X
-					let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: opt })
-					if (cmd !== undefined) {
-						this.sendCmd(cmd)
-					}					
+					for (let Y of YArr) {
+						opt.X = X
+						opt.Y = Y
+						let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: opt })
+						if (cmd !== undefined) {
+							this.sendCmd(cmd)
+						}							
+					}
 				}
 			}
 			
-			if (rcpCommand.RW.includes('w')) commands[rcpAction] = newAction // Only inlcude commands that are writable to the console
+			if (rcpCommand.RW.includes('w')) commands[rcpAction] = newAction // Only include commands that are writable to the console
 			if (rcpCommand.RW.includes('r')) feedbacks[rcpAction] = feedbackFuncs.createFeedbackFromAction(this, newAction) // only include commands that can be read from the console
 		}
 
