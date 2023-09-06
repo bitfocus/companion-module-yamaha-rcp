@@ -361,7 +361,7 @@ class instance extends InstanceBase {
 			
 			if (cmd == undefined) return data
 
-			if (cmd !== undefined && cmd.Address !== undefined && cmd.options !== undefined) {
+			if (cmd.Address !== undefined && cmd.options !== undefined) {
 				if (
 					this.dataStore[cmd.Address] !== undefined &&
 					this.dataStore[cmd.Address][cmd.options.X] !== undefined &&
@@ -390,7 +390,7 @@ class instance extends InstanceBase {
 			return data
 
 		} catch(error) {
-			this.log('error', `getFromDataStore Error: ${error}`)
+			this.log('error', `getFromDataStore: STACK TRACE:\n${error.stack}\n`)
 		}
 	}
 
@@ -489,9 +489,7 @@ class instance extends InstanceBase {
 			return parsedOptions
 
 		} catch(error) {
-			this.log('error', `parseOptions: Error Parsing ${JSON.stringify(cmdToParse, null, 2)}`)
-			this.log(`parseOptions: data = ${(data == undefined) ? 'undefined' : data}`)
-			this.log(`parseOptions: STACK TRACE:\n${error.stack}\n`)
+			this.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
 		}
 	}
 

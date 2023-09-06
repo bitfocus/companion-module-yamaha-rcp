@@ -37,11 +37,16 @@ module.exports = {
 				instance.sendCmd('sscurrent_ex scene_b')			// except when asking for the opposite back, you'll get an error
 				break
 			}
-			case 'PM':
-			case 'DM7': 
-				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage and DM7
+			case 'PM': {
+				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on Rivage
 				instance.sendCmd('sscurrentt_ex MIXER:Lib/Scene')
 				break
+			}
+			case 'DM7': {
+				instance.sendCmd(`scpmode sstype "text"`) 			// Scene numbers are text on DM7
+				instance.sendCmd('sscurrentt_ex scene_a')
+				instance.sendCmd('sscurrentt_ex scene_b')
+			}
 		}
 	},
 
@@ -73,7 +78,13 @@ module.exports = {
 			case 'sscurrentt_ex':
 				instance.setVariableValues({ curScene: msg.X })
 				// Request Current Scene Info once we know what scene we have
-				instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.X }"`)
+				switch (instance.config.model) {
+					case 'PM':
+						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.X }"`)
+						break
+					case 'DM7':
+						instance.sendCmd(`ssinfot_ex ${msg.Address} ${msg.X }`)
+				}
 				break
 			case 'ssinfo_ex':
 			case 'ssinfot_ex':
@@ -122,6 +133,7 @@ module.exports = {
 
 	fbCreatesVar: (instance, cmd, options, data) => {
 
+		if (data == undefined) return false
 		let cmdName = cmd.rcpCmd.Address.slice(cmd.rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
 		let varName = `V_${cmdName}`
 		varName = varName + (cmd.options.X ? `_${cmd.options.X}` : '')
