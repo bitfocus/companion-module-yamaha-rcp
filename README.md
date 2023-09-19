@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.2.3 - for Companion v3
+## Yamaha Remote Control Protocol v3.2.4 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -23,6 +23,10 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+
+3.2.4
+- Better Message Handling
 
 3.2.3
 - Support Cued Mixes in Actions & Additional Error Logging

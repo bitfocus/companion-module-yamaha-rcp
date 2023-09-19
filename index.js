@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Aug 17, 2023 Version 3.2.3 (v3)
+// Sep 18, 2023 Version 3.2.4 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -26,7 +26,8 @@ class instance extends InstanceBase {
 		this.colorCommands = [] // Commands which have a color field
 		this.rcpPresets = []
 		this.dataStore = {}
-		this.reqStack = []
+		this.msgQueue = []
+		this.queueTimer = {}
 		this.variables = []
 		this.newConsole()
 	}
@@ -41,6 +42,7 @@ class instance extends InstanceBase {
 
 	// Module deletion
 	async destroy() {
+		clearInterval(this.queueTimer)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
@@ -115,6 +117,9 @@ class instance extends InstanceBase {
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
 				varFuncs.getVars(this)
+				this.queueTimer = setInterval(() => {
+					this.processMsgQueue()
+				}, 300)
 			})
 
 			this.socket.on('data', (chunk) => {
@@ -137,31 +142,29 @@ class instance extends InstanceBase {
 					}
 					this.log('debug', `Received: '${line}'`)
 					receivedCmds = paramFuncs.parseData(this, line, RCP_VALS) // Break out the parameters
-					if (receivedCmds.length == 0) this.processReqStack()
 
 					for (let i = 0; i < receivedCmds.length; i++) {
 						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
 						let cmdToFind = curCmd.Address
+						this.processMsgQueue(curCmd)
+						
+						if (curCmd.Status == 'NOTIFY' && curCmd.Command.startsWith('sscurrent')) {
+							varFuncs.setVar(this, curCmd)
+							this.pollConsole()
+							continue
+						}
 
-						this.processReqStack(curCmd)
-
-						foundCmd = this.rcpCommands.find((cmd) => cmd.Address == cmdToFind) // Find which command
+						foundCmd = this.findRcpCmd(cmdToFind.replace(/:/g, '_')) // Find which command
 						if (foundCmd != undefined) {
 							if (foundCmd.Command == 'prminfo') {
+	
 								this.addToDataStore(curCmd)
 								if (this.isRecordingActions) {
 									this.addToActionRecording({ rcpCmd: foundCmd, options: curCmd })
 								}
 								this.checkFeedbacks(foundCmd.Address.replace(/:/g, '_')) // Companion commands use a _ instead of :
-								varFuncs.setVar(this, curCmd)
 							}
-							continue
-						}
 
-						if (curCmd.Address.startsWith('MIXER:Lib/Scene') || curCmd.Address.startsWith('scene')) {
-							if (curCmd.Status == 'NOTIFY' && curCmd.Command.startsWith('sscurrent')) {
-								this.pollConsole()
-							}
 							varFuncs.setVar(this, curCmd)
 							continue
 						}
@@ -179,23 +182,40 @@ class instance extends InstanceBase {
 		}
 	}
 
-	processReqStack(cmd = {Address: '', X: 0, Y: 0}) {
-		if (this.reqStack == undefined || this.reqStack.length == 0) return
-
-		let reqIdx = this.reqStack.findIndex((c) => 
-			(c.Address == cmd.Address && c.X == (cmd.X || 0) && c.Y == (cmd.Y || 0))
-		)
-		if (reqIdx > -1) {
-			this.reqStack.splice(reqIdx, 1) // Got value from matching request so remove it!
+	addToMsgQueue(msg) {
+		if (this.msgQueue.length == 0) {
+			this.msgQueue.push(msg)
 		} else {
-			this.reqStack.shift() // Just in case it's an invalid command stuck in there
+			let i = this.msgQueue.findIndex((c) => 
+				(c.cmd.Address == msg.cmd.Address && c.cmd.X == (msg.cmd.X || 0) && c.cmd.Y == (msg.cmd.Y || 0))
+			)
+			if (i == -1) {
+				this.msgQueue.push(msg)
+			}
 		}
+	}
 
-		if (this.reqStack.length > 0) { // More to send?
-			let cmdToSend = this.reqStack[0] // Oldest
-			let req = `get ${cmdToSend.Address} ${cmdToSend.X} ${cmdToSend.Y}`
-			this.sendCmd(req)
+	processMsgQueue(cmd = {Address: '', X: 0, Y: 0, Val: ''}) {
+		if (this.msgQueue == undefined || this.msgQueue.length == 0) return
+		clearInterval(this.queueTimer)
+
+		let i = this.msgQueue.findIndex((c) =>
+			(c.prefix == 'get' && c.cmd.Address == cmd.Address && c.cmd.X == (cmd.X || 0) && c.cmd.Y == (cmd.Y || 0))
+		)
+		if (i > -1) {
+			this.msgQueue.splice(i, 1)	// Got value from matching request so remove it!
+		}		
+
+		if (this.msgQueue.length > 0) { 			// Moessages still to send?
+			let cmdToSend = this.msgQueue[0] 		// Oldest
+			let msg = this.fmtCmd(cmdToSend)
+			if (this.sendCmd(msg)) {
+				this.msgQueue.shift() 				// Sent successfully, so delete it
+			}
 		}
+		this.queueTimer = setInterval(() => {
+			this.processMsgQueue()
+		}, 300)
 	}
 
 	// Create the Actions & Feedbacks
@@ -226,10 +246,8 @@ class instance extends InstanceBase {
 					for (let Y of YArr) {
 						opt.X = X
 						opt.Y = Y
-						let cmd = await this.fmtCmd(this, 'set', { rcpCmd: foundCmd, options: opt })
-						if (cmd !== undefined) {
-							this.sendCmd(cmd)
-						}							
+						let options = await this.parseOptions(this, context, { rcpCmd: foundCmd, options: opt })
+						await this.addToMsgQueue({prefix: 'set', cmd: {Address: foundCmd.Address, X: options.X, Y: options.Y, Val: options.Val}})						
 					}
 				}
 			}
@@ -317,14 +335,15 @@ class instance extends InstanceBase {
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the console
-			} else {
-				this.log('info', 'Socket not connected :(')
-			}
+				return true
+			} 
+			this.log('info', 'Socket not connected :(')
 		}
+		return false
 	}
 
 	findRcpCmd(cmdName) {
-		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_') == cmdName)
+		let rcpCommand = this.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdName))
 		if (rcpCommand == undefined) {
 			this.log('debug', `FINDCMD: Unrecognized command. '${cmdName}'`)
 		}
@@ -372,39 +391,31 @@ class instance extends InstanceBase {
 				}
 
 				let rcpCmd = this.findRcpCmd(cmd.Address.replace(/:/g, '_'))
-				if (rcpCmd == undefined || rcpCmd.Index >= 1000 || !rcpCmd.RW.includes('r')) return data
-
-				if (this.reqStack.length == 0) {
-					this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
-					let req = `get ${cmd.Address} ${cmd.options.X} ${cmd.options.Y}`
-					this.sendCmd(req) // Get the current value	
-				} else {
-					let i = this.reqStack.findIndex((c) => 
-						(c.Address == cmd.Address && c.X == cmd.options.X && c.Y == cmd.options.Y)
-					)
-					if (i == -1) {
-						this.reqStack.push({Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y})
-					}
+				if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
+					this.addToMsgQueue({prefix: 'get', cmd: {Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y}})
 				}
+
 			}
 			return data
 
 		} catch(error) {
-			this.log('error', `getFromDataStore: STACK TRACE:\n${error.stack}\n`)
+			this.log('error', `\ngetFromDataStore: STACK TRACE:\n${error.stack}\n`)
 		}
 	}
-
-
+	
 	// Create the proper command string to send to the console
-	async fmtCmd(instance, prefix, cmdToFmt) {
+	fmtCmd(cmdToFmt) {
 		if (cmdToFmt == undefined) return
 
+		let rcpCmd = this.findRcpCmd(cmdToFmt.cmd.Address.replace(/:/g, '_'))
+		let prefix = cmdToFmt.prefix
 		let cmdStart = prefix
-		let cmdName = cmdToFmt.rcpCmd.Address
-		let options = await this.parseOptions(instance, instance, cmdToFmt)
+		let cmd = cmdToFmt.cmd
+		let cmdName = cmd.Address
+		let options = {X: cmd.X, Y: cmd.Y, Val: cmd.Val}
 
-		if (cmdToFmt.rcpCmd.Index == 1000) {
-			switch (instance.config.model) {
+		if (rcpCmd.Index == 1000) {
+			switch (this.config.model) {
 				case 'TF':
 				case 'DM3':
 					cmdStart = prefix == 'set' ? 'ssrecall_ex' : 'sscurrent_ex'
@@ -426,15 +437,15 @@ class instance extends InstanceBase {
 			options.Y = ''
 		}
 
-		if (cmdToFmt.rcpCmd.Index > 1000) { // RecallInc/Dec
+		if (rcpCmd.Index > 1000) { // RecallInc/Dec
 			cmdStart = 'event'
 			options.X = ''
 			options.Y = ''
 		}
 
 		let cmdStr = `${cmdStart} ${cmdName}`
-		if (prefix == 'set' && cmdToFmt.rcpCmd.Index <= 1000) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
-			if (cmdToFmt.rcpCmd.Type == 'string') {
+		if (prefix == 'set' && rcpCmd.Index <= 1000) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
+			if (rcpCmd.Type == 'string') {
 				options.Val = `"${options.Val}"` // put quotes around the string
 			}
 		} else {

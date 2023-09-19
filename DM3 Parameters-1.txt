@@ -152,6 +152,6 @@ OK prminfo 121 "MIXER:Current/MuteGrpCtrl/Label/Name" 6 1 0 64 0 "" string any r
 -- prminfo 151 "MIXER:Current/St/Role" 2 1 0 7 0 "" binary any r 1
 -- prminfo 152 "MIXER:Current/Fx/Role" 2 1 0 7 0 "" string any r 1
 OK prminfo 153 "MIXER:Current/FxRtnCh/Label/Category" 4 1 0 6 0 "" binary any r 1
-OK scninfo 1000 "MIXER:Lib/Bank/Scene/Recall" 1 2 0 100 0 "" integer any rw 1
+OK scninfo 1000 "MIXER:Lib/Bank/Scene/Recall" 1 2 0 100 0 "" integer any w 1
 OK scninfo 1001 "MIXER:Lib/Scene/RecallInc" 0 0 0 0 0 "" none any w 1
 OK scninfo 1002 "MIXER:Lib/Scene/RecallDec" 0 0 0 0 0 "" none any w 1
