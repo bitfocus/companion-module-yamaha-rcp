@@ -27,6 +27,7 @@ _Andrew Broughton_
 
 3.2.4
 - Better Message Handling
+- Added new commands for Rivage v6 firmware
 
 3.2.3
 - Support Cued Mixes in Actions & Additional Error Logging

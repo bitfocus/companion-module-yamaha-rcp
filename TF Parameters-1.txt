@@ -4,7 +4,7 @@ OK prminfo 2 "MIXER:Current/InCh/Label/Color" 40 0 0 8 0 "" string any rw 1
 OK prminfo 3 "MIXER:Current/InCh/Label/Icon" 40 0 0 12 0 "" binary any rw 1
 OK prminfo 4 "MIXER:Current/InCh/Label/Category" 40 0 0 16 0 "" binary any rw 1
 OK prminfo 5 "MIXER:Current/InCh/Label/Name" 40 0 0 64 "ch 1" "" string any rw 1
--- prminfo 6 "MIXER:Current/InCh/Role" 40 0 0 255 0 "" integer any rw 1
+OK prminfo 6 "MIXER:Current/InCh/Role" 40 0 0 255 0 "" integer any r 1
 OK prminfo 7 "MIXER:Current/InCh/ToFx/Level" 40 2 -32768 1000 -32768 "dB" integer any rw 100
 OK prminfo 8 "MIXER:Current/InCh/ToFx/On" 40 2 0 1 1 "" integer any rw 1
 OK prminfo 9 "MIXER:Current/InCh/ToFx/PrePost" 40 2 0 1 0 "" integer any rw 1
@@ -68,14 +68,14 @@ OK prminfo 66 "MIXER:Current/Mix/ToMtrx/Level" 20 4 -32768 1000 -32768 "dB" inte
 OK prminfo 67 "MIXER:Current/Mix/ToMtrx/On" 20 4 0 1 1 "" integer any rw 1
 OK prminfo 68 "MIXER:Current/Mix/Out/Balance" 20 0 -63 63 0 "" integer any rw 1
 OK prminfo 69 "MIXER:Current/Mix/PanLink" 20 0 0 1 0 "" integer any rw 1
--- prminfo 70 "MIXER:Current/Mix/Role" 20 0 0 255 0 "" binary any rw 1
+OK prminfo 70 "MIXER:Current/Mix/Role" 20 0 0 255 0 "" binary any r 1
 OK prminfo 71 "MIXER:Current/Mtrx/Fader/Level" 4 0 -32768 1000 0 "dB" integer any rw 100
 OK prminfo 72 "MIXER:Current/Mtrx/Fader/On" 4 0 0 1 1 "" integer any rw 1
 OK prminfo 73 "MIXER:Current/Mtrx/Label/Color" 4 0 0 8 0 "" string any rw 1
 OK prminfo 74 "MIXER:Current/Mtrx/Label/Icon" 4 0 0 12 0 "" binary any rw 1
 OK prminfo 75 "MIXER:Current/Mtrx/Label/Category" 4 0 0 16 0 "" binary any rw 1
 OK prminfo 76 "MIXER:Current/Mtrx/Label/Name" 4 0 0 64 "MT 1" "" string any rw 1
--- prminfo 77 "MIXER:Current/Mtrx/Role" 4 0 0 255 0 "" binary any rw 1
+OK prminfo 77 "MIXER:Current/Mtrx/Role" 4 0 0 255 0 "" binary any r 1
 OK prminfo 78 "MIXER:Current/St/Fader/Level" 2 0 -32768 1000 -32768 "dB" integer any rw 100
 OK prminfo 79 "MIXER:Current/St/Fader/On" 2 0 0 1 1 "" integer any rw 1
 OK prminfo 80 "MIXER:Current/St/Label/Color" 2 0 0 8 0 "" string any rw 1
@@ -95,17 +95,17 @@ OK prminfo 93 "MIXER:Current/Mono/ToMtrx/Level" 1 4 -32768 1000 -32768 "dB" inte
 OK prminfo 94 "MIXER:Current/Mono/ToMtrx/On" 1 4 0 1 1 "" integer any rw 1
 OK prminfo 95 "MIXER:Setup/MonitorMix/Password" 0 0 0 24 0 "" binary any rw 1
 OK prminfo 96 "MIXER:Current/MuteMaster/On" 6 0 0 1 0 "" integer any rw 1
--- prminfo 97 "MIXER:Current/Mix/BusType" 20 0 0 4 0 "" binary any r 1
+OK prminfo 97 "MIXER:Current/Mix/BusType" 20 0 0 4 0 "" binary any r 1
 OK prminfo 98 "MIXER:Current/InCh/PanMode" 32 0 0 1 0 "" integer any r 1
 OK prminfo 99 "MIXER:Current/StInCh/PanMode" 4 0 0 1 0 "" integer any r 1
 OK prminfo 100 "MIXER:Current/FxRtnCh/PanMode" 4 0 0 1 0 "" integer any r 1
 OK prminfo 101 "MIXER:Current/Mix/PanMode" 20 0 0 1 0 "" integer any r 1
 OK prminfo 102 "MIXER:Current/St/PanMode" 2 0 0 1 0 "" integer any r 1
--- prminfo 103 "MIXER:Current/StInCh/Role" 4 0 0 7 0 "" binary any r 1
--- prminfo 104 "MIXER:Current/FxRtnCh/Role" 4 0 0 7 0 "" binary any r 1
--- prminfo 105 "MIXER:Current/St/Role" 2 0 0 7 0 "" binary any r 1
-OK prminfo 106 "MIXER:Current/FxRtnCh/Label/Category" 4 0 0 6 0 "" binary any r 1
-OK prminfo 107 "MIXER:Current/MuteMaster/Label/Name" 6 0 0 8 "MUTE 1" "" string any r 1
+OK prminfo 103 "MIXER:Current/StInCh/Role" 4 0 0 7 0 "" binary any r 1
+OK prminfo 104 "MIXER:Current/FxRtnCh/Role" 4 0 0 7 0 "" binary any r 1
+OK prminfo 105 "MIXER:Current/St/Role" 2 0 0 7 0 "" binary any r 1
+OK prminfo 106 "MIXER:Current/FxRtnCh/Label/Category" 4 0 0 6 0 "" binary any rw 1
+OK prminfo 107 "MIXER:Current/MuteMaster/Label/Name" 6 0 0 8 "MUTE 1" "" string any rw 1
 OK scninfo 1000 "MIXER:Lib/Bank/Scene/Recall" 1 2 0 100 0 "" integer any w 1
 OK scninfo 1001 "MIXER:Lib/Scene/RecallInc" 0 0 0 0 0 "" none any w 1
 OK scninfo 1002 "MIXER:Lib/Scene/RecallDec" 0 0 0 0 0 "" none any w 1

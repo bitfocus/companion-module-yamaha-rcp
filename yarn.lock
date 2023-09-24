@@ -23,7 +23,7 @@
     p-timeout "^4.1.0"
     tslib "^2.6.1"
 
-"@companion-module/tools@^1.4.0":
+"@companion-module/tools@^1.4.1":
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-1.4.1.tgz#ba7ef9dec6992d66972748e04db79a9e2454027f"
   integrity sha512-hZrv24x0dofxNG+XeIlJpXmq7mH26LXMomWIBJ2W/7Oqs+jTMnULg4LhW1DzPxhfbEVBJQLtJ1v8nD37zk9HgQ==
@@ -635,9 +635,9 @@ callsites@^3.0.0:
   integrity sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==
 
 caniuse-lite@^1.0.30001517:
-  version "1.0.30001535"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001535.tgz#908a5b7ef11172f51f0b88f3d850aef1c6a3cf7b"
-  integrity sha512-48jLyUkiWFfhm/afF7cQPqPjaUmSraEhK4j+FCTJpgnGGEZHqyLe3hmWH7lIooZdSzXL0ReMvHz0vKDoTBsrwg==
+  version "1.0.30001538"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001538.tgz#9dbc6b9af1ff06b5eb12350c2012b3af56744f3f"
+  integrity sha512-HWJnhnID+0YMtGlzcp3T9drmBJUVDchPJ08tpUGFLs9CYlwWPH2uLgpHn8fND5pCgXVtnGS3H4QR9XLMHVNkHw==
 
 chalk@^4.0.0:
   version "4.1.2"
@@ -1093,9 +1093,9 @@ function-bind@^1.1.1:
   integrity sha512-yIovAzMX49sF8Yl58fSCWJ5svSLuaibPxXQJFLmBObTuCr0Mf1KiPopGM9NiFjiYBCbfaa2Fh6breQ6ANVTI0A==
 
 fx@*:
-  version "30.0.0"
-  resolved "https://registry.yarnpkg.com/fx/-/fx-30.0.0.tgz#4191b44bfa4a7fd5ca220a6b5064d0023146ffd9"
-  integrity sha512-T+CRbaZytPNK69220OFA4Al3nWoi78YDYEY9Cd20HprrcaP6J67OQbLSyhAAV4BTuVW2+hDgiy9AAUd90VhEvA==
+  version "30.0.2"
+  resolved "https://registry.yarnpkg.com/fx/-/fx-30.0.2.tgz#4a59381c2b22fc1522a00c915fe6119283e06bdf"
+  integrity sha512-L060zhS1e6oqt5FnxZWJ59NpjppYCrRe4748GP/bzjLT9nKq5if5Op0kxMqtsM4ldkuFOXEhWozgYDZi4aY7+A==
 
 get-tsconfig@^4.7.0:
   version "4.7.0"

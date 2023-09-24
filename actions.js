@@ -85,130 +85,130 @@ module.exports = {
 		}
 
 		// Val Parameter - integer, binary or string
-		//if (rcpCmd.Max != 0 || rcpCmd.Min != 0) { // SceneInc and SceneDec have no value parameter
-			switch (rcpCmd.Type) {
-				case 'integer':
-				case 'freq':
-					if (rcpCmd.Max == 1) { // Boolean
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: 'State',
-							id: 'Val',
-							default: 'Toggle',
-							minChoicesForSearch: 0,
-							choices: [
-								{ label: 'On', id: 1 },
-								{ label: 'Off', id: 0 },
-								{ label: 'Toggle', id: 'Toggle' },
-							],
-							allowCustom: true,
-						})
-					} else if (rcpCmd.Max != 0 || rcpCmd.Min != 0) {
-						paramsToAdd.push({
-							type: 'textinput',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
-							required: true,
-							useVariables: true,
-						})
-						if (rcpCmd.Index != 1000) {
-							paramsToAdd.push({
-								type: 'checkbox',
-								label: 'Relative',
-								id: 'Rel',
-								default: false,
-							})
-						}
-					}
+		switch (rcpCmd.Type) {
+			case 'bool':
+				paramsToAdd.push({
+					type: 'dropdown',
+					label: 'State',
+					id: 'Val',
+					default: 'Toggle',
+					minChoicesForSearch: 0,
+					choices: [
+						{ label: 'On', id: 1 },
+						{ label: 'Off', id: 0 },
+						{ label: 'Toggle', id: 'Toggle' },
+					],
+					allowCustom: true,
+				})
+				break
 
-					break
-
-				case 'string':
-				case 'binary':
-					if (actionName.startsWith('CustomFaderBank')) {
+			case 'integer':
+			case 'freq':
+				if (rcpCmd.Max != 0 || rcpCmd.Min != 0) {
+					paramsToAdd.push({
+						type: 'textinput',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
+						required: true,
+						useVariables: true,
+					})
+					if (rcpCmd.Index != 1000) {
 						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: rcpNames.customChNames,
-						})
-					} else if (actionName.endsWith('Color')) {
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: instance.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors,
-							allowCustom: true,
-						})
-					} else if (actionName.endsWith('Icon')) {
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: rcpNames.chIcons,
-							allowCustom: true,
-						})
-					} else if (actionName == 'InCh/Patch') {
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: rcpNames.inChPatch,
-						})
-					} else if (actionName == 'DanteOutPort/Patch') {
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: rcpNames.danteOutPatch,
-						})
-					} else if (actionName == 'OmniOutPort/Patch') {
-						paramsToAdd.push({
-							type: 'dropdown',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							minChoicesForSearch: 0,
-							choices: rcpNames.omniOutPatch,
-						})
-					} else if ((instance.config.model == 'PM' || instance.config.model == 'DM7') && rcpCmd.Index == 1000) {
-						paramsToAdd.push({
-							type: 'textinput',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
-							useVariables: true,
-						})
-					} else {
-						paramsToAdd.push({
-							type: 'textinput',
-							label: actionNameParts[rcpNameIdx],
-							id: 'Val',
-							default: rcpCmd.Default,
-							regex: '',
-							useVariables: true,
+							type: 'checkbox',
+							label: 'Relative',
+							id: 'Rel',
+							default: false,
 						})
 					}
-			}
-//		}
+				}
+				break
+
+			case 'string':
+			case 'binary':
+				if (actionName.startsWith('CustomFaderBank')) {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.customChNames,
+					})
+				} else if (actionName.endsWith('Color')) {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: instance.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors,
+						allowCustom: true,
+					})
+				} else if (actionName.endsWith('Icon')) {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.chIcons,
+						allowCustom: true,
+					})
+				} else if (actionName == 'InCh/Patch') {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.inChPatch,
+					})
+				} else if (actionName == 'DanteOutPort/Patch') {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.danteOutPatch,
+					})
+				} else if (actionName == 'OmniOutPort/Patch') {
+					paramsToAdd.push({
+						type: 'dropdown',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						minChoicesForSearch: 0,
+						choices: rcpNames.omniOutPatch,
+					})
+				} else if ((instance.config.model == 'PM' || instance.config.model == 'DM7') && rcpCmd.Index == 1000) {
+					paramsToAdd.push({
+						type: 'textinput',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
+						useVariables: true,
+					})
+				} else {
+					paramsToAdd.push({
+						type: 'textinput',
+						label: actionNameParts[rcpNameIdx],
+						id: 'Val',
+						default: rcpCmd.Default,
+						regex: '',
+						useVariables: true,
+					})
+				}
+		}
 
 		// Make sure the current value is stored in dataStore[]
 		if (rcpCmd.Index < 1000 && rcpCmd.RW.includes('r')) {
 			newAction.subscribe = async (action) => {
 				let options = await instance.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
-				await instance.getFromDataStore({ Address: rcpCmd.Address, options: options })
+				instance.getFromDataStore({ Address: rcpCmd.Address, options: options })  // Make sure current values are in dataStore
+console.log('Action.subcribe called')
 			}
 		}
 

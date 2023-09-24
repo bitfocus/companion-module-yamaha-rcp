@@ -63,7 +63,8 @@ module.exports = [
 				newAction.options.Y = action.options.Y == 'a' ? 1 : 2
 			}
 
-			rcpCmd = rcpCommands.find((i) => i.Address.replace(/:/g, '_') == actionAddress)
+			rcpCmd = context.getRcpCmd(actionAddress)
+
 //console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
 
 			if (rcpCmd !== undefined) {

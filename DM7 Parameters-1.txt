@@ -3,7 +3,7 @@ OK prminfo 1 "MIXER:Current/InCh/Fader/On" 72 1 0 1 1 "" integer any rw 1
 OK prminfo 2 "MIXER:Current/InCh/Label/Color" 72 1 0 8 0 "" binary any rw 1
 OK prminfo 3 "MIXER:Current/InCh/Label/Icon" 72 1 0 12 0 "" binary any rw 1
 OK prminfo 4 "MIXER:Current/InCh/Label/Name" 72 1 0 64 0 "" binary any rw 1
-OK prminfo 5 "MIXER:Current/InCh/Role" 72 1 0 255 0 "" integer any rw 1
+OK prminfo 5 "MIXER:Current/InCh/Role" 72 1 0 255 0 "" integer any r 1
 OK prminfo 6 "MIXER:Current/InCh/ToMix/Level" 72 48 -32768 1000 -32768 "dB" integer any rw 100
 OK prminfo 7 "MIXER:Current/InCh/ToMix/On" 72 48 0 1 1 "" integer any rw 1
 OK prminfo 8 "MIXER:Current/InCh/ToMix/Pan" 72 48 -63 63 0 "" integer any rw 1
@@ -74,7 +74,7 @@ OK prminfo 72 "MIXER:Current/Mtrx/Fader/On" 12 1 0 1 1 "" integer any rw 1
 OK prminfo 73 "MIXER:Current/Mtrx/Label/Color" 12 1 0 8 0 "" binary any rw 1
 OK prminfo 74 "MIXER:Current/Mtrx/Label/Icon" 12 1 0 12 0 "" binary any rw 1
 OK prminfo 75 "MIXER:Current/Mtrx/Label/Name" 12 1 0 64 0 "" binary any rw 1
-OK prminfo 76 "MIXER:Current/Mtrx/Role" 12 1 0 255 0 "" binary any rw 1
+OK prminfo 76 "MIXER:Current/Mtrx/Role" 12 1 0 255 0 "" binary any r 1
 -- prminfo 77 "MIXER:Current/Mtrx/PanLink" 12 1 0 1 0 "" integer any rw 1
 OK prminfo 78 "MIXER:Current/Mtrx/Out/Balance" 12 1 -63 63 0 "" integer any rw 1
 OK prminfo 79 "MIXER:Current/Mtrx/DCA/Assign" 12 24 0 1 0 "" integer any rw 1

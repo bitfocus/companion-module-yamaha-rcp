@@ -90,15 +90,17 @@ module.exports = {
 					rcpCommand[params[j]] = line[j].replace(/"/g, '')
 				}
 
-				cmds.push(rcpCommand)
-
-				if (params[0] == 'Ok') {
+				if (params[0].toUpperCase() == 'OK') {
 					// Only do this on initial command list creation
 					let rcpName = rcpCommand.Address.slice(rcpCommand.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 					if (rcpName.endsWith('Color')) {
 						instance.colorCommands.push(rcpName)
 					}
+					if (rcpCommand.Type == 'integer' && rcpCommand.Max == 1) {
+						rcpCommand.Type = 'bool'
+					}
 				}
+				cmds.push(rcpCommand)
 			}
 		}
 		return cmds
