@@ -147,7 +147,7 @@ module.exports = {
 		let varToAdd = { variableId: varName, name: varName }
 		let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
 
-		// Add
+		// Add new Auto-created variable and value
 		if (cmd.options.createVariable) {
 			if (varIndex == -1) {
 				instance.variables.push(varToAdd)
@@ -159,7 +159,7 @@ module.exports = {
 			return true
 		}
 
-		// Set a custom variable?
+		// Set a custom variable value using @ syntax?
 		varName = options.Val
 		const reg = /@\(([^:$)]+):custom_([^)$]+)\)/
 		let matches = reg.exec(varName)

@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Sep 18, 2023 Version 3.2.4 (v3)
+// Sep 24, 2023 Version 3.2.4 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -158,11 +158,13 @@ class instance extends InstanceBase {
 						if (foundCmd != undefined) {
 							if (foundCmd.Command == 'prminfo') {
 	
-								this.addToDataStore(curCmd)
+								if (!(curCmd.Status == 'OK' && curCmd.Command == 'set')) {
+									this.addToDataStore(curCmd)
+								}
 								if (this.isRecordingActions) {
 									this.addToActionRecording({ rcpCmd: foundCmd, options: curCmd })
 								}
-								this.checkFeedbacks(foundCmd.Address.replace(/:/g, '_')) // Companion commands use a _ instead of :
+								this.checkFeedbacks(curCmd.Address.replace(/:/g, '_'))
 							}
 
 							varFuncs.setVar(this, curCmd)
@@ -255,7 +257,9 @@ class instance extends InstanceBase {
 							opt.X = X
 							opt.Y = Y
 							let options = await this.parseOptions(this, context, { rcpCmd: foundCmd, options: opt })
-							this.addToMsgQueue({prefix: 'set', cmd: {Address: foundCmd.Address, X: options.X, Y: options.Y, Val: options.Val}})						
+							let actionCmd = {Address: foundCmd.Address, X: options.X, Y: options.Y, Val: options.Val}
+							this.addToDataStore(actionCmd)
+							this.addToMsgQueue({prefix: 'set', cmd: actionCmd})						
 						}
 					}
 				}
@@ -396,7 +400,6 @@ class instance extends InstanceBase {
 			this.dataStore[dsAddr][dsX] = {}
 		}
 		this.dataStore[dsAddr][dsX][dsY] = cmd.Val
-//console.log('addToDataStore: this.dataStore = ', this.dataStore)
 	}
 
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
