@@ -527,38 +527,14 @@ class instance extends InstanceBase {
 		} 
 
 		let curVal = parseInt(data)
-
-		let mult = 1
-		if (cmdToParse.rcpCmd.Unit.toUpperCase() == 'DB') {
-			switch (true) {
-				case (curVal <= -9600): {
-					curVal = (parsedOptions.Val < 0 ? -30000 : -11000)
-				}
-				case (curVal <= -7000): {
-					mult = 20
-					break
-				}
-				case (curVal <= -6000): {
-					mult = 10
-					break
-				}
-				case (curVal <= -3500) : {
-					mult = 5
-					break
-				}
-				case (curVal <= -2000) : {
-					mult = 3
-					break
-				}
-				case (curVal <= -1000) : {
-					mult = 2
-					break
-				}
-			}
+		if (curVal <= -9000) {
+			if (parsedOptions.Val < 0) parsedOptions.Val = -32768
+			if (parsedOptions.Val > 0) parsedOptions.Val = -6000
+		} else {
+			parsedOptions.Val = curVal + parsedOptions.Val	
 		}
-		parsedOptions.Val = curVal + (parsedOptions.Val * mult)
 		parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
-	return parsedOptions
+		return parsedOptions
 	}
 
 }
