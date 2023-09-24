@@ -422,11 +422,9 @@ class instance extends InstanceBase {
 				let rcpCmd = this.findRcpCmd(cmd.Address)
 				if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
 					this.addToMsgQueue({prefix: 'get', cmd: {Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y}})
-//console.log('getFromDataStore: added ', cmd, ' to msgQueue.')
-//console.log('msgQueue: ', this.msgQueue)
 				}
-
 			}
+			
 			return data
 
 		} catch(error) {
@@ -503,7 +501,7 @@ class instance extends InstanceBase {
 			parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
 
 			data = instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
-console.log('parseOptions: cmdToParse.rcpCmd.Address = ', cmdToParse.rcpCmd.Address, ', data = ', data)
+
 			if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
 
 			if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary' || cmdToParse.rcpCmd.Type == 'bool') {
@@ -529,9 +527,6 @@ console.log('parseOptions: cmdToParse.rcpCmd.Address = ', cmdToParse.rcpCmd.Addr
 		} 
 
 		let curVal = parseInt(data)
-
-//console.log("parseOptions: parsedOptions.Val = ", parsedOptions.Val, ", curVal = ", curVal)
-//console.log('parseOptions: cmdToParse.rcpCmd = ', cmdToParse.rcpCmd)
 
 		let mult = 1
 		if (cmdToParse.rcpCmd.Unit.toUpperCase() == 'DB') {

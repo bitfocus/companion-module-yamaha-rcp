@@ -208,7 +208,6 @@ module.exports = {
 			newAction.subscribe = async (action) => {
 				let options = await instance.parseOptions(instance, instance, { rcpCmd: rcpCmd, options: action.options })
 				instance.getFromDataStore({ Address: rcpCmd.Address, options: options })  // Make sure current values are in dataStore
-console.log('Action.subcribe called')
 			}
 		}
 
