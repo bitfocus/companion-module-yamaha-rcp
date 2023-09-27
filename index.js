@@ -256,6 +256,7 @@ class instance extends InstanceBase {
 						for (let Y of YArr) {
 							opt.X = X
 							opt.Y = Y
+console.log('Action.callback: Calling parseOptions for ', event.actionId)
 							let options = await this.parseOptions(this, context, { rcpCmd: foundCmd, options: opt })
 							let actionCmd = {Address: foundCmd.Address, X: options.X, Y: options.Y, Val: options.Val}
 							this.addToDataStore(actionCmd)
@@ -486,6 +487,7 @@ class instance extends InstanceBase {
 
 	// Create the proper command string for an action or poll
 	async parseOptions(instance, context, cmdToParse) {
+//console.log('parseOptions called for ', cmdToParse.rcpCmd.Address)
 		let data
 
 		try {
@@ -511,7 +513,7 @@ class instance extends InstanceBase {
 				if (instance.isRelAction(cmdToParse, parsedOptions)) {
 					parsedOptions = instance.handleRelAction(cmdToParse, parsedOptions, data)
 				}
-				parsedOptions.Val = (data == undefined) ? undefined : parseInt(parsedOptions.Val || 0)
+				parsedOptions.Val = parseInt(parsedOptions.Val || 0)
 			}
 			return parsedOptions
 
@@ -527,7 +529,7 @@ class instance extends InstanceBase {
 		} 
 
 		let curVal = parseInt(data)
-		if (curVal <= -9000) {
+		if (curVal <= -9000) { // Handle bottom of range
 			if (parsedOptions.Val < 0) parsedOptions.Val = -32768
 			if (parsedOptions.Val > 0) parsedOptions.Val = -6000
 		} else {
