@@ -48,9 +48,19 @@ module.exports = {
 		}
 
 		newFeedback.callback = async (event, context) => {
+			const varFuncs = require('./variables.js')
+
 			let rcpCommand = instance.findRcpCmd(event.feedbackId)
-			let options = await instance.parseOptions(instance, context, { rcpCmd: rcpCommand, options: event.options })
-			let data = instance.getFromDataStore({ Address: rcpCommand.Address, options: options })
+			let options = await instance.parseOptions(context, event.options)
+			let fb = options
+			fb.Address = rcpCommand.Address
+			fb.Val = await instance.parseVal(fb)
+			let data = instance.getFromDataStore(fb)
+			if (data == undefined) return
+			fb.X = event.options.X
+			fb.Y = event.options.Y
+			varFuncs.fbCreatesVar(instance, fb, data) // Are we creating and/or updating a variable?
+
 			if (options && data == options.Val) {
 				return true
 			}

@@ -11,7 +11,7 @@ const varFuncs = require('./variables.js')
 const upgrade = require('./upgrade')
 
 const RCP_VALS = ['Status', 'Command', 'Address', 'X', 'Y', 'Val', 'TxtVal']
-const MSG_DELAY = 100
+const MSG_DELAY = 5
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -26,8 +26,8 @@ class instance extends InstanceBase {
 		this.rcpCommands = []
 		this.colorCommands = [] // Commands which have a color field
 		this.rcpPresets = []
-		this.dataStore = {}
-		this.msgQueue = []
+		this.dataStore = {}		// status, Address (using ":"), X, Y, Val
+		this.cmdQueue = []		// prefix, Address (using ":"), X, Y, Val
 		this.queueTimer = {}
 		this.variables = []
 		this.newConsole()
@@ -43,7 +43,7 @@ class instance extends InstanceBase {
 
 	// Module deletion
 	async destroy() {
-		clearInterval(this.queueTimer)
+		clearTimeout(this.queueTimer)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
@@ -118,13 +118,10 @@ class instance extends InstanceBase {
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
 				varFuncs.getVars(this)
-				this.queueTimer = setInterval(() => {
-					this.processMsgQueue()
-				}, 300)
+				this.processCmdQueue()
 			})
 
 			this.socket.on('data', (chunk) => {
-				clearInterval(this.queueTimer)
 				receiveBuffer += chunk
 				receivedLines = receiveBuffer.split('\x0A') // Split by line break
 				if (receivedLines.length == 0) {
@@ -161,14 +158,14 @@ class instance extends InstanceBase {
 								if (!(curCmd.Status == 'OK' && curCmd.Command == 'set')) {
 									this.addToDataStore(curCmd)
 								}
+
 								if (this.isRecordingActions) {
 									this.addToActionRecording({ rcpCmd: foundCmd, options: curCmd })
 								}
-								this.checkFeedbacks(curCmd.Address.replace(/:/g, '_'))
 							}
 
 							varFuncs.setVar(this, curCmd)
-							this.processMsgQueue(curCmd)
+							this.processCmdQueue(curCmd)
 							continue
 						}
 
@@ -181,45 +178,70 @@ class instance extends InstanceBase {
 
 					}
 				}
-				this.queueTimer = setInterval(() => {
-					this.processMsgQueue()
-				}, MSG_DELAY)
 			})
 		}
 	}
 
-	// New Message to Add
-	addToMsgQueue(msg) {
-		let i = this.msgQueue.findIndex((c) => 
-			(c.prefix == msg.prefix && c.cmd.Address == msg.cmd.Address && c.cmd.X == (msg.cmd.X || 0) && c.cmd.Y == (msg.cmd.Y || 0))
+	// New Command (Action or Feedback) to Add
+	addToCmdQueue(cmd) {
+		clearTimeout(this.queueTimer)
+		let cmdToAdd = JSON.parse(JSON.stringify(cmd))		// Deep Clone
+		let i = this.cmdQueue.findIndex((c) => 
+			((c.prefix == cmdToAdd.prefix) && (c.Address == cmdToAdd.Address) && (c.X == cmdToAdd.X) && (c.Y == cmdToAdd.Y))
 		)
 		if (i > -1) {
-			if (msg.prefix == 'set') {
-				this.msgQueue.splice(i, 1)	// Remove any matching set message
-			} else {
-				return // Leave get message where it is
-			}		
-		} 
-		this.msgQueue.push(msg)
+			this.cmdQueue[i] = cmdToAdd	// Replace queued message with new one
+		} else {
+			this.cmdQueue.push(cmdToAdd)
+		}
+		this.queueTimer = setTimeout(() => {
+			this.processCmdQueue()
+		}, MSG_DELAY)
 	}
 
-	// When a message comes in from the console, match it up and send the next message
-	processMsgQueue(cmd = {Address: '', X: 0, Y: 0, Val: ''}) {
-		if (this.msgQueue == undefined || this.msgQueue.length == 0) return
+	// When a message comes in from the console, match it up and delete it, and send the next message
+	processCmdQueue(cmd) {
+		clearTimeout(this.queueTimer)
 
-		let i = this.msgQueue.findIndex((c) =>
-			(c.prefix == 'get' && c.cmd.Address == cmd.Address && c.cmd.X == (cmd.X || 0) && c.cmd.Y == (cmd.Y || 0))
-		)
-		if (i > -1) {
-			this.msgQueue.splice(i, 1)	// Got value from matching request so remove it!
+		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
+		if (cmd != undefined) {
+			let i = this.cmdQueue.findIndex((c) =>
+				((c.prefix == 'get') && (c.Address == cmd.Address) && (c.X == cmd.X) && (c.Y == cmd.Y))
+			)
+			if (i > -1) {
+				this.cmdQueue.splice(i, 1)		// Got value from matching request so remove it!
+			}			
 		}
 
-		if (this.msgQueue.length > 0) { 			// Messages still to send?
-			let cmdToSend = this.msgQueue[0] 		// Oldest
-			let msg = this.fmtCmd(cmdToSend)
-			if (this.sendCmd(msg)) {
-				this.msgQueue.shift() 				// Sent successfully, so delete it
+		if (this.cmdQueue.length > 0) { 		// Messages still to send?
+			let nextCmd = this.cmdQueue[0]		// Oldest
+
+			if (nextCmd.prefix == 'set') {
+				let nextCmdVal = this.parseVal(nextCmd)
+				if (nextCmdVal == undefined) {
+					this.cmdQueue.shift()
+					this.cmdQueue.push(nextCmd)
+					
+					this.queueTimer = setTimeout(() => {
+						this.processCmdQueue()
+					}, MSG_DELAY)
+
+					return
+				}
+				nextCmd.Val = nextCmdVal
 			}
+			
+			let msg = this.fmtCmd(nextCmd)
+			if (this.sendCmd(msg)) {
+				nextCmd = this.cmdQueue.shift()		// Get rid of it
+				if (nextCmd.prefix == 'set') {
+					this.addToDataStore(nextCmd)	// Update to latest value
+				}
+			}
+
+			this.queueTimer = setTimeout(() => {
+				this.processCmdQueue()
+			}, MSG_DELAY)
 		}
 	}
 
@@ -256,11 +278,11 @@ class instance extends InstanceBase {
 						for (let Y of YArr) {
 							opt.X = X
 							opt.Y = Y
-console.log('Action.callback: Calling parseOptions for ', event.actionId)
-							let options = await this.parseOptions(this, context, { rcpCmd: foundCmd, options: opt })
-							let actionCmd = {Address: foundCmd.Address, X: options.X, Y: options.Y, Val: options.Val}
-							this.addToDataStore(actionCmd)
-							this.addToMsgQueue({prefix: 'set', cmd: actionCmd})						
+							let options = await this.parseOptions(context, opt)
+							let actionCmd = options
+							actionCmd.Address = foundCmd.Address
+							actionCmd.prefix = 'set'
+							this.addToCmdQueue(actionCmd)						
 						}
 					}
 				}
@@ -371,11 +393,9 @@ console.log('Action.callback: Calling parseOptions for ', event.actionId)
 		return rcpCommand
 	}
 
-	isRelAction(cmd, parsedOptions) {
-		if (cmd != undefined && cmd.rcpCmd != undefined && (cmd.rcpCmd.Type == 'integer' || cmd.rcpCmd.Type == 'binary' || cmd.rcpCmd.Type == 'bool') &&
-			(parsedOptions.Val == 'Toggle' ||
-			(cmd.options.Rel != undefined && cmd.options.Rel == true))) { // Action that needs the current value from the console
-				return true
+	isRelAction(parsedCmd) {
+		if (parsedCmd.Val == 'Toggle' || (parsedCmd.Rel != undefined && parsedCmd.Rel == true)) { // Action that needs the current value from the console
+			return true
 		}
 		return false
 	}
@@ -400,49 +420,47 @@ console.log('Action.callback: Calling parseOptions for ', event.actionId)
 		if (this.dataStore[dsAddr][dsX] == undefined) {
 			this.dataStore[dsAddr][dsX] = {}
 		}
-		this.dataStore[dsAddr][dsX][dsY] = cmd.Val
+		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
+			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
+			this.checkFeedbacks(dsAddr.replace(/:/g, '_'))
+		}
 	}
 
 	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
 	getFromDataStore(cmd) {
-		try {
-			let data = undefined
-			
-			if (cmd == undefined) return data
+		let data = undefined
+		if (cmd == undefined) return data
 
-			if (cmd.Address !== undefined && cmd.options !== undefined) {
-				if (
-					this.dataStore[cmd.Address] !== undefined &&
-					this.dataStore[cmd.Address][cmd.options.X] !== undefined &&
-					this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y] !== undefined
-				) {
-					data = this.dataStore[cmd.Address][cmd.options.X][cmd.options.Y]
-					return data
-				}
-
-				let rcpCmd = this.findRcpCmd(cmd.Address)
-				if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
-					this.addToMsgQueue({prefix: 'get', cmd: {Address: cmd.Address, X: cmd.options.X, Y: cmd.options.Y}})
-				}
+		if (cmd.Address !== undefined) {
+			if (
+				this.dataStore[cmd.Address] !== undefined &&
+				this.dataStore[cmd.Address][cmd.X] !== undefined &&
+				this.dataStore[cmd.Address][cmd.X][cmd.Y] !== undefined
+			) {
+				data = this.dataStore[cmd.Address][cmd.X][cmd.Y]
+				return data
 			}
-			
-			return data
 
-		} catch(error) {
-			this.log('error', `\ngetFromDataStore: STACK TRACE:\n${error.stack}\n`)
+			let rcpCmd = this.findRcpCmd(cmd.Address)
+			if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
+				cmd.prefix = 'get'
+				this.addToCmdQueue(cmd)
+			}
 		}
+		
+		return data
+
 	}
 	
 	// Create the proper command string to send to the console
 	fmtCmd(cmdToFmt) {
 		if (cmdToFmt == undefined) return
 
-		let rcpCmd = this.findRcpCmd(cmdToFmt.cmd.Address)
+		let cmdName = cmdToFmt.Address
+		let rcpCmd = this.findRcpCmd(cmdName)
 		let prefix = cmdToFmt.prefix
 		let cmdStart = prefix
-		let cmd = cmdToFmt.cmd
-		let cmdName = cmd.Address
-		let options = {X: cmd.X, Y: cmd.Y, Val: cmd.Val}
+		let options = {X: cmdToFmt.X, Y: cmdToFmt.Y, Val: cmdToFmt.Val}
 
 		if (rcpCmd.Index == 1000) {
 			switch (this.config.model) {
@@ -486,35 +504,20 @@ console.log('Action.callback: Calling parseOptions for ', event.actionId)
 	}
 
 	// Create the proper command string for an action or poll
-	async parseOptions(instance, context, cmdToParse) {
-//console.log('parseOptions called for ', cmdToParse.rcpCmd.Address)
-		let data
+	async parseOptions(context, optionsToParse) {
 
 		try {
-			const varFuncs = require('./variables.js')
-			let parsedOptions = {}
+			let parsedOptions = JSON.parse(JSON.stringify(optionsToParse))		// Deep Clone
 
-			parsedOptions.X = cmdToParse.options.X == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.X)) - 1
-			parsedOptions.Y = cmdToParse.options.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(cmdToParse.options.Y)) - 1
+			parsedOptions.X = optionsToParse.X == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.X)) - 1
+			parsedOptions.Y = optionsToParse.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.Y)) - 1
 
 			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
 			parsedOptions.X = Math.max(parsedOptions.X, 0)
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-			parsedOptions.Val = await context.parseVariablesInString(cmdToParse.options.Val || '')
+			parsedOptions.Val = await context.parseVariablesInString(optionsToParse.Val)
+			parsedOptions.Val = (parsedOptions.Val === undefined) ? '' : parsedOptions.Val
 
-			data = instance.getFromDataStore({ Address: cmdToParse.rcpCmd.Address, options: parsedOptions })
-
-			if (varFuncs.fbCreatesVar(instance, cmdToParse, parsedOptions, data)) return // Are we creating and/or updating a variable?
-
-			if (cmdToParse.rcpCmd.Type == 'integer' || cmdToParse.rcpCmd.Type == 'binary' || cmdToParse.rcpCmd.Type == 'bool') {
-				if (cmdToParse.rcpCmd.Type != 'bool') {
-					parsedOptions.Val = parseInt(parsedOptions.Val.toUpperCase() == '-INF' ? cmdToParse.rcpCmd.Min : parsedOptions.Val * cmdToParse.rcpCmd.Scale)
-				}
-				if (instance.isRelAction(cmdToParse, parsedOptions)) {
-					parsedOptions = instance.handleRelAction(cmdToParse, parsedOptions, data)
-				}
-				parsedOptions.Val = parseInt(parsedOptions.Val || 0)
-			}
 			return parsedOptions
 
 		} catch(error) {
@@ -522,22 +525,43 @@ console.log('Action.callback: Calling parseOptions for ', event.actionId)
 		}
 	}
 
-	handleRelAction(cmdToParse, parsedOptions, data) {
-		if (parsedOptions.Val == 'Toggle') {
-			parsedOptions.Val = 1 - parseInt(data)
-			return parsedOptions
-		} 
+	parseVal(cmd) {
+		const varFuncs = require('./variables.js')
+		let val = cmd.Val
 
-		let curVal = parseInt(data)
-		if (curVal <= -9000) { // Handle bottom of range
-			if (parsedOptions.Val < 0) parsedOptions.Val = -32768
-			if (parsedOptions.Val > 0) parsedOptions.Val = -6000
-		} else {
-			parsedOptions.Val = curVal + parsedOptions.Val	
+		let rcpCmd = this.findRcpCmd(cmd.Address)
+		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary' || rcpCmd.Type == 'bool') {
+			if (rcpCmd.Type != 'bool') {
+				if (isNaN(cmd.Val)) {
+					if (cmd.Val.toUpperCase() == '-INF') val = rcpCmd.Min
+				} else {
+					val = parseInt(cmd.Val) * rcpCmd.Scale
+				}
+			}
+
+			if (!this.isRelAction(cmd)) return val
+			let data = this.getFromDataStore(cmd)
+			if (data === undefined) return undefined
+
+			if (cmd.Val == 'Toggle') {
+				val = 1 - parseInt(data)
+				return val
+			} 
+
+			let curVal = parseInt(data)
+			if (curVal <= -9000) { // Handle bottom of range
+				if (cmd.Val < 0) val = -32768
+				if (cmd.Val > 0) val = -6000
+			} else {
+				val = curVal + val	
+			}
+			val = Math.min(Math.max(val, rcpCmd.Min), rcpCmd.Max) // Clamp it
+
 		}
-		parsedOptions.Val = Math.min(Math.max(parsedOptions.Val, cmdToParse.rcpCmd.Min), cmdToParse.rcpCmd.Max) // Clamp it
-		return parsedOptions
+
+		return val
 	}
+
 
 }
 

@@ -131,16 +131,16 @@ module.exports = {
 		}
 	},
 
-	fbCreatesVar: (instance, cmd, options, data) => {
-
-		if (data == undefined) return false
-		let cmdName = cmd.rcpCmd.Address.slice(cmd.rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
+	fbCreatesVar: (instance, cmd, data) => {
+		let rcpCmd = instance.findRcpCmd(cmd.Address)
+	
+		let cmdName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
 		let varName = `V_${cmdName}`
-		varName = varName + (cmd.options.X ? `_${cmd.options.X}` : '')
-		varName = varName + (cmd.options.Y ? `_${cmd.options.Y}` : '')
+		varName = varName + (cmd.X ? `_${cmd.X}` : '')
+		varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
 
-		if (cmd.rcpCmd.Type == 'integer') {
-			data = data == cmd.rcpCmd.Min ? '-Inf' : data / cmd.rcpCmd.Scale
+		if (rcpCmd.Type == 'integer') {
+			data = data == rcpCmd.Min ? '-Inf' : data / rcpCmd.Scale
 		}
 
 		// Auto-create a variable?
@@ -148,7 +148,7 @@ module.exports = {
 		let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
 
 		// Add new Auto-created variable and value
-		if (cmd.options.createVariable) {
+		if (cmd.createVariable) {
 			if (varIndex == -1) {
 				instance.variables.push(varToAdd)
 				instance.setVariableDefinitions(instance.variables)
@@ -160,7 +160,7 @@ module.exports = {
 		}
 
 		// Set a custom variable value using @ syntax?
-		varName = options.Val
+		varName = cmd.Val
 		const reg = /@\(([^:$)]+):custom_([^)$]+)\)/
 		let matches = reg.exec(varName)
 		if (matches) {

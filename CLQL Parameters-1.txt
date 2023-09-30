@@ -230,7 +230,7 @@ OK prminfo 228 "MIXER:Current/Mix/ToMtrx/On" 24 8 0 1 1 "" integer any rw 1
 -- prminfo 229 "MIXER:Current/Monitor/St/SourceCh/Mix" 24 1 0 1 0 "" integer any rw 1
 OK prminfo 230 "MIXER:Current/Cue/InCh/On" 72 1 0 1 0 "" integer any rw 1
 OK prminfo 231 "MIXER:Current/Cue/Mix/On" 24 1 0 1 0 "" integer any rw 1
--- prminfo 232 "MIXER:Current/InCh/Patch" 72 1 0 8 "DANTE1" "" string any rw 1
+OK prminfo 232 "MIXER:Current/InCh/Patch" 72 1 0 8 "DANTE1" "" string any rw 1
 OK prminfo 233 "MIXER:Current/DanteOutPort/Patch" 64 1 0 12 "MIX1" "" string any rw 1
 OK prminfo 234 "MIXER:Current/OmniOutPort/Patch" 8 1 0 12 "MIX1" "" string any rw 1
 OK prminfo 235 "MIXER:Current/SlotOut1Port/Patch" 1 16 0 12 "MIX1" "" string any rw 1

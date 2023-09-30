@@ -57,7 +57,6 @@ module.exports = {
 		}
 
 		// Read the DataFile
-//console.log('Yamaha-RCP: getParams: Getting parameters from file: ', fname)
 		if (fname !== '') {
 			let data = FS.readFileSync(`${__dirname}/${fname}`)
 			rcpCommands = module.exports.parseData(instance, data, RCP_PARAMS)
