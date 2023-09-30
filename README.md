@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.2.4 - for Companion v3
+## Yamaha Remote Control Protocol v3.3.0 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -25,8 +25,8 @@ _Andrew Broughton_
 **REVISION HISTORY**
 
 
-3.2.4
-- Better Message Handling
+3.3.0
+- Re-write of Message Handling & cleanup
 - Added new commands for Rivage v6 firmware
 
 3.2.3
