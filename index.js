@@ -503,7 +503,7 @@ class instance extends InstanceBase {
 		return `${cmdStr} ${options.X} ${options.Y} ${options.Val}`.trim() // Command string to send to console
 	}
 
-	// Create the proper command string for an action or poll
+	// Create the proper command string for an action or feedback
 	async parseOptions(context, optionsToParse) {
 
 		try {
@@ -517,10 +517,11 @@ class instance extends InstanceBase {
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 			parsedOptions.Val = await context.parseVariablesInString(optionsToParse.Val)
 			parsedOptions.Val = (parsedOptions.Val === undefined) ? '' : parsedOptions.Val
-
+			
 			return parsedOptions
 
 		} catch(error) {
+			this.log('error',`\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
 			this.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
 		}
 	}

@@ -204,9 +204,10 @@ module.exports = {
 		}
 
 		// Make sure the current value is stored in dataStore[]
+
 		if (rcpCmd.Index < 1000 && rcpCmd.RW.includes('r')) {
-			newAction.subscribe = async (action) => {
-				let options = await instance.parseOptions(instance, action.options)
+			newAction.subscribe = async (action, context) => {
+				let options = await instance.parseOptions(context, action.options)
 				if (options != undefined) {
 					let subscrAction = JSON.parse(JSON.stringify(options))
 					subscrAction.Address = rcpCmd.Address

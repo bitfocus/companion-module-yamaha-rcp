@@ -51,7 +51,9 @@ module.exports = {
 			const varFuncs = require('./variables.js')
 
 			let rcpCommand = instance.findRcpCmd(event.feedbackId)
+			if (rcpCommand === undefined) return
 			let options = await instance.parseOptions(context, event.options)
+			if (options == undefined) return
 			let fb = options
 			fb.Address = rcpCommand.Address
 			fb.Val = await instance.parseVal(fb)
