@@ -348,11 +348,10 @@ class instance extends InstanceBase {
 		switch (c.rcpCmd.Type) {
 			case 'integer':
 			case 'binary':
-				if (c.rcpCmd.Max == 1) { // Boolean
-					cV = 'Toggle'
-					break
-				}
 				cV = (c.options.Val == c.rcpCmd.Min) ? '-Inf' : c.options.Val / c.rcpCmd.Scale
+				break
+			case 'bool':
+				cV = 'Toggle'
 				break
 			case 'string':
 				cV = c.options.Val
