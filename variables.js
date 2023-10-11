@@ -32,7 +32,8 @@ module.exports = {
 				instance.sendCmd('sscurrent_ex MIXER:Lib/Scene') 	// Request Current Scene Number
 				break
 			}
-			case 'TF': {
+			case 'TF': 
+			case 'DM3': {
 				instance.sendCmd('sscurrent_ex scene_a')			// TF uses 2 "banks", with no way to determine which is active
 				instance.sendCmd('sscurrent_ex scene_b')			// except when asking for the opposite back, you'll get an error
 				break
@@ -83,7 +84,7 @@ module.exports = {
 						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.X }"`)
 						break
 					case 'DM7':
-						instance.sendCmd(`ssinfot_ex ${msg.Address} ${msg.X }`)
+						instance.sendCmd(`ssinfot_ex ${msg.Address} ${ msg.X }`)
 				}
 				break
 			case 'ssinfo_ex':
