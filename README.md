@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.3.0 - for Companion v3
+## Yamaha Remote Control Protocol v3.3.1 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,6 +24,9 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
+
+3.3.1
+- Bug fixes for Macro recording and DM7 Scene recalls
 
 3.3.0
 - Re-write of Message Handling & cleanup

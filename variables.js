@@ -99,7 +99,7 @@ module.exports = {
 					case 'Cue/InCh/On':
 						varName = 'cuedInChannels'
 						break
-					case 'Cue/StIn/On':
+					case 'Cue/StInCh/On':
 						varName = 'cuedStInChannels'
 						break
 					case 'Cue/Mix/On':

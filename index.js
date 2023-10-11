@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Sep 29, 2023 Version 3.3.0(v3)
+// Oct 11, 2023 Version 3.3.1(v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -174,7 +174,9 @@ class instance extends InstanceBase {
 							continue
 						}
 
-						this.log('warn', `Unknown command: '${curCmd.Address}'`)
+						if (curCmd.Status != 'OK') {
+							this.log('warn', `Unknown command: '${curCmd.Address}'`)
+						}
 
 					}
 				}
@@ -286,7 +288,7 @@ class instance extends InstanceBase {
 						}
 					}
 				}
-
+				
 				commands[actionName] = newAction // Only include commands that are writable to the console
 
 			}
