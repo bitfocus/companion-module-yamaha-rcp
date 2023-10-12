@@ -27,6 +27,8 @@ _Andrew Broughton_
 
 3.3.1
 - Bug fixes for Macro recording and DM7 Scene recalls
+- Removed Toggle option for write-only actions
+- Fix HPF Relative Actions for RIO and TIO
 
 3.3.0
 - Re-write of Message Handling & cleanup

@@ -91,15 +91,17 @@ module.exports = {
 					type: 'dropdown',
 					label: 'State',
 					id: 'Val',
-					default: 'Toggle',
+					default: rcpCmd.RW.includes('r') ? 'Toggle' : 1,
 					minChoicesForSearch: 0,
 					choices: [
 						{ label: 'On', id: 1 },
 						{ label: 'Off', id: 0 },
-						{ label: 'Toggle', id: 'Toggle' },
 					],
 					allowCustom: true,
 				})
+				if (rcpCmd.RW.includes('r')) {
+					paramsToAdd[paramsToAdd.length - 1].choices.push({ label: 'Toggle', id: 'Toggle' })
+				} 
 				break
 
 			case 'integer':

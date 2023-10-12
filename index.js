@@ -239,11 +239,10 @@ class instance extends InstanceBase {
 				if (nextCmd.prefix == 'set') {
 					this.addToDataStore(nextCmd)	// Update to latest value
 				}
+				this.queueTimer = setTimeout(() => {
+					this.processCmdQueue()
+				}, MSG_DELAY)
 			}
-
-			this.queueTimer = setTimeout(() => {
-				this.processCmdQueue()
-			}, MSG_DELAY)
 		}
 	}
 
@@ -351,6 +350,9 @@ class instance extends InstanceBase {
 			case 'integer':
 			case 'binary':
 				cV = (c.options.Val == c.rcpCmd.Min) ? '-Inf' : c.options.Val / c.rcpCmd.Scale
+				break
+			case 'freq':
+				cV = c.options.Val / c.rcpCmd.Scale
 				break
 			case 'bool':
 				cV = 'Toggle'
@@ -532,7 +534,7 @@ class instance extends InstanceBase {
 		let val = cmd.Val
 
 		let rcpCmd = this.findRcpCmd(cmd.Address)
-		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary' || rcpCmd.Type == 'bool') {
+		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq' || rcpCmd.Type == 'binary' || rcpCmd.Type == 'bool') {
 			if (rcpCmd.Type != 'bool') {
 				if (isNaN(cmd.Val)) {
 					if (cmd.Val.toUpperCase() == '-INF') val = rcpCmd.Min
