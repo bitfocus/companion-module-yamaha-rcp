@@ -539,7 +539,7 @@ class instance extends InstanceBase {
 				if (isNaN(cmd.Val)) {
 					if (cmd.Val.toUpperCase() == '-INF') val = rcpCmd.Min
 				} else {
-					val = parseInt(cmd.Val) * rcpCmd.Scale
+					val = parseInt(cmd.Val || '0') * rcpCmd.Scale
 				}
 			}
 
