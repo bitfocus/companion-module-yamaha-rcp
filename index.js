@@ -530,7 +530,6 @@ class instance extends InstanceBase {
 	}
 
 	parseVal(cmd) {
-		const varFuncs = require('./variables.js')
 		let val = cmd.Val
 
 		let rcpCmd = this.findRcpCmd(cmd.Address)
@@ -539,7 +538,7 @@ class instance extends InstanceBase {
 				if (isNaN(cmd.Val)) {
 					if (cmd.Val.toUpperCase() == '-INF') val = rcpCmd.Min
 				} else {
-					val = parseInt(cmd.Val || '0') * rcpCmd.Scale
+					val = parseInt(parseFloat(cmd.Val || '0') * rcpCmd.Scale)
 				}
 			}
 
