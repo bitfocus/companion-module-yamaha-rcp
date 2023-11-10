@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Oct 13, 2023 Version 3.3.1(v3)
+// Nov 10, 2023 Version 3.3.2 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -57,9 +57,16 @@ class instance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'IP Address of Console',
+				label: 'IP Address of Device',
 				width: 6,
 				default: '192.168.0.128',
+				regex: Regex.IP,
+			},
+			{
+				type: 'bonjour-device',
+				id: 'bonjour_host',
+				label: 'Bonjour Address of Device',
+				width: 6,
 				regex: Regex.IP,
 			},
 			{
@@ -349,7 +356,7 @@ class instance extends InstanceBase {
 		switch (c.rcpCmd.Type) {
 			case 'integer':
 			case 'binary':
-				cV = (c.options.Val == c.rcpCmd.Min) ? '-Inf' : c.options.Val / c.rcpCmd.Scale
+				cV = (c.options.Val == -32768) ? '-Inf' : c.options.Val / c.rcpCmd.Scale
 				break
 			case 'freq':
 				cV = c.options.Val / c.rcpCmd.Scale
@@ -530,6 +537,7 @@ class instance extends InstanceBase {
 	}
 
 	parseVal(cmd) {
+		const hpf = require('./hpf')
 		let val = cmd.Val
 
 		let rcpCmd = this.findRcpCmd(cmd.Address)
@@ -543,6 +551,7 @@ class instance extends InstanceBase {
 			}
 
 			if (!this.isRelAction(cmd)) return val
+			
 			let data = this.getFromDataStore(cmd)
 			if (data === undefined) return undefined
 
@@ -556,7 +565,12 @@ class instance extends InstanceBase {
 				if (cmd.Val < 0) val = -32768
 				if (cmd.Val > 0) val = -6000
 			} else {
-				val = curVal + val	
+				if (rcpCmd.Type != 'freq') {
+					val = curVal + val	
+				} else {
+					const index = hpf.findIndex((f) => f == curVal)
+					val = hpf[Math.min(Math.max(index + (val / rcpCmd.Scale), 0), hpf.length - 1)]
+				}
 			}
 			val = Math.min(Math.max(val, rcpCmd.Min), rcpCmd.Max) // Clamp it
 

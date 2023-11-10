@@ -70,7 +70,7 @@ module.exports = [
 			if (rcpCmd !== undefined) {
 
 				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && newAction.options.Val !== 'Toggle') {
-					newAction.options.Val = newAction.options.Val == rcpCmd.Min ? '-Inf' : newAction.options.Val / rcpCmd.Scale
+					newAction.options.Val = newAction.options.Val == -32768 ? '-Inf' : newAction.options.Val / rcpCmd.Scale
 					changed = true
 				}
 

@@ -141,7 +141,7 @@ module.exports = {
 		varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
 
 		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq') {
-			data = (data == rcpCmd.Min) ? '-Inf' : data / rcpCmd.Scale
+			data = (data == -32768) ? '-Inf' : data / rcpCmd.Scale
 		}
 
 		// Auto-create a variable?
