@@ -1,33 +1,42 @@
 module.exports = {
 	initVars: (instance) => {
 		instance.variables = [
-			{ variableId: 'modelName', name: 'Console Model Name' },
-			{ variableId: 'curScene', name: 'Current Scene Number' },
-			{ variableId: 'curSceneName', name: 'Current Scene Name' },
-			{ variableId: 'curSceneComment', name: 'Current Scene Comment' },
+			{ variableId: 'modelName', name: 'Device Model Name' }
 		]
-		switch (instance.config.model) {
-			case 'CL/QL': {
-				instance.variables.push(
-					{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' }
-				)
+
+		if (config.model.slice(-2) != 'IO') { 		// Not TIO or RIO
+			instance.variables = [
+				...instance.variables,
+				{ variableId: 'curScene', name: 'Current Scene Number' },
+				{ variableId: 'curSceneName', name: 'Current Scene Name' },
+				{ variableId: 'curSceneComment', name: 'Current Scene Comment' }
+			]
+
+			switch (config.model) {
+				case 'CL/QL': {
+					instance.variables.push(
+						{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' }
+					)
+				}			
+				case 'PM': {
+					instance.variables.push(
+						{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
+						{ variableId: 'cuedMixes', name: 'Mixes Cued' },
+						{ variableId: 'cuedMatrices', name: 'Matrices Cued' },
+						{ variableId: 'cuedDCAs', name: 'DCAs Cued' },
+					)
+				}
 			}			
-			case 'PM': {
-				instance.variables.push(
-					{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
-					{ variableId: 'cuedMixes', name: 'Mixes Cued' },
-					{ variableId: 'cuedDCAs', name: 'DCAs Cued' }
-				)
-			}
 		}
+
 		instance.setVariableDefinitions(instance.variables)
-		instance.setVariableValues({ cuedStInChannels: '[]', cuedInChannels: '[]', cuedMixes: '[]', cuedDCAs: '[]' })
+		instance.setVariableValues({ cuedStInChannels: '[]', cuedInChannels: '[]', cuedMixes: '[]', cuedMatrices: '[]', cuedDCAs: '[]' })
 	},
 
 	// Get info from a connected console
 	getVars: (instance) => {
 		instance.sendCmd('devinfo productname') // Request Console Model
-		switch (instance.config.model) {
+		switch (config.model) {
 			case 'CL/QL': {
 				instance.sendCmd('sscurrent_ex MIXER:Lib/Scene') 	// Request Current Scene Number
 				break
@@ -52,14 +61,14 @@ module.exports = {
 	},
 
 	setVar: (instance, msg) => {
-		switch (msg.Command) {
+		switch (msg.Action) {
 			case 'devinfo': {
 				switch (msg.Address) {
 					case 'productname':
 						if (instance.getVariableValue('modelName') == '') {
-							instance.log('info', `Console Model is ${msg.X}`)
+							instance.log('info', `Device Model is ${msg.Val}`)
 						}
-						instance.setVariableValues({ modelName: msg.X })
+						instance.setVariableValues({ modelName: msg.Val })
 						break
 				}
 				break
@@ -68,29 +77,29 @@ module.exports = {
 				break
 			case 'sscurrent_ex':
 				// Request Current Scene Info once we know what scene we have
-				if (instance.config.model == 'TF') {
-					instance.setVariableValues({ curScene: `${ msg.Address.toUpperCase().slice(-1) }${ msg.X.toString().padStart(2, "0") }`})
-					instance.sendCmd(`ssinfo_ex ${msg.Address} ${msg.X }`)
+				if (config.model == 'TF') {
+					instance.setVariableValues({ curScene: `${ msg.Address.toUpperCase().slice(-1) }${ msg.Val.toString().padStart(2, "0") }`})
+					instance.sendCmd(`ssinfo_ex ${msg.Address} ${msg.Val }`)
 				} else {
-					instance.setVariableValues({ curScene: msg.X })
-					instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.X }`)
+					instance.setVariableValues({ curScene: msg.Val })
+					instance.sendCmd(`ssinfo_ex MIXER:Lib/Scene ${msg.Val }`)
 				}
 				break
 			case 'sscurrentt_ex':
-				instance.setVariableValues({ curScene: msg.X })
+				instance.setVariableValues({ curScene: msg.Val })
 				// Request Current Scene Info once we know what scene we have
-				switch (instance.config.model) {
+				switch (config.model) {
 					case 'PM':
-						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.X }"`)
+						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${ msg.Val }"`)
 						break
 					case 'DM7':
-						instance.sendCmd(`ssinfot_ex ${msg.Address} ${ msg.X }`)
+						instance.sendCmd(`ssinfot_ex ${msg.Address} ${ msg.Val }`)
 				}
 				break
 			case 'ssinfo_ex':
 			case 'ssinfot_ex':
-				instance.setVariableValues({ curSceneName: msg.Val.trim() })
-				instance.setVariableValues({ curSceneComment: msg.TxtVal.trim() })
+				instance.setVariableValues({ curSceneName: msg.ScnName })
+				instance.setVariableValues({ curSceneComment: msg.ScnComment })
 				break
 			default: {
 				let cmdName = msg.Address.slice(msg.Address.indexOf('/') + 1) // String after "MIXER:Current/"
@@ -105,6 +114,9 @@ module.exports = {
 						break
 					case 'Cue/Mix/On':
 						varName = 'cuedMixes'
+						break
+					case 'Cue/Mtrx/On':
+						varName = 'cuedMatrices'
 						break
 					case 'Cue/DCA/On':
 						varName = 'cuedDCAs'
@@ -133,12 +145,18 @@ module.exports = {
 	},
 
 	fbCreatesVar: (instance, cmd, data) => {
-		let rcpCmd = instance.findRcpCmd(cmd.Address)
+		const paramFuncs = require('./paramFuncs.js')
+
+		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 	
 		let cmdName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
 		let varName = `V_${cmdName}`
 		varName = varName + (cmd.X ? `_${cmd.X}` : '')
 		varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
+
+		if (rcpCmd.Type == 'mtr') {
+			data = data - 126
+		}
 
 		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq') {
 			data = (data == -32768) ? '-Inf' : data / rcpCmd.Scale

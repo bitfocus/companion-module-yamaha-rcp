@@ -3,7 +3,7 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.3.2",
+	"version": "3.4.0",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -20,7 +20,8 @@
 		"@companion-module/tools": "^1.4.1"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.6.0"
+		"@companion-module/base": "~1.6.0",
+		"companion-module-utils": "^0.3.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }

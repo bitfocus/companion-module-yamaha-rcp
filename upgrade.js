@@ -25,7 +25,7 @@ module.exports = [
 	upg2xxto30x = (context, props) => {
 		var paramFuncs = require('./paramFuncs')
 
-		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.0.x Upgrade.')
+		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.x Upgrade.')
 		var updates = {
 			updatedConfig: null,
 			updatedActions: [],
@@ -38,7 +38,7 @@ module.exports = [
 		}
 
 		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
-		var rcpCommands = paramFuncs.getParams({config: context.currentConfig})
+		rcpCommands = paramFuncs.getParams(context, context.currentConfig)
 		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
@@ -63,7 +63,7 @@ module.exports = [
 				newAction.options.Y = action.options.Y == 'a' ? 1 : 2
 			}
 
-			rcpCmd = context.getRcpCmd(actionAddress)
+			rcpCmd = paramFuncs.findRcpCmd(actionAddress)
 
 //console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
 

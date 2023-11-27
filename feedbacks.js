@@ -1,7 +1,7 @@
 module.exports = {
 	createFeedbackFromAction: (instance, action) => {
 		const { combineRgb } = require('@companion-module/base')
-		const actionFuncs = require('./actions.js')
+		const paramFuncs = require('./paramFuncs.js')
 		const rcpNames = require('./rcpNames.json')
 
 		let newFeedback = JSON.parse(JSON.stringify(action)) // Clone the Action to a matching feedback
@@ -28,13 +28,6 @@ module.exports = {
 				id: 'createVariable',
 				default: false,
 			})
-/*
-			newFeedback.options.push({
-				type: 'custom-variable',
-				label: 'Set Value to Variable',
-				id: 'varToSet'
-			})
-*/
 		}
 
 		newFeedback.defaultStyle = {
@@ -47,27 +40,27 @@ module.exports = {
 			newFeedback.options[valOptionIdx].isVisible = (options) => !options.createVariable
 		}
 
-		newFeedback.callback = async (event, context) => {
+		newFeedback.callback = async (feedback, context) => {
 			const varFuncs = require('./variables.js')
 
-			let rcpCommand = instance.findRcpCmd(event.feedbackId)
-			if (rcpCommand === undefined) return
-			let options = await instance.parseOptions(context, event.options)
+			let rcpCmd = paramFuncs.findRcpCmd(feedback.feedbackId)
+			if (rcpCmd === undefined) return
+			let options = await paramFuncs.parseOptions(context, feedback.options)
 			if (options == undefined) return
 			let fb = options
-			fb.Address = rcpCommand.Address
-			fb.Val = await instance.parseVal(fb)
+			fb.Address = rcpCmd.Address
+			fb.Val = await paramFuncs.parseVal(context, fb)
 			let data = instance.getFromDataStore(fb)
 			if (data == undefined) return
-			fb.X = event.options.X
-			fb.Y = event.options.Y
+			fb.X = feedback.options.X
+			fb.Y = feedback.options.Y
 			varFuncs.fbCreatesVar(instance, fb, data) // Are we creating and/or updating a variable?
 
 			if (options && data == options.Val) {
 				return true
 			}
 
-			let rcpName = rcpCommand.Address.slice(rcpCommand.Address.indexOf('/') + 1) // String after "MIXER:Current/"
+			let rcpName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 			if (instance.colorCommands.includes(rcpName)) {
 				let retOptions = {}
 				let c = rcpNames.chColorRGB[data]

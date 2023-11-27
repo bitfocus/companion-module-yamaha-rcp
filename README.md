@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.3.2 - for Companion v3
+## Yamaha Remote Control Protocol v3.4.0 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -23,6 +23,11 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.4.0
+- Added Scene Store function (use with caution! - There's NO confirmation when storing or overwriting a scene)
+- Added auto-detect RIO devices (bonjour)
+- Level Meter support (functionality depends on device)
 
 3.3.2
 - Fixed min. Gain and HPF showing -Inf

@@ -4,3 +4,5 @@ OK prminfo 2 "IO:Current/InCh/HPFFreq" 16 1 200 6000 800 "Hz" freq knob rw 10
 OK prminfo 3 "IO:Current/InCh/HAGain" 16 1 -6 66 0 "dB" integer knob rw 1
 OK prminfo 4 "IO:Current/Dev/MuteOn" 1 1 0 0 0 "" integer latchsw rw 1
 OK prminfo 21 "IO:Event/Dev/Identify" 1 1 0 1 0 "" integer any w 1
+OK mtrinfo 2000 "IO:Current/Dev/InputLevel" 16 1 0 127 0 "dB" mtr any r 1
+OK mtrinfo 2100 "IO:Current/Dev/OutputLevel" 8 1 0 127 0 "dB" mtr any r 1
