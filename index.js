@@ -136,10 +136,8 @@ class instance extends InstanceBase {
 		let receivedCmds = []
 		let foundCmd = {}
 
-//		if (this.socket !== undefined) {
-			this.socket?.destroy()
-			delete this?.socket
-//		}
+		this.socket?.destroy()
+		delete this.socket
 
 		if (config.host) {
 			this.socket = new TCPHelper(config.host, 49280)
