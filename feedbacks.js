@@ -42,16 +42,19 @@ module.exports = {
 
 		newFeedback.callback = async (feedback, context) => {
 			const varFuncs = require('./variables.js')
-
 			let rcpCmd = paramFuncs.findRcpCmd(feedback.feedbackId)
 			if (rcpCmd === undefined) return
+
 			let options = await paramFuncs.parseOptions(context, feedback.options)
 			if (options == undefined) return
+
 			let fb = options
 			fb.Address = rcpCmd.Address
 			fb.Val = await paramFuncs.parseVal(context, fb)
+
 			let data = instance.getFromDataStore(fb)
 			if (data == undefined) return
+
 			fb.X = feedback.options.X
 			fb.Y = feedback.options.Y
 			varFuncs.fbCreatesVar(instance, fb, data) // Are we creating and/or updating a variable?

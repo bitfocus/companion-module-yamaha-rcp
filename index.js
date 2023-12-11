@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Nov 27, 2023 Version 3.4.0 (v3)
+// Dec 10, 2023 Version 3.4.2 (v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -186,13 +186,12 @@ class instance extends InstanceBase {
 					for (let i = 0; i < receivedCmds.length; i++) {
 
 						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
+						foundCmd = paramFuncs.findRcpCmd(curCmd.Address) // Find which command
 				
 						switch (curCmd.Action) {
 							case 'set':
 							case 'get':
-								foundCmd = paramFuncs.findRcpCmd(curCmd.Address) // Find which command
 								if (foundCmd != undefined) {
-			
 									if (!(curCmd.Status == 'OK' && curCmd.Action == 'set')) {
 										this.addToDataStore(curCmd)
 									}
@@ -212,11 +211,19 @@ class instance extends InstanceBase {
 
 							case 'mtr':
 								let i = 0
+								let Addr = curCmd.Address.replace('Current/', 'Current/Meter/')
+								if (config.model == 'TIO' || config.model == 'RIO') {
+									Addr = Addr.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
+									Addr = Addr.replace(/\/Dev.*/, (config.model == 'TIO') ? '/InCh/InputLevel' : '/InCh')
+								}
+								if (curCmd.Pickoff) {
+									Y = rcpCmd.Pickoff.findIndex(curCmd.Pickoff)
+								}
 								while (curCmd[i]) {
-									this.addToDataStore({ Status: curCmd.Status, Action: curCmd.Action, Address: curCmd.Address, X: i, Val: parseInt(curCmd[i], 16) })
+									this.addToDataStore({ Status: curCmd.Status, Action: curCmd.Action, Address: Addr, Y: curCmd.Y, X: i, Val: parseInt(curCmd[i], 16) })
 									i++
 								}
-						}
+							}
 
 						varFuncs.setVar(this, curCmd)
 						this.processCmdQueue(curCmd)
@@ -424,7 +431,7 @@ class instance extends InstanceBase {
 				this.addToCmdQueue(cmd)
 			}
 		}
-		
+
 		return data
 
 	}

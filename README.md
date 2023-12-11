@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.4.0 - for Companion v3
+## Yamaha Remote Control Protocol v3.4.2 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -14,7 +14,7 @@
 **Available commands**
 
 - Selected "set" commands
-- Recall Scenes
+- Recall & Store Scenes
 
 Please visit http://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
@@ -23,6 +23,11 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.4.2
+- Additional Meter support for devices other than RIO/TIO
+- Added Meter offset for positioning
+- Bug fixes
 
 3.4.0
 - Added Scene Store function (use with caution! - There's NO confirmation when storing or overwriting a scene)

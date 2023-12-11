@@ -67,7 +67,8 @@ module.exports = {
 	},
 
 	parseData: (data) => {
-		const RCP_DEF_FIELDS = ['Ok', 'Action', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale']
+		const RCP_PARAM_DEF_FIELDS = ['Ok', 'Action', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale']
+		const RCP_METER_DEF_FIELDS = ['Ok', 'Action', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale', 'Pickoff']
 		const RCP_PARAM_FIELDS = ['Status', 'Action', 'Address', 'X', 'Y', 'Val', 'TxtVal']
 		const RCP_DEVINFO_FIELDS = ['Status', 'Action', 'Address', 'Val']
 		const RCP_SCENE_FIELDS = ['Status', 'Action', 'Address', 'Val', 'ScnStatus']
@@ -84,9 +85,13 @@ module.exports = {
 
 			if (line !== null && ['OK', 'OKM', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
 				let rcpCommand = {}
-				let params = RCP_DEF_FIELDS
+				let params = RCP_PARAM_DEF_FIELDS
 
 				switch (line[1].trim()) {
+					case 'mtrinfo':
+						params = RCP_METER_DEF_FIELDS
+						break
+
 					case 'set':
 					case 'get':
 					case 'mtrstart':
@@ -140,8 +145,8 @@ module.exports = {
 		let cmdStart = prefix
 		let options = {X: cmdToFmt.X, Y: cmdToFmt.Y, Val: cmdToFmt.Val}
 
-		if (rcpCmd.Index >= 1000 && rcpCmd.Index <= 1010) {
-			cmdStart = prefix == 'set' ? 'ssrecall' : 'sscurrent'
+		if (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+			cmdStart = (prefix == 'set') ? 'ssrecall' : 'sscurrent'
 			if (rcpCmd.Index == 1001) cmdStart = 'ssupdate' // store command
 			switch (config.model) {
 				case 'TF':
@@ -165,7 +170,7 @@ module.exports = {
 			options.Y = ''
 		}
 
-		if (rcpCmd.Index >= 1010) { // RecallInc/Dec
+		if (rcpCmd.Index >= 1010 && rcpCmd.Index < 2000) { // RecallInc/Dec
 			cmdStart = 'event'
 			options.X = ''
 			options.Y = ''
@@ -174,12 +179,20 @@ module.exports = {
 		if (rcpCmd.Index >= 2000) { // Meters
 			if (!config.metering) return
 			cmdStart = 'mtrstart'
+			cmdName = cmdName.replace('/Meter','') // Remove "Meter" from the beginning of the command
+			if (config.model == 'TIO' || config.model == 'RIO') {
+				cmdName = cmdName.replace(/\/.*Ch/, '/Dev')
+			}
+			if (rcpCmd.Pickoff) {
+				let pickoffs = rcpCmd.Pickoff.split('|')
+				cmdName += '/' + pickoffs[options.Y]  // Add the Pickoff Parameter
+			}
 			options.X = config.meterSpeed
 			options.Y = ''
 		}
 
 		let cmdStr = `${cmdStart} ${cmdName}`
-		if (prefix == 'set' && rcpCmd.Index <= 1010) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
+		if (prefix == 'set' && rcpCmd.Index < 1010) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
 			if (rcpCmd.Type == 'string') {
 				options.Val = `"${options.Val}"` // put quotes around the string
 			}

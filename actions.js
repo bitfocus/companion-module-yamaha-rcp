@@ -10,32 +10,29 @@ module.exports = {
 
 		// Add the commands from the data file. Action id's (action.actionId) are the rcp command text (Address)
 		let actionNameParts = actionName.split('/')
-		let rcpNameIdx = actionName.startsWith('Cue') ? 1 : 0
+		let rcpNameIdx = (actionName.startsWith('Cue') || actionName.startsWith('Meter')) ? 1 : 0
 
 		newAction = { name: actionName, options: [] }
 
 		// X parameter - always an integer
 		if (rcpCmd.X > 1) {
 			let XOpts = {
+				type: 'textinput',
 				label: actionNameParts[rcpNameIdx],
 				id: 'X',
 				default: 1,
 				required: true,
+				useVariables: true,
 			}
-			if (actionName.startsWith('InCh') || actionName.startsWith('OutCh') || actionName.startsWith('Cue/InCh') || actionName.startsWith('Dev')) {
+			if (actionNameParts[rcpNameIdx].endsWith('Ch')) {
 				XOpts = {...XOpts,
 					type: 'dropdown',
-					label: (actionName.startsWith('Dev')) ? 'Ch' : actionNameParts[rcpNameIdx],
+					label: actionNameParts[rcpNameIdx],
 					minChoicesForSearch: 0,
 					choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X)),
 					allowCustom: true,
 				}
- 			} else {
-				XOpts = {...XOpts,
-					type: 'textinput',
-					useVariables: true,
-				}
-			}
+ 			}
 			paramsToAdd.push(XOpts)
 			rcpNameIdx++
 		}
@@ -49,11 +46,11 @@ module.exports = {
 				type: 'textinput',
 				label: actionNameParts[rcpNameIdx],
 				id: 'Y',
-				default: '1',
+				default: 1,
 				required: true,
 				useVariables: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index <= 1010)) {
+			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010)) {
 				YOpts = {...YOpts,
 					type: 'dropdown',
 					choices: [
@@ -61,7 +58,6 @@ module.exports = {
 						{ id: 2, label: 'B' },
 					],
 					allowCustom: true,
-					required: true,
 				}
 			} else if (actionNameParts[0] == "Cue") {
 				YOpts = {...YOpts,
@@ -72,7 +68,17 @@ module.exports = {
 						{ id: 2, label: 'B' },
 					],
 					allowCustom: true,
-					required: true,
+				}
+			} else if (rcpCmd.Type == 'mtr') {
+				YOpts.type = 'dropdown'
+				let pickoffs = rcpCmd.Pickoff?.split('|')
+				if (pickoffs) {
+					YOpts.label = 'Pickoff'
+					YOpts.choices = []
+					for (i = 0; i < pickoffs.length; i++) {
+						YOpts.choices.push({ id: i + 1, label: pickoffs[i] })
+					}
+					YOpts.default = 1
 				}
 			}
 			paramsToAdd.push(YOpts)
@@ -97,20 +103,22 @@ module.exports = {
 				ValOpts = {...ValOpts,
 					label: 'State',
 					choices: [
-						{ label: 'On', id: 1 },
-						{ label: 'Off', id: 0 },
+						{ id: 1, label: 'On' },
+						{ id: 0, label: 'Off' },
 					],
 				}
 				if (rcpCmd.RW.includes('r')) {
-					ValOpts.choices.push({label: 'Toggle', id: 'Toggle' })
+					ValOpts.choices.push({id: 'Toggle', label: 'Toggle' })
 					ValOpts.default = 'Toggle'
 				}
 				paramsToAdd.push(ValOpts)
 				break
 
+			case 'mtr':
+				ValOpts.label = 'Level'
+
 			case 'integer':
 			case 'freq':
-			case 'mtr':
 				if (rcpCmd.Max != 0 || rcpCmd.Min != 0) {
 					ValOpts = {...ValOpts,
 						type: 'textinput',
@@ -137,7 +145,7 @@ module.exports = {
 				else if (actionName == 'InCh/Patch') ValOpts.choices = rcpNames.inChPatch
 				else if (actionName == 'DanteOutPort/Patch') ValOpts.choices = rcpNames.danteOutPatch
 				else if (actionName == 'OmniOutPort/Patch') ValOpts.choices = rcpNames.omniOutPatch
-				else if ((config.model == 'PM' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index <= 1010)) {
+				else if ((config.model == 'PM' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010)) {
 					ValOpts = {...ValOpts,
 						type: 'textinput',
 						regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
@@ -221,10 +229,10 @@ module.exports = {
 		const { graphics } = require('companion-module-utils')
 		const { combineRgb } = require('@companion-module/base')
 
-		feedbacks['Meter'] = {
+		feedbacks['Bar'] = {
 			type: 'advanced',
-			name: 'Meter',
-			description: 'Show a bar meter on the button',
+			name: 'Bar Indicator',
+			description: 'Show a bar indicator (meter) on the button',
 			options: [
 				{
 					type: 'dropdown',
@@ -237,7 +245,16 @@ module.exports = {
 						{id: 'top', label: 'top'},
 						{id: 'bottom', label: 'bottom'},
 					],
-					width: 3,
+				},
+				{
+					type: 'number',
+					label: 'Padding',
+					id: 'padding',
+					tooltip: 'Distance from edge of button',
+					min: 0,
+					max: 72,
+					default: 1,
+					required: true,
 				},
 				{
 					type: 'number',
@@ -245,7 +262,6 @@ module.exports = {
 					id: 'min',
 					default: -60,
 					required: true,
-					width: 3,
 				},
 				{
 					type: 'number',
@@ -253,7 +269,6 @@ module.exports = {
 					id: 'max',
 					default: 1,
 					required: true,
-					width: 3,
 				},
 				{
 					type: 'textinput',
@@ -268,9 +283,11 @@ module.exports = {
 					id: 'meterVal2',
 					default: '',
 					useVariables: true,
-				}			],
+				}
+			],
 			callback: async (feedback, context) => {
 				let position = feedback.options.position
+				let padding = feedback.options.padding
 				let ofsX1 = 0
 				let ofsX2 = 0
 				let ofsY1 = 0
@@ -279,7 +296,7 @@ module.exports = {
 				let bLength = 0
 				switch (position) {
 					case 'left':
-						ofsX1 = 1
+						ofsX1 = padding
 						ofsY1 = 5
 						bWidth = (feedback.options.meterVal2) ? 3 : 6
 						bLength = feedback.image.height - (ofsY1 * 2)
@@ -290,13 +307,13 @@ module.exports = {
 						ofsY1 = 5
 						bWidth = (feedback.options.meterVal2) ? 3 : 6
 						bLength = feedback.image.height - (ofsY1 * 2)
-						ofsX2 = feedback.image.width - bWidth - 1
+						ofsX2 = feedback.image.width - bWidth - padding
 						ofsX1 = (feedback.options.meterVal2) ? ofsX2 - bWidth - 1 : ofsX2
 						ofsY2 = ofsY1
 						break
 					case 'top':
 						ofsX1 = 5
-						ofsY1 = 1
+						ofsY1 = padding
 						bWidth = (feedback.options.meterVal2) ? 3 : 7
 						bLength = feedback.image.width - (ofsX1 * 2)
 						ofsX2 = ofsX1
@@ -305,7 +322,7 @@ module.exports = {
 					case 'bottom':
 						ofsX1 = 5
 						bWidth = (feedback.options.meterVal2) ? 3 : 7
-						ofsY2 = feedback.image.height - bWidth - 1
+						ofsY2 = feedback.image.height - bWidth - padding
 						bLength = feedback.image.width - (ofsX1 * 2)
 						ofsX2 = ofsX1
 						ofsY1 = (feedback.options.meterVal2) ? ofsY2 - bWidth - 1 : ofsY2
