@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Dec 10, 2023 Version 3.4.2 (v3)
+// Dec 20, 2023 Version 3.4.5 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -10,6 +10,7 @@ const varFuncs = require('./variables.js')
 const upgrade = require('./upgrade')
 
 const MSG_DELAY = 5
+const METER_REFRESH = 10000
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -26,7 +27,7 @@ class instance extends InstanceBase {
 		this.rcpPresets = []
 		this.dataStore = {}		// status, Address (using ":"), X, Y, Val
 		this.cmdQueue = []		// prefix, Address (using ":"), X, Y, Val
-		this.queueTimer = {}
+		this.queueTimer
 		this.meterTimer = {}
 		this.variables = []
 		this.newConsole()
@@ -43,11 +44,9 @@ class instance extends InstanceBase {
 	// Module deletion
 	async destroy() {
 		clearTimeout(this.queueTimer)
+		clearInterval(this.meterTimer)
+this.log('debug', 'attempting to destroy socket')
 		this.socket?.destroy()
-//		if (this.socket !== undefined) {
-//			this.socket.destroy()
-//		}
-
 		this.log('debug', `destroyed ${this.id}`)
 	}
 
@@ -152,13 +151,13 @@ class instance extends InstanceBase {
 
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
+				clearInterval(this.meterTimer)
 				varFuncs.getVars(this)
+				this.queueTimer = {}
 				this.processCmdQueue()
 				if (config.metering) {
 					this.startMeters()
-					this.meterTimer = setInterval(() => this.startMeters(), 10000)
-				} else {
-					clearInterval(this.meterTimer)
+					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
 				}
 			})
 
@@ -180,13 +179,13 @@ class instance extends InstanceBase {
 					if (line.length == 0) {
 						continue
 					}
-					this.log('debug', `Received: '${line}'`)
+					this.log('debug', `[${new Date().toJSON()}] Received: '${line}'`)
 					receivedCmds = paramFuncs.parseData(line) // Break out the parameters
 
 					for (let i = 0; i < receivedCmds.length; i++) {
 
 						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
-						foundCmd = paramFuncs.findRcpCmd(curCmd.Address) // Find which command
+						foundCmd = paramFuncs.findRcpCmd(curCmd.Address, curCmd.Action) // Find which command
 				
 						switch (curCmd.Action) {
 							case 'set':
@@ -210,17 +209,17 @@ class instance extends InstanceBase {
 								break
 
 							case 'mtr':
+								if (foundCmd.Pickoff) {
+									let lastSlash = curCmd.Address.lastIndexOf('/')
+									let pickoff = curCmd.Address.slice(lastSlash + 1)
+									curCmd.Y = foundCmd.Pickoff.split('|').indexOf(pickoff)
+								}
+								curCmd.Address = foundCmd.Address
 								let i = 0
-								let Addr = curCmd.Address.replace('Current/', 'Current/Meter/')
-								if (config.model == 'TIO' || config.model == 'RIO') {
-									Addr = Addr.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
-									Addr = Addr.replace(/\/Dev.*/, (config.model == 'TIO') ? '/InCh/InputLevel' : '/InCh')
-								}
-								if (curCmd.Pickoff) {
-									Y = rcpCmd.Pickoff.findIndex(curCmd.Pickoff)
-								}
 								while (curCmd[i]) {
-									this.addToDataStore({ Status: curCmd.Status, Action: curCmd.Action, Address: Addr, Y: curCmd.Y, X: i, Val: parseInt(curCmd[i], 16) })
+									curCmd.X = i
+									curCmd.Val = parseInt(curCmd[i], 16)
+									this.addToDataStore(curCmd)
 									i++
 								}
 							}
@@ -238,23 +237,34 @@ class instance extends InstanceBase {
 	addToCmdQueue(cmd) {
 		clearTimeout(this.queueTimer)
 		let cmdToAdd = JSON.parse(JSON.stringify(cmd))		// Deep Clone
+		let rcpCmd = paramFuncs.findRcpCmd(cmdToAdd.Address)
 		let i = this.cmdQueue.findIndex((c) => 
-			((c.prefix == cmdToAdd.prefix) && (c.Address == cmdToAdd.Address) && (c.X == cmdToAdd.X) && (c.Y == cmdToAdd.Y))
+			(
+				(
+					(c.prefix == cmdToAdd.prefix) && (c.Address == cmdToAdd.Address)
+				) && (
+					((c.X == cmdToAdd.X) && (c.Y == cmdToAdd.Y))
+					||
+					((rcpCmd.Action == 'mtrinfo') && (c.Y == cmdToAdd.Y))
+				)
+			)
 		)
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd	// Replace queued message with new one
 		} else {
 			this.cmdQueue.push(cmdToAdd)
-		}
-		this.queueTimer = setTimeout(() => {
-			this.processCmdQueue()
-		}, MSG_DELAY)
+		}			
+
+		if (this.queueTimer) {
+			this.queueTimer = setTimeout(() => {
+				this.processCmdQueue()
+			}, MSG_DELAY)
+		}	
 	}
 
 	// When a message comes in from the console, match it up and delete it, and send the next message
 	processCmdQueue(cmd) {
 		clearTimeout(this.queueTimer)
-
 		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
 		if (cmd != undefined) {
 			let i = this.cmdQueue.findIndex((c) =>
@@ -290,7 +300,7 @@ class instance extends InstanceBase {
 				}
 			}
 
-			this.cmdQueue.shift()			// Get rid of message, whether sent or not
+			this.cmdQueue.shift()					// Get rid of message, whether sent or not
 			this.queueTimer = setTimeout(() => {
 				this.processCmdQueue()
 			}, MSG_DELAY)
@@ -406,7 +416,7 @@ class instance extends InstanceBase {
 		}
 		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
 			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
-			this.checkFeedbacks(dsAddr.replace(/:/g, '_')) // Not sure if this is necessary??
+			this.checkFeedbacks(dsAddr.replace(/:/g, '_')) // Make sure variables are updated
 		}
 	}
 
@@ -424,7 +434,6 @@ class instance extends InstanceBase {
 				data = this.dataStore[cmd.Address][cmd.X][cmd.Y]
 				return data
 			}
-
 			let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 			if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
 				cmd.prefix = 'get'
@@ -440,11 +449,16 @@ class instance extends InstanceBase {
 	startMeters() {
 		let mtrFeedbacks = rcpCommands.filter((f) => f.Type == 'mtr')
 		let fbNames = Array.from(mtrFeedbacks, (f) => f.Address)
-		fbNames = fbNames.map((f) => {
-			this.dataStore[f] = {}
-			return f.replace(/:/g, '_')
+		fbNames.forEach((fb) => {
+			let cmd = this.dataStore[fb]
+			if (cmd) {
+				for (let key in cmd[0]) {
+					let cmdToSend = {Address: fb, X: 0, Y: key}
+					cmdToSend.prefix = 'get'
+					this.addToCmdQueue(cmdToSend)
+				}
+			}
 		})
-		this.checkFeedbacks(...fbNames)
 	}
 
 }

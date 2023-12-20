@@ -257,20 +257,6 @@ module.exports = {
 					required: true,
 				},
 				{
-					type: 'number',
-					label: 'Min',
-					id: 'min',
-					default: -60,
-					required: true,
-				},
-				{
-					type: 'number',
-					label: 'Max',
-					id: 'max',
-					default: 1,
-					required: true,
-				},
-				{
 					type: 'textinput',
 					label: 'Value 1',
 					id: 'meterVal1',
@@ -294,6 +280,18 @@ module.exports = {
 				let ofsY2 = 0
 				let bWidth = 0
 				let bLength = 0
+				const bVal = (mtrVal) => {
+					switch(true) {
+						case (mtrVal <= -30) :
+							return mtrVal + 62
+						case (mtrVal <= -18) :
+							return ((mtrVal + 30) * 2) + 25
+						case (mtrVal <= 0) :
+							return ((mtrVal + 18) * 2.5) + 54
+						default :
+							return 100 // mtrVal > 0
+					}
+				}
 				switch (position) {
 					case 'left':
 						ofsX1 = padding
@@ -331,30 +329,50 @@ module.exports = {
 					width: feedback.image.width,
 					height: feedback.image.height,
 					colors: [
-						{ size: 30, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
-						{ size: 50, color: combineRgb(255, 165, 0), background: combineRgb(255, 165, 0), backgroundOpacity: 64 },
-						{ size: 20, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+						{ size: 45, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
+						{ size: 52, color: combineRgb(255, 165, 0), background: combineRgb(255, 165, 0), backgroundOpacity: 64 },
+						{ size: 1, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
 					],
 					barLength: bLength,
 					barWidth: bWidth,
-					value: 100 * (await context.parseVariablesInString(feedback.options.meterVal1) - feedback.options.min) / (feedback.options.max - feedback.options.min),
 					type: (position == 'left' || position == 'right') ? 'vertical' : 'horizontal',
+					value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal1))),
 					offsetX: ofsX1,
 					offsetY: ofsY1,
 					opacity: 255,
 				}
-				const options2 = {
+				const peak1 = {
 					...options1,
-					value: 100 * (await context.parseVariablesInString(feedback.options.meterVal2) - feedback.options.min) / (feedback.options.max - feedback.options.min),
-					offsetX: ofsX2,
-					offsetY: ofsY2,
+					colors: [
+						{ size: 100, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+					],
+					value: 100,
+				}
+				let options2 = undefined
+				let peak2 = undefined
+				if (feedback.options.meterVal2) {
+					options2 = {
+						...options1,
+						value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal2))),
+						offsetX: ofsX2,
+						offsetY: ofsY2,
+					}
+					peak2 = {
+						...options2,
+						colors: [
+							{ size: 100, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+						],
+						value: 100,
+					}
+				}
+			
+				let bars = (options1.value == 100) ? [graphics.bar(peak1)] : [graphics.bar(options1)]
+				if (options2) {
+					bars.push((options2.value == 100) ? graphics.bar(peak2) : graphics.bar(options2))
 				}
 				
-				if (feedback.options.meterVal2) {
-					return { imageBuffer: graphics.stackImage([graphics.bar(options1), graphics.bar(options2)]) }
-				} else {
-					return { imageBuffer: graphics.bar(options1)}
-				}
+				return { imageBuffer: graphics.stackImage(bars) }
+
 			}
 		}
 

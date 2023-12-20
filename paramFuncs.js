@@ -274,10 +274,19 @@ module.exports = {
 		return val
 	},
 
-	findRcpCmd: (cmdName) => {
+	findRcpCmd: (cmdName, cmdAction = '') => {
 		let rcpCmd = undefined
 		if (cmdName != undefined) {
-			rcpCmd = rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdName.replace(/:/g, '_')))
+			if (cmdAction == 'mtr') {
+				cmdName = cmdName.replace('Current/', 'Current/Meter/')
+
+				if (config.model == 'TIO' || config.model == 'RIO') {
+					cmdName = cmdName.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
+					cmdName = cmdName.replace(/\/Dev.*/, (config.model == 'TIO') ? '/InCh/InputLevel' : '/InCh')
+				}
+			}
+			let cmdToFind = cmdName.replace(/:/g, '_')
+			rcpCmd = rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdToFind.slice(0, cmd.Address.length)))
 		}
 		return rcpCmd
 	},

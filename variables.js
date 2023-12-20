@@ -146,28 +146,31 @@ module.exports = {
 
 	fbCreatesVar: (instance, cmd, data) => {
 		const paramFuncs = require('./paramFuncs.js')
-
 		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
-	
-		let cmdName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
-		let varName = `V_${cmdName}`
-		varName = varName + (cmd.X ? `_${cmd.X}` : '')
-		varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
 
 		if (rcpCmd.Type == 'mtr') {
 			data = data - 126
+			if (rcpCmd.Pickoff && cmd.Y > 0) {
+				cmd.Y = rcpCmd.Pickoff.split('|')[cmd.Y - 1] || undefined
+			}
 		}
 
 		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq') {
 			data = (data == -32768) ? '-Inf' : data / rcpCmd.Scale
 		}
 
-		// Auto-create a variable?
-		let varToAdd = { variableId: varName, name: varName }
-		let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
-
-		// Add new Auto-created variable and value
 		if (cmd.createVariable) {
+			// Auto-create a variable
+		
+			let cmdName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')
+			let varName = `V_${cmdName}`
+			varName = varName + (cmd.X ? `_${cmd.X}` : '')
+			varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
+
+			let varToAdd = { variableId: varName, name: varName }
+			let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
+
+			// Add new Auto-created variable and value
 			if (varIndex == -1) {
 				instance.variables.push(varToAdd)
 				instance.setVariableDefinitions(instance.variables)
@@ -175,17 +178,13 @@ module.exports = {
 			let value = {}
 			value[varName] = data
 			instance.setVariableValues(value)
-			return true
+		} else {
+			const reg = /@\(([^:$)]+):custom_([^)$]+)\)/
+			let hasCustomVar = reg.exec(cmd.Val)
+			if (hasCustomVar) {
+				// Set a custom variable value using @ syntax
+				instance.setCustomVariableValue(hasCustomVar[2], data)
+			}
 		}
-
-		// Set a custom variable value using @ syntax?
-		varName = cmd.Val
-		const reg = /@\(([^:$)]+):custom_([^)$]+)\)/
-		let matches = reg.exec(varName)
-		if (matches) {
-			instance.setCustomVariableValue(matches[2], data)
-			return true
-		}
-		return false // no variable
 	},
 }
