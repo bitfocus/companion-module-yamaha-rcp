@@ -283,10 +283,13 @@ module.exports = {
 				if (config.model == 'TIO' || config.model == 'RIO') {
 					cmdName = cmdName.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
 					cmdName = cmdName.replace(/\/Dev.*/, (config.model == 'TIO') ? '/InCh/InputLevel' : '/InCh')
+				} else {
+					let lastSlash = cmdName.lastIndexOf('/')
+					cmdName = cmdName.slice(0, lastSlash)
 				}
 			}
 			let cmdToFind = cmdName.replace(/:/g, '_')
-			rcpCmd = rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdToFind.slice(0, cmd.Address.length)))
+			rcpCmd = rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdToFind))
 		}
 		return rcpCmd
 	},
