@@ -59,7 +59,8 @@ module.exports = {
 			fb.Y = feedback.options.Y
 			varFuncs.fbCreatesVar(instance, fb, data) // Are we creating and/or updating a variable?
 
-			if (options && data == options.Val) {
+			//	if (options && data == options.Val) {
+			if (fb.Val == data) {
 				return true
 			}
 

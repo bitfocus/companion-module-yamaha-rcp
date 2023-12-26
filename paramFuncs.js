@@ -235,7 +235,10 @@ module.exports = {
 		}
 
 		if (rcpCmd.Type == 'mtr') {
-			val = val - 126
+			if (!isNaN(cmd.Val)) {
+				val = parseInt(cmd.Val) + 126
+			}
+			return val
 		}
 
 		if (rcpCmd.Type != 'bool') {
@@ -246,7 +249,7 @@ module.exports = {
 			}
 		}
 
-		if (!module.exports.isRelAction(cmd)) return val
+		if (!module.exports.isRelAction(cmd)) return val //Only continue if it's a relative action
 		
 		let data = context.getFromDataStore(cmd)
 		if (data === undefined) return undefined
