@@ -49,6 +49,7 @@ module.exports = {
 				default: 1,
 				required: true,
 				useVariables: true,
+				allowCustom: true,
 			}
 			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010)) {
 				YOpts = {...YOpts,
@@ -57,7 +58,6 @@ module.exports = {
 						{ id: 1, label: 'A' },
 						{ id: 2, label: 'B' },
 					],
-					allowCustom: true,
 				}
 			} else if (actionNameParts[0] == "Cue") {
 				YOpts = {...YOpts,
@@ -67,7 +67,6 @@ module.exports = {
 						{ id: 1, label: 'A' },
 						{ id: 2, label: 'B' },
 					],
-					allowCustom: true,
 				}
 			} else if (rcpCmd.Type == 'mtr') {
 				YOpts.type = 'dropdown'
