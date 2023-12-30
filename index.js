@@ -45,9 +45,8 @@ class instance extends InstanceBase {
 	async destroy() {
 		clearTimeout(this.queueTimer)
 		clearInterval(this.meterTimer)
-this.log('debug', 'attempting to destroy socket')
 		this.socket?.destroy()
-		this.log('debug', `destroyed ${this.id}`)
+		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
 	}
 
 	// Web UI config fields
@@ -383,7 +382,7 @@ this.log('debug', 'attempting to destroy socket')
 	sendCmd(c) {
 		if (c !== undefined) {
 			c = c.trim()
-			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`)
+			this.log('debug', `[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the device

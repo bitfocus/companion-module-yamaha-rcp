@@ -228,10 +228,10 @@ module.exports = {
 		const { graphics } = require('companion-module-utils')
 		const { combineRgb } = require('@companion-module/base')
 
-		feedbacks['Bar'] = {
+		feedbacks['Meter'] = {
 			type: 'advanced',
-			name: 'Bar Indicator',
-			description: 'Show a bar indicator (meter) on the button',
+			name: 'VUMeter',
+			description: 'Show a Bargraph VU Meter on the button',
 			options: [
 				{
 					type: 'dropdown',
