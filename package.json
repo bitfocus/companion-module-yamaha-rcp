@@ -17,11 +17,11 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^1.4.1"
+		"@companion-module/tools": "^1.4.2"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.6.0",
-		"companion-module-utils": "^0.3.1"
+		"@companion-module/base": "~1.7.0",
+		"companion-module-utils": "^0.4.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
