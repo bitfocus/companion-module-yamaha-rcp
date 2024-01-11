@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Dec 26, 2023 Version 3.4.6 (for Companion v3)
+// Dec 26, 2023 Version 3.4.7 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -9,6 +9,7 @@ const actionFuncs = require('./actions.js')
 const varFuncs = require('./variables.js')
 const upgrade = require('./upgrade')
 
+const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000
 
@@ -138,7 +139,7 @@ class instance extends InstanceBase {
 		delete this.socket
 
 		if (config.host) {
-			this.socket = new TCPHelper(config.host, 49280)
+			this.socket = new TCPHelper(config.host, RCP_PORT)
 
 			this.socket.on('status_change', (status, message) => {
 				this.updateStatus(status, message)
