@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.4.7 - for Companion v3
+## Yamaha Remote Control Protocol v3.4.8 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,7 +24,7 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-3.4.3 - 3.4.7
+3.4.3 - 3.4.8
 - Meter fixes/improvements
 
 3.4.2
