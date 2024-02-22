@@ -110,7 +110,7 @@ module.exports = [
 
 		console.log('\nYamaha-RCP Upgrade: Running 3.x -> 3.4 Upgrade.')
 		var updates = {
-			updatedConfig: props.config,
+			updatedConfig: props.config || {},
 			updatedActions: [],
 			updatedFeedbacks: []
 		}

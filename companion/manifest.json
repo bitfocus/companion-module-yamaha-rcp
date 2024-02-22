@@ -3,7 +3,7 @@
 	"name": "yamaha-rcp",
 	"shortname": "yamaha-rcp",
 	"description": "yamaha-rcp",
-	"version": "3.4.8",
+	"version": "3.4.9",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-yamaha-rcp.git",
 	"bugs": "https://discourse.checkcheckonetwo.com",

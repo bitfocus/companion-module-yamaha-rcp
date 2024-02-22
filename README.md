@@ -24,7 +24,7 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-3.4.3 - 3.4.8
+3.4.3 - 3.4.9
 - Meter fixes/improvements
 
 3.4.2
