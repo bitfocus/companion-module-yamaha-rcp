@@ -24,7 +24,7 @@ module.exports = {
 			}
 			newFeedback.options.push({
 				type: 'checkbox',
-				label: 'Auto-Create Variable?',
+				label: 'Auto-Create Variable',
 				id: 'createVariable',
 				default: false,
 			})

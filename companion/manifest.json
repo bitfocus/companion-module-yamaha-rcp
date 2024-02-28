@@ -16,8 +16,8 @@
 		"entrypoint": "../index.js"
 	},
 	"manufacturer": "Yamaha",
-	"products": ["CL/QL", "TF", "Rivage PM", "DM", "RIO", "TIO"],
-	"keywords": ["Yamaha", "Mixer"],
+	"products": ["RCP"],
+	"keywords": ["Yamaha", "Mixer", "CL", "QL", "PM", "TF", "DM"],
 	"bonjourQueries": {
 		"bonjour_host": {
 			"type": "ypa-scp",

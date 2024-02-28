@@ -123,7 +123,7 @@ class instance extends InstanceBase {
 
 		actionFuncs.updateActions(this) // Re-do the actions once the console is chosen
 		varFuncs.initVars(this)
-		//this.createPresets()
+		this.createPresets()
 		config.host = config.bonjour_host?.split(':')[0] || config.host
 		this.initTCP()
 	}
@@ -312,6 +312,39 @@ class instance extends InstanceBase {
 		this.rcpPresets = [
 			{
 				type: 'button',
+				category: 'Indicators',
+				name: 'Meter Level Indicator',
+				style: {
+					text: 'Meter',
+					size: 'auto',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
+				},
+				steps: [],
+				feedbacks: [
+					{
+						feedbackId: 'Meter',
+						options: {
+							position: 'right',
+							padding: 1,
+//							meterVal1: '',
+//							meterVal2: ''
+						},
+					},
+					{
+						feedbackId: 'MIXER_Current/Meter/Mix/PostOn',
+						options: {
+//							position: 'right',
+//							padding: 1,
+//							meterVal1: '',
+//							meterVal2: ''
+						},
+					},
+				],
+			},
+/*
+			{
+				type: 'button',
 				category: 'Macros',
 				name: 'Create RCP Macro',
 				style: {
@@ -338,6 +371,7 @@ class instance extends InstanceBase {
 					},
 				],
 			},
+*/
 		]
 
 		this.setPresetDefinitions(this.rcpPresets)
