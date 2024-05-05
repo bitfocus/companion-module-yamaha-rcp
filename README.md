@@ -25,7 +25,7 @@ _Andrew Broughton_
 **REVISION HISTORY**
 
 3.4.3 - 3.4.9
-- Meter fixes/improvements
+- Meter fixes/improvements, add metering for Rivage
 
 3.4.2
 - Additional Meter support for devices other than RIO/TIO

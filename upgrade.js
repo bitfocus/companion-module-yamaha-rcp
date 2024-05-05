@@ -42,7 +42,7 @@ module.exports = [
 		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
-		console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
+			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
 			let changed = false
 			let rcpCmd = undefined
@@ -64,9 +64,6 @@ module.exports = [
 			}
 
 			rcpCmd = paramFuncs.findRcpCmd(actionAddress)
-
-//console.log('Yamaha-RCP Upgrade: rcpCmd:', rcpCmd)
-
 			if (rcpCmd !== undefined) {
 
 				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && newAction.options.Val !== 'Toggle') {
@@ -106,8 +103,6 @@ module.exports = [
 	},
 
 	upg30xto34x = (context, props) => {
-		var paramFuncs = require('./paramFuncs')
-
 		console.log('\nYamaha-RCP Upgrade: Running 3.x -> 3.4 Upgrade.')
 		var updates = {
 			updatedConfig: props.config || {},
@@ -124,15 +119,10 @@ module.exports = [
 			updates.updatedConfig.meterSpeed = 100; // set default value for new configs
 		} 
 
-		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
-		rcpCommands = paramFuncs.getParams(context, context.currentConfig)
-		console.log('\n')
-
 		let checkUpgrade = (action, isAction) => {
 			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
 			let changed = false
-			let rcpCmd = undefined
 			let newAction = JSON.parse(JSON.stringify(action))
 			let actionAddress = isAction ? action.actionId : action.feedbackId
 
@@ -141,9 +131,8 @@ module.exports = [
 				changed = true
 			}
 
-
 			if (changed) {
-				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + newAction.actionId + "' -> '" + actionAddress : "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress}' ...`)
+				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + action.actionId + "' -> '" + actionAddress : "Feedback '" + action.feedbackId + "' -> '" + actionAddress}' ...`)
 				console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
 
 				if (isAction) {
@@ -169,5 +158,56 @@ module.exports = [
 
 		return updates
 	},
+
+	/*
+	upg34xto348 = (context, props) => {
+		console.log('\nYamaha-RCP Upgrade: Running 3.4.x -> 3.4.8 Upgrade.')
+		var updates = {
+			updatedConfig: props.config || {},
+			updatedActions: [],
+			updatedFeedbacks: []
+		}
+		
+		if (context.currentConfig == null) {
+			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
+			return updates
+		}
+
+		if (updates.updatedConfig !== undefined && updates.updatedConfig.meterSpeed == undefined) {
+			updates.updatedConfig.meterSpeed = 100; // set default value for new configs
+		} 
+
+		let checkUpgrade = (action, isAction) => {
+			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
+
+			let changed = false
+			let newAction = JSON.parse(JSON.stringify(action))
+
+			if (changed) {
+				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + action.actionId + "' -> '" + newAction.actionId : "Feedback '" + action.feedbackId + "' -> '" + newAction.feedbackId}' ...`)
+				console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
+
+				if (isAction) {
+					updates.updatedActions.push(newAction) 
+				} else {
+					updates.updatedFeedbacks.push(newAction)
+				}
+			}
+
+			return
+
+		}
+
+		for (let k in props.actions) {
+			checkUpgrade(props.actions[k], true)
+		}
+
+		for (let k in props.feedbacks) {
+			checkUpgrade(props.feedbacks[k], false)
+		}
+
+		return updates
+	},
+*/
 
 ]

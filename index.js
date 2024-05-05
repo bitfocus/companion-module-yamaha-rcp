@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Feb 22, 2024 Version 3.4.9 (for Companion v3)
+// Mar 13, 2024 Version 3.4.9 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -77,7 +77,7 @@ class instance extends InstanceBase {
 				default: '',
 				regex: Regex.IP,
 				isVisible: (options) => {
-					let vis = (options.model != 'CL/QL')
+					let vis = (['RIO','TIO'].includes(options.model))
 					if (!vis) options.bonjour_host = undefined
 					return vis
 				}
@@ -89,13 +89,13 @@ class instance extends InstanceBase {
 				width: 6,
 				default: '192.168.0.128',
 				regex: Regex.IP,
-				isVisible: (options) => !options.bonjour_host || (options.model == 'CL/QL')
+				isVisible: (options) => !options.bonjour_host || !['RIO','TIO'].includes(options.model)
 			},
 			{
 				type: 'static-text',
 				label: '',
 				width: 6,
-				isVisible: (options) => !!options.bonjour_host || (options.model == 'CL/QL')
+				isVisible: (options) => !!options.bonjour_host || !['RIO','TIO'].includes(options.model)
 			},
 			{
 				type: 'checkbox',

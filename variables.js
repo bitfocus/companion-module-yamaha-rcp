@@ -167,7 +167,7 @@ module.exports = {
 			varName = varName + (cmd.X ? `_${cmd.X}` : '')
 			varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
 
-			let varToAdd = { variableId: varName, name: varName }
+			let varToAdd = { variableId: varName, name: 'Auto-Created Variable' }
 			let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
 
 			// Add new Auto-created variable and value
