@@ -28,7 +28,7 @@ module.exports = {
 				fname = 'TF Parameters-1.txt'
 				break
 			case 'DM3':
-				fname = 'DM3 Parameters-1.txt'
+				fname = 'DM3 Parameters-2.txt'
 				break
 			case 'DM7':
 				fname = 'DM7 Parameters-1.txt'
@@ -83,7 +83,7 @@ module.exports = {
 			// but it basically pulls out the space-separated values, except for spaces that are inside quotes!
 			line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 
-			if (line !== null && ['OK', 'OKM', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
+			if (line !== null && line.length > 1 && ['OK', 'OKM', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
 				let rcpCommand = {}
 				let params = RCP_PARAM_DEF_FIELDS
 

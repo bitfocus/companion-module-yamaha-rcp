@@ -15,9 +15,25 @@ module.exports = {
 			switch (config.model) {
 				case 'CL/QL': {
 					instance.variables.push(
-						{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' }
+						{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
+						{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' },
+						{ variableId: 'cuedMixes', name: 'Mixes Cued' },
+						{ variableId: 'cuedMatrices', name: 'Matrices Cued' },
+						{ variableId: 'cuedDCAs', name: 'DCAs Cued' },
 					)
-				}			
+				}
+				break;
+				
+				case 'DM3': {
+					instance.variables.push(
+						{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' },
+						{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
+						{ variableId: 'cuedMixes', name: 'Mixes Cued' },
+						{ variableId: 'cuedMatrices', name: 'Matrices Cued' },
+					)
+				}
+				break;
+					
 				case 'PM': {
 					instance.variables.push(
 						{ variableId: 'cuedInChannels', name: 'Inputs Cued' },

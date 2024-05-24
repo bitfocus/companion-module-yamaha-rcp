@@ -3,7 +3,7 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.4.9",
+	"version": "3.5.0",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",

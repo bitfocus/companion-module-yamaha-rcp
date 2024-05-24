@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.4.8 - for Companion v3
+## Yamaha Remote Control Protocol v3.4.0 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -23,6 +23,13 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.5.0
+- Add new functions for DM3 Firmware v2
+- Fix DM7 InCh count, make 120 instead of 72
+
+3.4.10
+- Bug fix when receiving partial message from Yamaha
 
 3.4.3 - 3.4.9
 - Meter fixes/improvements, add metering for Rivage
