@@ -155,7 +155,7 @@
 		{ "id": "SEL CH", "label": "SEL CH" },
 		{ "id": "SEND MASTER", "label": "SEND MASTER" }
 	],
-	"danteOutPatch": [
+	"DanteOutPort/Patch": [
 		{ "id": "NONE", "label": "NONE" },
 		{ "id": "MIX1", "label": "MIX1" },
 		{ "id": "MIX2", "label": "MIX2" },
@@ -557,7 +557,7 @@
 		{ "id": "M MTX Ls", "label": "M MTX Ls" },
 		{ "id": "M MTX Rs", "label": "M MTX Rs" }
 	],
-	"omniOutPatch": [
+	"OmniOutPort/Patch": [
 		{ "id": "NONE", "label": "NONE" },
 		{ "id": "MIX1", "label": "MIX1" },
 		{ "id": "MIX2", "label": "MIX2" },
@@ -1023,7 +1023,7 @@
 		{ "id": "CAS CUE L", "label": "CAS CUE L" },
 		{ "id": "CAS CUE R", "label": "CAS CUE R" }
 	],
-	"inChPatch": [
+	"InCh/Patch": [
 		{ "id": "DANTE1", "label": "DANTE1" },
 		{ "id": "DANTE2", "label": "DANTE2" },
 		{ "id": "DANTE3", "label": "DANTE3" },

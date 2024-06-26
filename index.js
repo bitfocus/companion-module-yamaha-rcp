@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// May 22, 2024 Version 3.5.0 (for Companion v3)
+// June 24, 2024 Version 3.5.1 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -26,10 +26,11 @@ class instance extends InstanceBase {
 		global.rcpCommands = []
 		this.colorCommands = [] // Commands which have a color field
 		this.rcpPresets = []
-		this.dataStore = {}		// status, Address (using ":"), X, Y, Val
-		this.cmdQueue = []		// prefix, Address (using ":"), X, Y, Val
+		this.dataStore = {} // status, Address (using ":"), X, Y, Val
+		this.cmdQueue = [] // prefix, Address (using ":"), X, Y, Val
 		this.queueTimer
 		this.meterTimer = {}
+		this.kaTimer = {}
 		this.variables = []
 		this.newConsole()
 	}
@@ -52,7 +53,8 @@ class instance extends InstanceBase {
 
 	// Web UI config fields
 	getConfigFields() {
-		return [
+		let kaMax = 2147482
+		let config = [
 			{
 				type: 'dropdown',
 				id: 'model',
@@ -67,6 +69,7 @@ class instance extends InstanceBase {
 					{ id: 'DM7', label: 'DM7 Console' },
 					{ id: 'RIO', label: 'RIO Preamp' },
 					{ id: 'TIO', label: 'TIO Preamp' },
+					{ id: 'RSIO', label: 'RSio IO Device' },
 				],
 			},
 			{
@@ -77,11 +80,11 @@ class instance extends InstanceBase {
 				default: '',
 				regex: Regex.IP,
 				isVisible: (options) => {
-					let vis = (['RIO','TIO'].includes(options.model))
+					let vis = ['RIO', 'TIO', 'RSIO'].includes(options.model)
 					if (!vis) options.bonjour_host = undefined
 					return vis
-				}
-			},			
+				},
+			},
 			{
 				type: 'textinput',
 				id: 'host',
@@ -89,13 +92,13 @@ class instance extends InstanceBase {
 				width: 6,
 				default: '192.168.0.128',
 				regex: Regex.IP,
-				isVisible: (options) => !options.bonjour_host || !['RIO','TIO'].includes(options.model)
+				isVisible: (options) => !options.bonjour_host || !['RIO', 'TIO', 'RSIO'].includes(options.model),
 			},
 			{
 				type: 'static-text',
 				label: '',
 				width: 6,
-				isVisible: (options) => !!options.bonjour_host || !['RIO','TIO'].includes(options.model)
+				isVisible: (options) => !!options.bonjour_host || !['RIO', 'TIO', 'RSIO'].includes(options.model),
 			},
 			{
 				type: 'checkbox',
@@ -108,12 +111,58 @@ class instance extends InstanceBase {
 				type: 'number',
 				id: 'meterSpeed',
 				label: 'Metering interval (40 - 1000 ms)',
-				width: 6,
+				width: 8,
 				default: 100,
 				min: 40,
 				max: 1000,
-			}
+			},
+			{
+				type: 'checkbox',
+				id: 'keepAlive',
+				label: 'Enable KeepAlive?',
+				width: 3,
+				default: false,
+			},
+			{
+				type: 'number',
+				id: 'kaIntervalH',
+				label: `Keep Alive interval (1 - ${kaMax} seconds)`,
+				width: 8,
+				default: 10,
+				min: 1,
+				max: kaMax,
+				isVisible: (options) => {
+					if (['TF', 'DM3', 'DM7'].includes(options.model)) {
+						options.kaInterval = options.kaIntervalH
+						return true
+					}
+					return false
+				},
+			},
+			{
+				type: 'number',
+				id: 'kaIntervalL',
+				label: `Keep Alive interval (1 - 600 seconds)`,
+				width: 8,
+				default: 10,
+				min: 1,
+				max: 600,
+				isVisible: (options) => {
+					if (!['TF', 'DM3', 'DM7'].includes(options.model)) {
+						options.kaInterval = options.kaIntervalL
+						return true
+					}
+					return false
+				},
+			},
+			{
+				type: 'static-text',
+				label: '**NOTE** KeepAlive will attempt to keep the connection alive by regularly sending an innocuous message to the device.',
+				width: 12,
+			},
 		]
+		//config.kaInterval = (['TF', 'DM3', 'DM7'].includes(options.model)) ? config.kaInterval
+		return config
 	}
 
 	// Whenever the console type changes, update the info
@@ -152,12 +201,17 @@ class instance extends InstanceBase {
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
 				clearInterval(this.meterTimer)
+				clearInterval(this.kaTimer)
 				varFuncs.getVars(this)
 				this.queueTimer = {}
 				this.processCmdQueue()
 				if (config.metering) {
 					this.startMeters()
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
+				}
+				if (config.keepAlive) {
+					this.sendCmd(`scpmode keepalive ${config.kaInterval * 1000}`) // To possibly keep the device from closing the connection
+					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), config.kaInterval * 1000)
 				}
 			})
 
@@ -183,10 +237,9 @@ class instance extends InstanceBase {
 					receivedCmds = paramFuncs.parseData(line) // Break out the parameters
 
 					for (let i = 0; i < receivedCmds.length; i++) {
-
 						let curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
 						foundCmd = paramFuncs.findRcpCmd(curCmd.Address, curCmd.Action) // Find which command
-				
+
 						switch (curCmd.Action) {
 							case 'set':
 							case 'get':
@@ -209,6 +262,7 @@ class instance extends InstanceBase {
 								break
 
 							case 'mtr':
+								if (foundCmd === undefined) break
 								if (foundCmd.Pickoff) {
 									let lastSlash = curCmd.Address.lastIndexOf('/')
 									let pickoff = curCmd.Address.slice(lastSlash + 1)
@@ -222,11 +276,10 @@ class instance extends InstanceBase {
 									this.addToDataStore(curCmd)
 									i++
 								}
-							}
+						}
 
 						varFuncs.setVar(this, curCmd)
 						this.processCmdQueue(curCmd)
-
 					}
 				}
 			})
@@ -236,30 +289,25 @@ class instance extends InstanceBase {
 	// New Command (Action or Feedback) to Add
 	addToCmdQueue(cmd) {
 		clearTimeout(this.queueTimer)
-		let cmdToAdd = JSON.parse(JSON.stringify(cmd))		// Deep Clone
+		let cmdToAdd = JSON.parse(JSON.stringify(cmd)) // Deep Clone
 		let rcpCmd = paramFuncs.findRcpCmd(cmdToAdd.Address)
-		let i = this.cmdQueue.findIndex((c) => 
-			(
-				(
-					(c.prefix == cmdToAdd.prefix) && (c.Address == cmdToAdd.Address)
-				) && (
-					((c.X == cmdToAdd.X) && (c.Y == cmdToAdd.Y))
-					||
-					((rcpCmd.Action == 'mtrinfo') && (c.Y == cmdToAdd.Y))
-				)
-			)
+		let i = this.cmdQueue.findIndex(
+			(c) =>
+				c.prefix == cmdToAdd.prefix &&
+				c.Address == cmdToAdd.Address &&
+				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y))
 		)
 		if (i > -1) {
-			this.cmdQueue[i] = cmdToAdd	// Replace queued message with new one
+			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
 		} else {
 			this.cmdQueue.push(cmdToAdd)
-		}			
+		}
 
 		if (this.queueTimer) {
 			this.queueTimer = setTimeout(() => {
 				this.processCmdQueue()
 			}, MSG_DELAY)
-		}	
+		}
 	}
 
 	// When a message comes in from the console, match it up and delete it, and send the next message
@@ -267,23 +315,24 @@ class instance extends InstanceBase {
 		clearTimeout(this.queueTimer)
 		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
 		if (cmd != undefined) {
-			let i = this.cmdQueue.findIndex((c) =>
-				((c.prefix == 'get') && (c.Address == cmd.Address) && (c.X == cmd.X) && (c.Y == cmd.Y))
+			let i = this.cmdQueue.findIndex(
+				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y
 			)
 			if (i > -1) {
-				this.cmdQueue.splice(i, 1)		// Got value from matching request so remove it!
-			}			
+				this.cmdQueue.splice(i, 1) // Got value from matching request so remove it!
+			}
 		}
 
-		if (this.cmdQueue.length > 0) { 		// Messages still to send?
-			let nextCmd = this.cmdQueue[0]		// Oldest
+		if (this.cmdQueue.length > 0) {
+			// Messages still to send?
+			let nextCmd = this.cmdQueue[0] // Oldest
 
 			if (nextCmd.prefix == 'set') {
 				let nextCmdVal = paramFuncs.parseVal(this, nextCmd)
 				if (nextCmdVal == undefined) {
 					this.cmdQueue.shift()
 					this.cmdQueue.push(nextCmd)
-					
+
 					this.queueTimer = setTimeout(() => {
 						this.processCmdQueue()
 					}, MSG_DELAY)
@@ -296,11 +345,11 @@ class instance extends InstanceBase {
 			let msg = paramFuncs.fmtCmd(nextCmd)
 			if (this.sendCmd(msg)) {
 				if (nextCmd.prefix == 'set') {
-					this.addToDataStore(nextCmd)	// Update to latest value
+					this.addToDataStore(nextCmd) // Update to latest value
 				}
 			}
 
-			this.cmdQueue.shift()					// Get rid of message, whether sent or not
+			this.cmdQueue.shift() // Get rid of message, whether sent or not
 			this.queueTimer = setTimeout(() => {
 				this.processCmdQueue()
 			}, MSG_DELAY)
@@ -327,22 +376,22 @@ class instance extends InstanceBase {
 						options: {
 							position: 'right',
 							padding: 1,
-//							meterVal1: '',
-//							meterVal2: ''
+							//							meterVal1: '',
+							//							meterVal2: ''
 						},
 					},
 					{
 						feedbackId: 'MIXER_Current/Meter/Mix/PostOn',
 						options: {
-//							position: 'right',
-//							padding: 1,
-//							meterVal1: '',
-//							meterVal2: ''
+							//							position: 'right',
+							//							padding: 1,
+							//							meterVal1: '',
+							//							meterVal2: ''
 						},
 					},
 				],
 			},
-/*
+			/*
 			{
 				type: 'button',
 				category: 'Macros',
@@ -392,7 +441,7 @@ class instance extends InstanceBase {
 		switch (c.rcpCmd.Type) {
 			case 'integer':
 			case 'binary':
-				cV = (c.options.Val == -32768) ? '-Inf' : c.options.Val / c.rcpCmd.Scale
+				cV = c.options.Val == -32768 ? '-Inf' : c.options.Val / c.rcpCmd.Scale
 				break
 			case 'freq':
 				cV = c.options.Val / c.rcpCmd.Scale
@@ -417,12 +466,15 @@ class instance extends InstanceBase {
 	sendCmd(c) {
 		if (c !== undefined) {
 			c = c.trim()
-			this.log('debug', `[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`)
+			this.log(
+				'debug',
+				`[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`
+			)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the device
 				return true
-			} 
+			}
 			this.log('info', 'Socket not connected :(')
 		}
 		return false
@@ -476,7 +528,6 @@ class instance extends InstanceBase {
 		}
 
 		return data
-
 	}
 
 	// Start requesting meter data
@@ -487,14 +538,13 @@ class instance extends InstanceBase {
 			let cmd = this.dataStore[fb]
 			if (cmd) {
 				for (let key in cmd[0]) {
-					let cmdToSend = {Address: fb, X: 0, Y: key}
+					let cmdToSend = { Address: fb, X: 0, Y: key }
 					cmdToSend.prefix = 'get'
 					this.addToCmdQueue(cmdToSend)
 				}
 			}
 		})
 	}
-
 }
 
 runEntrypoint(instance, upgrade)

@@ -7,7 +7,6 @@ module.exports = {
 	},
 
 	getParams: (instance, cfg) => {
-
 		var rcpNames = require('./rcpNames.json')
 		rcpNames.chNames = module.exports.makeChNames(rcpNames)
 
@@ -38,7 +37,10 @@ module.exports = {
 				break
 			case 'TIO':
 				fname = 'TIO Parameters-1.txt'
-			
+				break
+			case 'RSIO':
+					fname = 'RSio Parameters-1.txt'
+	
 		}
 
 		// Read the DataFile
@@ -52,7 +54,7 @@ module.exports = {
 				let bcmd = b.Address.slice(b.Address.indexOf('/') + 1)
 				return acmd.toLowerCase().localeCompare(bcmd.toLowerCase())
 			})
-			
+
 			rcpCmds.forEach((cmd) => {
 				let rcpName = cmd.Address.slice(cmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 				if (rcpName.endsWith('Color')) {
@@ -67,8 +69,39 @@ module.exports = {
 	},
 
 	parseData: (data) => {
-		const RCP_PARAM_DEF_FIELDS = ['Ok', 'Action', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale']
-		const RCP_METER_DEF_FIELDS = ['Ok', 'Action', 'Index', 'Address', 'X', 'Y', 'Min', 'Max', 'Default', 'Unit', 'Type', 'UI', 'RW', 'Scale', 'Pickoff']
+		const RCP_PARAM_DEF_FIELDS = [
+			'Ok',
+			'Action',
+			'Index',
+			'Address',
+			'X',
+			'Y',
+			'Min',
+			'Max',
+			'Default',
+			'Unit',
+			'Type',
+			'UI',
+			'RW',
+			'Scale',
+		]
+		const RCP_METER_DEF_FIELDS = [
+			'Ok',
+			'Action',
+			'Index',
+			'Address',
+			'X',
+			'Y',
+			'Min',
+			'Max',
+			'Default',
+			'Unit',
+			'Type',
+			'UI',
+			'RW',
+			'Scale',
+			'Pickoff',
+		]
 		const RCP_PARAM_FIELDS = ['Status', 'Action', 'Address', 'X', 'Y', 'Val', 'TxtVal']
 		const RCP_DEVINFO_FIELDS = ['Status', 'Action', 'Address', 'Val']
 		const RCP_SCENE_FIELDS = ['Status', 'Action', 'Address', 'Val', 'ScnStatus']
@@ -97,8 +130,10 @@ module.exports = {
 					case 'mtrstart':
 						params = RCP_PARAM_FIELDS
 						break
-					
+
 					case 'devinfo':
+					case 'devstatus':
+					case 'scpmode':
 						params = RCP_DEVINFO_FIELDS
 						break
 
@@ -129,7 +164,6 @@ module.exports = {
 				}
 
 				cmds.push(rcpCommand)
-
 			}
 		}
 		return cmds
@@ -143,10 +177,10 @@ module.exports = {
 		let rcpCmd = module.exports.findRcpCmd(cmdName)
 		let prefix = cmdToFmt.prefix
 		let cmdStart = prefix
-		let options = {X: cmdToFmt.X, Y: cmdToFmt.Y, Val: cmdToFmt.Val}
+		let options = { X: cmdToFmt.X, Y: cmdToFmt.Y, Val: cmdToFmt.Val }
 
 		if (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
-			cmdStart = (prefix == 'set') ? 'ssrecall' : 'sscurrent'
+			cmdStart = prefix == 'set' ? 'ssrecall' : 'sscurrent'
 			if (rcpCmd.Index == 1001) cmdStart = 'ssupdate' // store command
 			switch (config.model) {
 				case 'TF':
@@ -170,29 +204,32 @@ module.exports = {
 			options.Y = ''
 		}
 
-		if (rcpCmd.Index >= 1010 && rcpCmd.Index < 2000) { // RecallInc/Dec
+		if (rcpCmd.Index >= 1010 && rcpCmd.Index < 2000) {
+			// RecallInc/Dec
 			cmdStart = 'event'
 			options.X = ''
 			options.Y = ''
 		}
 
-		if (rcpCmd.Index >= 2000) { // Meters
+		if (rcpCmd.Index >= 2000) {
+			// Meters
 			if (!config.metering) return
 			cmdStart = 'mtrstart'
-			cmdName = cmdName.replace('/Meter','') // Remove "Meter" from the beginning of the command
-			if (config.model == 'TIO' || config.model == 'RIO') {
+			cmdName = cmdName.replace('/Meter', '') // Remove "Meter" from the beginning of the command
+			if (config.model == 'TIO' || config.model == 'RIO' || config.model == 'RSIO') {
 				cmdName = cmdName.replace(/\/.*Ch/, '/Dev')
 			}
 			if (rcpCmd.Pickoff) {
 				let pickoffs = rcpCmd.Pickoff.split('|')
-				cmdName += '/' + pickoffs[options.Y]  // Add the Pickoff Parameter
+				cmdName += '/' + pickoffs[options.Y] // Add the Pickoff Parameter
 			}
 			options.X = config.meterSpeed
 			options.Y = ''
 		}
 
 		let cmdStr = `${cmdStart} ${cmdName}`
-		if (prefix == 'set' && rcpCmd.Index < 1010) { // if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
+		if (prefix == 'set' && rcpCmd.Index < 1010) {
+			// if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
 			if (rcpCmd.Type == 'string') {
 				options.Val = `"${options.Val}"` // put quotes around the string
 			}
@@ -206,21 +243,22 @@ module.exports = {
 	// Create the proper command string for an action or feedback
 	parseOptions: async (context, optionsToParse) => {
 		try {
-			let parsedOptions = JSON.parse(JSON.stringify(optionsToParse))		// Deep Clone
+			let parsedOptions = JSON.parse(JSON.stringify(optionsToParse)) // Deep Clone
 
-			parsedOptions.X = optionsToParse.X == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.X)) - 1
-			parsedOptions.Y = optionsToParse.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.Y)) - 1
+			parsedOptions.X =
+				optionsToParse.X == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.X)) - 1
+			parsedOptions.Y =
+				optionsToParse.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.Y)) - 1
 
 			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
 			parsedOptions.X = Math.max(parsedOptions.X, 0)
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
 			parsedOptions.Val = await context.parseVariablesInString(optionsToParse.Val)
-			parsedOptions.Val = (parsedOptions.Val === undefined) ? '' : parsedOptions.Val
-			
-			return parsedOptions
+			parsedOptions.Val = parsedOptions.Val === undefined ? '' : parsedOptions.Val
 
-		} catch(error) {
-			this.log('error',`\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
+			return parsedOptions
+		} catch (error) {
+			this.log('error', `\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
 			this.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
 		}
 	},
@@ -250,7 +288,7 @@ module.exports = {
 		}
 
 		if (!module.exports.isRelAction(cmd)) return val //Only continue if it's a relative action
-		
+
 		let data = context.getFromDataStore(cmd)
 		if (data === undefined) return undefined
 
@@ -259,17 +297,18 @@ module.exports = {
 		if (cmd.Val == 'Toggle') {
 			val = 1 - curVal
 			return val
-		} 
+		}
 
-		if (curVal <= -9000) { // Handle bottom of range
+		if (curVal <= -9000) {
+			// Handle bottom of range
 			if (cmd.Val < 0) val = -32768
 			if (cmd.Val > 0) val = -6000
 		} else {
 			if (rcpCmd.Type != 'freq') {
-				val = curVal + val	
+				val = curVal + val
 			} else {
 				const index = hpf.findIndex((f) => f == curVal)
-				val = hpf[Math.min(Math.max(index + (val / rcpCmd.Scale), 0), hpf.length - 1)]
+				val = hpf[Math.min(Math.max(index + val / rcpCmd.Scale, 0), hpf.length - 1)]
 			}
 		}
 		val = Math.min(Math.max(val, rcpCmd.Min), rcpCmd.Max) // Clamp it
@@ -285,7 +324,9 @@ module.exports = {
 
 				if (config.model == 'TIO' || config.model == 'RIO') {
 					cmdName = cmdName.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
-					cmdName = cmdName.replace(/\/Dev.*/, (config.model == 'TIO') ? '/InCh/InputLevel' : '/InCh')
+					cmdName = cmdName.replace(/\/Dev.*/, config.model == 'TIO' ? '/InCh/InputLevel' : '/InCh')
+				} else if (config.model == 'RSIO') {
+					cmdName = cmdName.replace('/Dev', cmdName.includes('InputLevel') ? '/InCh' : '/OutCh')
 				} else {
 					let lastSlash = cmdName.lastIndexOf('/')
 					cmdName = cmdName.slice(0, lastSlash)
@@ -298,10 +339,10 @@ module.exports = {
 	},
 
 	isRelAction: (parsedCmd) => {
-		if (parsedCmd.Val == 'Toggle' || (parsedCmd.Rel != undefined && parsedCmd.Rel == true)) { // Action that needs the current value from the device
+		if (parsedCmd.Val == 'Toggle' || (parsedCmd.Rel != undefined && parsedCmd.Rel == true)) {
+			// Action that needs the current value from the device
 			return true
 		}
 		return false
-	}
-
+	},
 }

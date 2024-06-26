@@ -2,15 +2,16 @@ module.exports = {
 	// Create single Action/Feedback
 	createAction: (instance, rcpCmd) => {
 		const rcpNames = require('./rcpNames.json')
+		const rsioChoices = require('./rsioChoices.json')
 		const paramFuncs = require('./paramFuncs.js')
-			
+
 		let newAction = {}
 		let paramsToAdd = []
 		let actionName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 
 		// Add the commands from the data file. Action id's (action.actionId) are the rcp command text (Address)
 		let actionNameParts = actionName.split('/')
-		let rcpNameIdx = (actionName.startsWith('Cue') || actionName.startsWith('Meter')) ? 1 : 0
+		let rcpNameIdx = actionName.startsWith('Cue') || actionName.startsWith('Meter') ? 1 : 0
 
 		newAction = { name: actionName, options: [] }
 
@@ -24,15 +25,25 @@ module.exports = {
 				required: true,
 				useVariables: true,
 			}
-			if (actionNameParts[rcpNameIdx].endsWith('Ch')) {
-				XOpts = {...XOpts,
+			if (rsioChoices[actionName] !== undefined) {
+				XOpts = {
+					...XOpts,
+					type: 'dropdown',
+					label: rsioChoices[actionName].xName || actionNameParts[rcpNameIdx],
+					minChoicesForSearch: 0,
+					choices: rsioChoices[actionName].X,
+					allowCustom: true,
+				}
+			} else if (actionNameParts[rcpNameIdx].endsWith('Ch')) {
+				XOpts = {
+					...XOpts,
 					type: 'dropdown',
 					label: actionNameParts[rcpNameIdx],
 					minChoicesForSearch: 0,
 					choices: rcpNames.chNames.slice(0, parseInt(rcpCmd.X)),
 					allowCustom: true,
 				}
- 			}
+			}
 			paramsToAdd.push(XOpts)
 			rcpNameIdx++
 		}
@@ -51,16 +62,18 @@ module.exports = {
 				useVariables: true,
 				allowCustom: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010)) {
-				YOpts = {...YOpts,
+			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+				YOpts = {
+					...YOpts,
 					type: 'dropdown',
 					choices: [
 						{ id: 1, label: 'A' },
 						{ id: 2, label: 'B' },
 					],
 				}
-			} else if (actionNameParts[0] == "Cue") {
-				YOpts = {...YOpts,
+			} else if (actionNameParts[0] == 'Cue') {
+				YOpts = {
+					...YOpts,
 					label: 'Cue Bus',
 					type: 'dropdown',
 					choices: [
@@ -99,7 +112,8 @@ module.exports = {
 		}
 		switch (rcpCmd.Type) {
 			case 'bool':
-				ValOpts = {...ValOpts,
+				ValOpts = {
+					...ValOpts,
 					label: 'State',
 					choices: [
 						{ id: 1, label: 'On' },
@@ -107,7 +121,7 @@ module.exports = {
 					],
 				}
 				if (rcpCmd.RW.includes('r')) {
-					ValOpts.choices.push({id: 'Toggle', label: 'Toggle' })
+					ValOpts.choices.push({ id: 'Toggle', label: 'Toggle' })
 					ValOpts.default = 'Toggle'
 				}
 				paramsToAdd.push(ValOpts)
@@ -119,19 +133,27 @@ module.exports = {
 			case 'integer':
 			case 'freq':
 				if (rcpCmd.Max != 0 || rcpCmd.Min != 0) {
-					ValOpts = {...ValOpts,
-						type: 'textinput',
-						default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
-					}
-					paramsToAdd.push(ValOpts)
+					if (rsioChoices[actionName] !== undefined) {
+						ValOpts.label = rsioChoices[actionName].valName || actionNameParts[rcpNameIdx]
+						ValOpts.choices = rsioChoices[actionName].Val
+						paramsToAdd.push(ValOpts)
+					} else {
+						ValOpts = {
+							...ValOpts,
+							type: 'textinput',
+							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
+						}
+		
+						paramsToAdd.push(ValOpts)
 
-					if (rcpCmd.RW.includes('r')) {
-						paramsToAdd.push({
-							type: 'checkbox',
-							label: 'Relative',
-							id: 'Rel',
-							default: false,
-						})
+						if (rcpCmd.RW.includes('r')) {
+							paramsToAdd.push({
+								type: 'checkbox',
+								label: 'Relative',
+								id: 'Rel',
+								default: false,
+							})
+						}
 					}
 				}
 				break
@@ -141,19 +163,13 @@ module.exports = {
 				if (actionName.startsWith('CustomFaderBank')) ValOpts.choices = rcpNames.customChNames
 				else if (actionName.endsWith('Color')) ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
 				else if (actionName.endsWith('Icon')) ValOpts.choices = rcpNames.chIcons
-				else if (actionName == 'InCh/Patch') ValOpts.choices = rcpNames.inChPatch
-				else if (actionName == 'DanteOutPort/Patch') ValOpts.choices = rcpNames.danteOutPatch
-				else if (actionName == 'OmniOutPort/Patch') ValOpts.choices = rcpNames.omniOutPatch
-				else if ((config.model == 'PM' || config.model == 'DM7') && (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010)) {
-					ValOpts = {...ValOpts,
-						type: 'textinput',
-						regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/',
-					}
+				
+				else if (rcpNames[actionName] !== undefined) ValOpts.choices = rcpNames[actionName]
+
+				else if ((config.model == 'PM' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+					ValOpts = { ...ValOpts, type: 'textinput', regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/' }
 				} else {
-					ValOpts = {...ValOpts,
-						type: 'textinput',
-						regex: '',
-					}
+					ValOpts = { ...ValOpts, type: 'textinput', regex: '' }
 				}
 				paramsToAdd.push(ValOpts)
 		}
@@ -166,7 +182,7 @@ module.exports = {
 				if (options != undefined) {
 					let subscrAction = JSON.parse(JSON.stringify(options))
 					subscrAction.Address = rcpCmd.Address
-					instance.getFromDataStore(subscrAction)  // Make sure current values are in dataStore
+					instance.getFromDataStore(subscrAction) // Make sure current values are in dataStore
 				}
 			}
 		}
@@ -175,7 +191,7 @@ module.exports = {
 
 		return newAction
 	},
-// Create the Actions & Feedbacks
+	// Create the Actions & Feedbacks
 	updateActions: (instance) => {
 		const paramFuncs = require('./paramFuncs.js')
 		const feedbackFuncs = require('./feedbacks.js')
@@ -215,13 +231,12 @@ module.exports = {
 							let actionCmd = options
 							actionCmd.Address = foundCmd.Address
 							actionCmd.prefix = 'set'
-							instance.addToCmdQueue(actionCmd)						
+							instance.addToCmdQueue(actionCmd)
 						}
 					}
 				}
-				
-				commands[actionName] = newAction // Only include commands that are writable to the console
 
+				commands[actionName] = newAction // Only include commands that are writable to the console
 			}
 		}
 
@@ -239,10 +254,10 @@ module.exports = {
 					id: 'position',
 					default: 'right',
 					choices: [
-						{id: 'left', label: 'left'},
-						{id: 'right', label: 'right'},
-						{id: 'top', label: 'top'},
-						{id: 'bottom', label: 'bottom'},
+						{ id: 'left', label: 'left' },
+						{ id: 'right', label: 'right' },
+						{ id: 'top', label: 'top' },
+						{ id: 'bottom', label: 'bottom' },
 					],
 				},
 				{
@@ -268,7 +283,7 @@ module.exports = {
 					id: 'meterVal2',
 					default: '',
 					useVariables: true,
-				}
+				},
 			],
 			callback: async (feedback, context) => {
 				let position = feedback.options.position
@@ -280,14 +295,14 @@ module.exports = {
 				let bWidth = 0
 				let bLength = 0
 				const bVal = (mtrVal) => {
-					switch(true) {
-						case (mtrVal <= -30) :
+					switch (true) {
+						case mtrVal <= -30:
 							return mtrVal + 62
-						case (mtrVal <= -18) :
-							return ((mtrVal + 30) * 2) + 25
-						case (mtrVal <= 0) :
-							return ((mtrVal + 18) * 2.5) + 54
-						default :
+						case mtrVal <= -18:
+							return (mtrVal + 30) * 2 + 25
+						case mtrVal <= 0:
+							return (mtrVal + 18) * 2.5 + 54
+						default:
 							return 100 // mtrVal > 0
 					}
 				}
@@ -295,34 +310,34 @@ module.exports = {
 					case 'left':
 						ofsX1 = padding
 						ofsY1 = 5
-						bWidth = (feedback.options.meterVal2) ? 3 : 6
-						bLength = feedback.image.height - (ofsY1 * 2)
+						bWidth = feedback.options.meterVal2 ? 3 : 6
+						bLength = feedback.image.height - ofsY1 * 2
 						ofsX2 = ofsX1 + bWidth + 1
 						ofsY2 = ofsY1
 						break
 					case 'right':
 						ofsY1 = 5
-						bWidth = (feedback.options.meterVal2) ? 3 : 6
-						bLength = feedback.image.height - (ofsY1 * 2)
+						bWidth = feedback.options.meterVal2 ? 3 : 6
+						bLength = feedback.image.height - ofsY1 * 2
 						ofsX2 = feedback.image.width - bWidth - padding
-						ofsX1 = (feedback.options.meterVal2) ? ofsX2 - bWidth - 1 : ofsX2
+						ofsX1 = feedback.options.meterVal2 ? ofsX2 - bWidth - 1 : ofsX2
 						ofsY2 = ofsY1
 						break
 					case 'top':
 						ofsX1 = 5
 						ofsY1 = padding
-						bWidth = (feedback.options.meterVal2) ? 3 : 7
-						bLength = feedback.image.width - (ofsX1 * 2)
+						bWidth = feedback.options.meterVal2 ? 3 : 7
+						bLength = feedback.image.width - ofsX1 * 2
 						ofsX2 = ofsX1
 						ofsY2 = ofsY1 + bWidth + 1
 						break
 					case 'bottom':
 						ofsX1 = 5
-						bWidth = (feedback.options.meterVal2) ? 3 : 7
+						bWidth = feedback.options.meterVal2 ? 3 : 7
 						ofsY2 = feedback.image.height - bWidth - padding
-						bLength = feedback.image.width - (ofsX1 * 2)
+						bLength = feedback.image.width - ofsX1 * 2
 						ofsX2 = ofsX1
-						ofsY1 = (feedback.options.meterVal2) ? ofsY2 - bWidth - 1 : ofsY2
+						ofsY1 = feedback.options.meterVal2 ? ofsY2 - bWidth - 1 : ofsY2
 				}
 				const options1 = {
 					width: feedback.image.width,
@@ -334,7 +349,7 @@ module.exports = {
 					],
 					barLength: bLength,
 					barWidth: bWidth,
-					type: (position == 'left' || position == 'right') ? 'vertical' : 'horizontal',
+					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
 					value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal1))),
 					offsetX: ofsX1,
 					offsetY: ofsY1,
@@ -364,19 +379,17 @@ module.exports = {
 						value: 100,
 					}
 				}
-			
-				let bars = (options1.value == 100) ? [graphics.bar(peak1)] : [graphics.bar(options1)]
-				if (options2) {
-					bars.push((options2.value == 100) ? graphics.bar(peak2) : graphics.bar(options2))
-				}
-				
-				return { imageBuffer: graphics.stackImage(bars) }
 
-			}
+				let bars = options1.value == 100 ? [graphics.bar(peak1)] : [graphics.bar(options1)]
+				if (options2) {
+					bars.push(options2.value == 100 ? graphics.bar(peak2) : graphics.bar(options2))
+				}
+
+				return { imageBuffer: graphics.stackImage(bars) }
+			},
 		}
 
 		instance.setActionDefinitions(commands)
 		instance.setFeedbackDefinitions(feedbacks)
-
-	}
+	},
 }

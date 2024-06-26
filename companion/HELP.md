@@ -1,16 +1,18 @@
-## Yamaha Remote Control Protocol - v3.5.0
+## Yamaha Remote Control Protocol - v3.5.1
 
 Please visit https://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
-_Andrew Broughton, May 22, 2024_
+_Andrew Broughton, June 2024_
 
 ---
 
 **Instructions**
 
+Note that this module only works to connected hardware. It does not work with the Editor.
+
 **MACROS** ("Learn" Function)
 
-> *Macro Preset is not available in this version, so please download the Macro Button page from https://discourse.checkcheckonetwo.com/t/macro-page-for-yamaha-rcp-and-midi-module*
+> _Macro Preset is not available in this version, so please download the Macro Button page from https://discourse.checkcheckonetwo.com/t/macro-page-for-yamaha-rcp-and-midi-module_
 
 > Macros utilize the new Action Recorder feature in v3, and will only work while connected to a console.
 
@@ -19,7 +21,8 @@ _Andrew Broughton, May 22, 2024_
 > Don't forget that you can create a macro by pressing a SD button (while recording) that already has actions on it while a console is connected.The new Macro will have those commands in it as well as any you added before you pressed the button or after!
 
 **VARIABLES**
-> Select "Auto-Create Variable" to create a variable in the form **CommandName_Ch#** or **CommandName_Ch#_Mix#**
+
+> Select "Auto-Create Variable" to create a variable in the form **CommandName_Ch#** or **CommandName_Ch#\_Mix#**
 
 > Use **@(internal:custom_MyCustomVar)** in the value field to update a custom variable within a feedback. Custom variable must already exist
 

@@ -3,35 +3,35 @@
 */
 
 module.exports = [
-	upg111to112 = () => ({
+	(upg111to112 = () => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	}),
+	})),
 
-	upg112to113 = () => ({
+	(upg112to113 = () => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	}),
+	})),
 
-	upg113to160 = () => ({
+	(upg113to160 = () => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	}),
+	})),
 
 	// Upgrade  2.x > 3.0.x, changes scene action parameter format
-	upg2xxto30x = (context, props) => {
+	(upg2xxto30x = (context, props) => {
 		var paramFuncs = require('./paramFuncs')
 
 		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.x Upgrade.')
 		var updates = {
 			updatedConfig: null,
 			updatedActions: [],
-			updatedFeedbacks: []
+			updatedFeedbacks: [],
 		}
-		
+
 		if (context.currentConfig == null) {
 			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
 			return updates
@@ -65,30 +65,36 @@ module.exports = [
 
 			rcpCmd = paramFuncs.findRcpCmd(actionAddress)
 			if (rcpCmd !== undefined) {
-
 				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && newAction.options.Val !== 'Toggle') {
 					newAction.options.Val = newAction.options.Val == -32768 ? '-Inf' : newAction.options.Val / rcpCmd.Scale
 					changed = true
 				}
 
 				if (changed) {
-					console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + newAction.actionId + "' -> '" + actionAddress : "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress}' ...`)
-					console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
+					console.log(
+						`Yamaha-RCP Upgrade: Updating ${
+							isAction
+								? "Action '" + newAction.actionId + "' -> '" + actionAddress
+								: "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress
+						}' ...`
+					)
+					console.log(
+						`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+					)
 
 					if (isAction) {
 						newAction.actionId = actionAddress
-						updates.updatedActions.push(newAction) 
+						updates.updatedActions.push(newAction)
 					} else {
 						newAction.feedbackId = actionAddress
 						updates.updatedFeedbacks.push(newAction)
 					}
- 				}
+				}
 
 				return
 			}
-			
-			console.log(`Yamaha-RCP Upgrade: Action ${actionAddress} not found in list!`)
 
+			console.log(`Yamaha-RCP Upgrade: Action ${actionAddress} not found in list!`)
 		}
 
 		for (let k in props.actions) {
@@ -100,24 +106,26 @@ module.exports = [
 		}
 
 		return updates
-	},
+	}),
 
-	upg30xto34x = (context, props) => {
+	(upg30xto34x = (context, props) => {
 		console.log('\nYamaha-RCP Upgrade: Running 3.x -> 3.4 Upgrade.')
 		var updates = {
 			updatedConfig: props.config || {},
 			updatedActions: [],
-			updatedFeedbacks: []
+			updatedFeedbacks: [],
 		}
-		
+
 		if (context.currentConfig == null) {
 			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
 			return updates
 		}
 
-		if (updates.updatedConfig !== undefined && updates.updatedConfig.meterSpeed == undefined) {
-			updates.updatedConfig.meterSpeed = 100; // set default value for new configs
-		} 
+		if (updates.updatedConfig !== undefined) { // set default value for new configs
+			if (updates.updatedConfig.meterSpeed == undefined) updates.updatedConfig.meterSpeed = 100 
+			if (updates.updatedConfig.kaIntervalL == undefined) updates.updatedConfig.kaIntervalL = 10
+			if (updates.updatedConfig.kaIntervalH == undefined) updates.updatedConfig.kaIntervalH = 10 
+		}
 
 		let checkUpgrade = (action, isAction) => {
 			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
@@ -132,12 +140,20 @@ module.exports = [
 			}
 
 			if (changed) {
-				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + action.actionId + "' -> '" + actionAddress : "Feedback '" + action.feedbackId + "' -> '" + actionAddress}' ...`)
-				console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
+				console.log(
+					`Yamaha-RCP Upgrade: Updating ${
+						isAction
+							? "Action '" + action.actionId + "' -> '" + actionAddress
+							: "Feedback '" + action.feedbackId + "' -> '" + actionAddress
+					}' ...`
+				)
+				console.log(
+					`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+				)
 
 				if (isAction) {
 					newAction.actionId = actionAddress
-					updates.updatedActions.push(newAction) 
+					updates.updatedActions.push(newAction)
 				} else {
 					newAction.feedbackId = actionAddress
 					updates.updatedFeedbacks.push(newAction)
@@ -145,7 +161,6 @@ module.exports = [
 			}
 
 			return
-
 		}
 
 		for (let k in props.actions) {
@@ -157,57 +172,6 @@ module.exports = [
 		}
 
 		return updates
-	},
-
-	/*
-	upg34xto348 = (context, props) => {
-		console.log('\nYamaha-RCP Upgrade: Running 3.4.x -> 3.4.8 Upgrade.')
-		var updates = {
-			updatedConfig: props.config || {},
-			updatedActions: [],
-			updatedFeedbacks: []
-		}
-		
-		if (context.currentConfig == null) {
-			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
-			return updates
-		}
-
-		if (updates.updatedConfig !== undefined && updates.updatedConfig.meterSpeed == undefined) {
-			updates.updatedConfig.meterSpeed = 100; // set default value for new configs
-		} 
-
-		let checkUpgrade = (action, isAction) => {
-			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
-
-			let changed = false
-			let newAction = JSON.parse(JSON.stringify(action))
-
-			if (changed) {
-				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? "Action '" + action.actionId + "' -> '" + newAction.actionId : "Feedback '" + action.feedbackId + "' -> '" + newAction.feedbackId}' ...`)
-				console.log(`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`)
-
-				if (isAction) {
-					updates.updatedActions.push(newAction) 
-				} else {
-					updates.updatedFeedbacks.push(newAction)
-				}
-			}
-
-			return
-
-		}
-
-		for (let k in props.actions) {
-			checkUpgrade(props.actions[k], true)
-		}
-
-		for (let k in props.feedbacks) {
-			checkUpgrade(props.feedbacks[k], false)
-		}
-
-		return updates
-	},
-*/
+	}),
 
 ]
