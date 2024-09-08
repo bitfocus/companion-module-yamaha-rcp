@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.1 - for Companion v3
+## Yamaha Remote Control Protocol v3.5.2 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -25,7 +25,7 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-3.5.1
+3.5.2
 
 - Add new functions for DM3 Firmware v2
 - Fix DM3 not retrieving Scene Name or Scene Comment

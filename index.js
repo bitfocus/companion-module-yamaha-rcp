@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// June 24, 2024 Version 3.5.1 (for Companion v3)
+// Sept, 2024 Version 3.5.2 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
