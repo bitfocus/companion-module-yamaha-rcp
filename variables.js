@@ -189,11 +189,16 @@ module.exports = {
 	},
 
 	fbCreatesVar: (instance, cmd, data) => {
+		const wtMtrTable = require('./wtMtrTable.json')
 		const paramFuncs = require('./paramFuncs.js')
 		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 
 		if (rcpCmd.Type == 'mtr') {
-			data = data - 126
+			if (config.model == 'DM7') {
+				data = Math.round(wtMtrTable[data])
+			} else {
+				data = data - 126
+			}
 			if (rcpCmd.Pickoff && cmd.Y > 0) {
 				cmd.Y = rcpCmd.Pickoff.split('|')[cmd.Y - 1] || undefined
 			}
