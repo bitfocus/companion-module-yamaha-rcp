@@ -228,11 +228,12 @@ module.exports = {
 			value[varName] = data
 			instance.setVariableValues(value)
 		} else {
-			const reg = /@\(([^:$)]+):custom_([^)$]+)\)/
+
+			const reg = /^@\(custom:([^)$]+)\)/
 			let hasCustomVar = reg.exec(cmd.Val)
 			if (hasCustomVar) {
 				// Set a custom variable value using @ syntax
-				instance.setCustomVariableValue(hasCustomVar[2], data)
+				instance.setCustomVariableValue(hasCustomVar[1], data)
 			}
 		}
 	},

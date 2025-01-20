@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.3 - for Companion v3
+## Yamaha Remote Control Protocol v3.5.4 - for Companion v3
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -25,9 +25,14 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
+3.5.4
+
+- Updated commands for DM7 firmware 1.60
+
 3.5.3
 
 - Fix incorrect Meter values for DM7
+- Add Meter Presets for DM series
 
 3.5.2
 

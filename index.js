@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Oct 2024 Version 3.5.3 (for Companion v3)
+// Oct 2024 Version 3.5.4 (for Companion v3)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -11,7 +11,8 @@ const upgrade = require('./upgrade')
 
 const RCP_PORT = 49280
 const MSG_DELAY = 5
-const METER_REFRESH = 10000
+const METER_REFRESH = 10000 // 10 seconds
+const KA_INTERVAL = 10000 // 10 seconds
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -53,7 +54,6 @@ class instance extends InstanceBase {
 
 	// Web UI config fields
 	getConfigFields() {
-		let kaMax = 2147482
 		let config = [
 			{
 				type: 'dropdown',
@@ -124,38 +124,6 @@ class instance extends InstanceBase {
 				default: false,
 			},
 			{
-				type: 'number',
-				id: 'kaIntervalH',
-				label: `Keep Alive interval (1 - ${kaMax} seconds)`,
-				width: 8,
-				default: 10,
-				min: 1,
-				max: kaMax,
-				isVisible: (options) => {
-					if (['TF', 'DM3', 'DM7'].includes(options.model)) {
-						options.kaInterval = options.kaIntervalH
-						return true
-					}
-					return false
-				},
-			},
-			{
-				type: 'number',
-				id: 'kaIntervalL',
-				label: `Keep Alive interval (1 - 600 seconds)`,
-				width: 8,
-				default: 10,
-				min: 1,
-				max: 600,
-				isVisible: (options) => {
-					if (!['TF', 'DM3', 'DM7'].includes(options.model)) {
-						options.kaInterval = options.kaIntervalL
-						return true
-					}
-					return false
-				},
-			},
-			{
 				type: 'static-text',
 				label: '**NOTE** KeepAlive will attempt to keep the connection alive by regularly sending an innocuous message to the device.',
 				width: 12,
@@ -210,7 +178,7 @@ class instance extends InstanceBase {
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
 				}
 				if (config.keepAlive) {
-					this.sendCmd(`scpmode keepalive ${config.kaInterval * 1000}`) // To possibly keep the device from closing the connection
+					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
 					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), config.kaInterval * 1000)
 				}
 			})
@@ -358,13 +326,14 @@ class instance extends InstanceBase {
 
 	// Create the preset definitions
 	createPresets() {
-		this.rcpPresets = [
-			{
+		var meterCmds = global.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
+		this.rcpPresets = []
+		var meterPreset = {
 				type: 'button',
-				category: 'Indicators',
-				name: 'Meter Level Indicator',
+				category: 'Level Meters',
+				name: '',
 				style: {
-					text: 'Meter',
+					text: '',
 					size: 'auto',
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(0, 0, 0),
@@ -376,22 +345,51 @@ class instance extends InstanceBase {
 						options: {
 							position: 'right',
 							padding: 1,
-							//							meterVal1: '',
-							//							meterVal2: ''
+							meterVal1: '',
+							meterVal2: '',
 						},
 					},
 					{
-						feedbackId: 'MIXER_Current/Meter/Mix/PostOn',
+						feedbackId: '',
 						options: {
-							//							position: 'right',
-							//							padding: 1,
-							//							meterVal1: '',
-							//							meterVal2: ''
+							X: 1,
+							Y: 1,
+							createVariable: true,
 						},
+						style: {
+						}
 					},
 				],
-			},
-			/*
+			}
+			
+			for (const c of meterCmds) {
+				var curPreset = JSON.parse(JSON.stringify(meterPreset))
+				console.log(c)
+				var addrParts = c.Address.split('/')
+				var cmdName = (addrParts.length > 1) ? addrParts[2] : ''
+				var pickoffIndex = (c.Index < 2100) ? 1 : c.Y
+				var pickoffName = ''
+				if (c.Pickoff) {
+					cmdName = (addrParts.length > 0) ? addrParts[addrParts.length - 1] : ''
+					var pickoffParts = c.Pickoff.split('|')
+					pickoffName = `_${pickoffParts[pickoffIndex - 1]}` 
+				}
+				if (cmdName) {
+					curPreset.name = `Meter Level Indicator - ${cmdName}`
+					curPreset.style.text = `${cmdName}\\nMeter`
+					curPreset.feedbacks[0].options.meterVal1 = `$(${this.label}:V_Meter_${cmdName}_1${pickoffName})`
+					curPreset.feedbacks[1].feedbackId = c.Address.replace(/:/g, '_')
+					curPreset.feedbacks[1].options.Y = pickoffIndex
+					if (cmdName == 'St') { // Make a Stereo Meter for L/R
+						curPreset.feedbacks[0].options.meterVal2 = `$(${this.label}:V_Meter_${cmdName}_2${pickoffName})`
+						curPreset.feedbacks.push(JSON.parse(JSON.stringify(curPreset.feedbacks[1])))
+						curPreset.feedbacks[2].options.X = 2 // Right channel
+					}
+					this.rcpPresets.push(curPreset)
+				}
+			}
+
+/*
 			{
 				type: 'button',
 				category: 'Macros',
@@ -420,8 +418,8 @@ class instance extends InstanceBase {
 					},
 				],
 			},
+
 */
-		]
 
 		this.setPresetDefinitions(this.rcpPresets)
 	}

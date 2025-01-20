@@ -1,8 +1,10 @@
-## Yamaha Remote Control Protocol - v3.5.3
+## Yamaha Remote Control Protocol - v3.5.4
 
 Please visit https://discourse.checkcheckonetwo.com for help, discussions, suggestions, etc.
 
-_Andrew Broughton, 2024_
+This module is not developed by Yamaha and as such Yamaha accepts no liability for the usage of this module. Yamaha also has no responsibility to support this module.
+
+_Andrew Broughton, 2025_
 
 ---
 

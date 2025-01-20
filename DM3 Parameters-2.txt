@@ -181,4 +181,4 @@ OK mtrinfo 2001 "MIXER:Current/Meter/StInCh" 2 3 0 127 0 "dB" mtr any r 1 "PreEQ
 OK mtrinfo 2002 "MIXER:Current/Meter/FxRtnCh" 4 2 0 127 0 "dB" mtr any r 1 "PreFader|PostOn"
 OK mtrinfo 2100 "MIXER:Current/Meter/Mix" 6 3 0 127 0 "dB" mtr any r 1 "PreEQ|PreFader|PostOn"
 OK mtrinfo 2101 "MIXER:Current/Meter/Mtrx" 2 3 0 127 0 "dB" mtr any r 1 "PreEQ|PreFader|PostOn"
-OK mtrinfo 2102 "MIXER:Current/Meter/St" 1 3 0 127 0 "dB" mtr any r 1 "PreEQ|PreFader|PostOn"
+OK mtrinfo 2102 "MIXER:Current/Meter/St" 2 3 0 127 0 "dB" mtr any r 1 "PreEQ|PreFader|PostOn"

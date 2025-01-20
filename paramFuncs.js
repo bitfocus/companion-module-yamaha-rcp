@@ -30,7 +30,7 @@ module.exports = {
 				fname = 'DM3 Parameters-2.txt'
 				break
 			case 'DM7':
-				fname = 'DM7 Parameters-1.txt'
+				fname = 'DM7 Parameters-2.txt'
 				break
 			case 'RIO':
 				fname = 'RIO Parameters-1.txt'
