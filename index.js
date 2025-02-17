@@ -364,7 +364,7 @@ class instance extends InstanceBase {
 			
 			for (const c of meterCmds) {
 				var curPreset = JSON.parse(JSON.stringify(meterPreset))
-				console.log(c)
+				// console.log(c)
 				var addrParts = c.Address.split('/')
 				var cmdName = (addrParts.length > 1) ? addrParts[2] : ''
 				var pickoffIndex = (c.Index < 2100) ? 1 : c.Y

@@ -230,7 +230,7 @@ module.exports = {
 		let cmdStr = `${cmdStart} ${cmdName}`
 		if (prefix == 'set' && rcpCmd.Index < 1010) {
 			// if it's not "set" then it's a "get" which doesn't have a Value, and RecallInc/Dec don't use a value
-			if (rcpCmd.Type == 'string') {
+			if (rcpCmd.Type == 'string' || rcpCmd.Type == 'binary') {
 				options.Val = `"${options.Val}"` // put quotes around the string
 			}
 		} else {
