@@ -3,12 +3,14 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.5.4",
+	"version": "3.5.5",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"postinstall": "husky",
 		"format": "prettier -w .",
-		"lint:raw": "eslint --ext .ts --ext .js --ignore-pattern dist --ignore-pattern pkg",
+		"package": "yarn companion-module-build",
+		"package-dev": "yarn companion-module-build --dev",
+		"lint:raw": "eslint",
 		"lint": "yarn lint:raw ."
 	},
 	"repository": {
