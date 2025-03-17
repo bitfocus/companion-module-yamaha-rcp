@@ -32,6 +32,7 @@ _Andrew Broughton_
 3.5.4
 
 - Updated commands for DM7 firmware 1.60
+- Fix for some strings not being quoted properly
 
 3.5.3
 

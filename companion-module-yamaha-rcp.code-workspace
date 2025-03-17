@@ -5,6 +5,7 @@
 		}
 	],
 	"settings": {
-		"print.colourScheme": "Visual Studio"
+		"print.colourScheme": "Visual Studio",
+		"print.sourcecode.colourScheme": "Visual Studio"
 	}
 }
