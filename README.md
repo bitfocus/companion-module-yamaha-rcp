@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.5 - for Companion v3/4
+## Yamaha Remote Control Protocol v3.5.7 - for Companion v3/4
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -25,7 +25,11 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-3.5.5
+3.5.7
+
+- Add Device Label variable
+
+3.5.6
 
 - Fix DM3 mute action
 

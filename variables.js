@@ -2,6 +2,7 @@ module.exports = {
 	initVars: (instance) => {
 		instance.variables = [
 			{ variableId: 'modelName', name: 'Device Model Name' },
+			{ variableId: 'deviceName', name: 'Device Label' },
 			{ variableId: 'runMode', name: 'Device Run Mode' },
 		]
 		if (!['TF', 'DM3', 'DM7'].includes(config.model)) {
@@ -64,7 +65,8 @@ module.exports = {
 	// Get info from a connected console
 	getVars: (instance) => {
 		instance.sendCmd('devinfo productname') // Request Device Model
-		instance.sendCmd('devstatus runmode') // Request Run Mode
+		instance.sendCmd('devinfo devicename')  // Request Device Label
+		instance.sendCmd('devstatus runmode')   // Request Run Mode
 		if (!['TF', 'DM3', 'DM7'].includes(config.model)) instance.sendCmd('devstatus error') // Request error status
 		
 		switch (config.model) {
@@ -101,7 +103,10 @@ module.exports = {
 						}
 						instance.setVariableValues({ modelName: msg.Val })
 						break
-				}
+					case 'devicename':
+						instance.setVariableValues({ deviceName: msg.Val })
+						break
+					}
 				break
 			}
 			case 'devstatus': {
