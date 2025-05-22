@@ -380,7 +380,7 @@ class instance extends InstanceBase {
 					curPreset.feedbacks[0].options.meterVal1 = `$(${this.label}:V_Meter_${cmdName}_1${pickoffName})`
 					curPreset.feedbacks[1].feedbackId = c.Address.replace(/:/g, '_')
 					curPreset.feedbacks[1].options.Y = pickoffIndex
-					if (cmdName == 'St') { // Make a Stereo Meter for L/R
+					if (cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh') { // Make a Stereo Meter
 						curPreset.feedbacks[0].options.meterVal2 = `$(${this.label}:V_Meter_${cmdName}_2${pickoffName})`
 						curPreset.feedbacks.push(JSON.parse(JSON.stringify(curPreset.feedbacks[1])))
 						curPreset.feedbacks[2].options.X = 2 // Right channel
