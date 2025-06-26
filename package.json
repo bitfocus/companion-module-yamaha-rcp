@@ -3,7 +3,7 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.5.9",
+	"version": "3.5.10",
 	"main": "index.js",
 	"scripts": {
 		"postinstall": "husky",
