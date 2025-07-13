@@ -135,7 +135,7 @@ OK prminfo 168 "MIXER:Current/Monitor/DownMix/CToLOn" 1 1 0 1 0 "" integer any r
 OK prminfo 169 "MIXER:Current/Monitor/DownMix/LFEToLOn" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 170 "MIXER:Current/Monitor/DownMix/LsToLOn" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 171 "MIXER:Current/Monitor/DownMix/RsToLOn" 1 1 0 1 0 "" integer any rw 1
-OK prminfo 1120 "MIXER:Current/Monitor/DownMix/LToROn" 1 1 0 1 0 "" integer any rw 1
+OK prminfo 172 "MIXER:Current/Monitor/DownMix/LToROn" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 173 "MIXER:Current/Monitor/DownMix/RToROn" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 174 "MIXER:Current/Monitor/DownMix/CToROn" 1 1 0 1 0 "" integer any rw 1
 OK prminfo 175 "MIXER:Current/Monitor/DownMix/LFEToROn" 1 1 0 1 0 "" integer any rw 1
