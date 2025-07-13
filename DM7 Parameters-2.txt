@@ -70,7 +70,7 @@ OK prminfo 68 "MIXER:Current/Mix/HPF/Slope" 48 1 6 24 12 "" integer any rw 1
 OK prminfo 69 "MIXER:Current/Mix/LPF/On" 48 1 0 1 0 "" integer any rw 1
 OK prminfo 70 "MIXER:Current/Mix/LPF/Freq" 48 1 200 200000 160000 "" integer any rw 10
 OK prminfo 71 "MIXER:Current/Mix/LPF/Slope" 48 1 6 12 12 "" integer any rw 1
-OK prminfo 120 "MIXER:Current/Mix/PEQ/BankSelect" 48 1 0 1 0 "" integer any rw 1
+OK prminfo 72 "MIXER:Current/Mix/PEQ/BankSelect" 48 1 0 1 0 "" integer any rw 1
 OK prminfo 73 "MIXER:Current/Mix/PEQ/On" 48 1 0 1 1 "" integer any rw 1
 OK prminfo 74 "MIXER:Current/Mix/PEQ/Type" 48 1 0 12 "PRECISE" "" integer any rw 1
 OK prminfo 75 "MIXER:Current/Mix/PEQ/Band/Bypass" 48 8 0 1 0 "" integer any rw 1
