@@ -207,8 +207,9 @@ module.exports = {
 		if (rcpCmd.Index >= 1010 && rcpCmd.Index < 2000) {
 			// RecallInc/Dec
 			cmdStart = 'event'
+			cmdName = cmdName.replace('/Bank', '') // Remove "Bank" from command
 			options.X = ''
-			options.Y = ''
+			options.Y = (config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
 		}
 
 		if (rcpCmd.Index >= 2000) {

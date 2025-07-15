@@ -141,6 +141,7 @@ module.exports = {
 					case 'PM':
 						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${msg.Val}"`)
 						break
+					case 'DM3':
 					case 'DM7':
 						instance.sendCmd(`ssinfot_ex ${msg.Address} ${msg.Val}`)
 				}

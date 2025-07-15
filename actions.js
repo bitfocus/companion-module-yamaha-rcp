@@ -62,7 +62,7 @@ module.exports = {
 				useVariables: true,
 				allowCustom: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
 				YOpts = {
 					...YOpts,
 					type: 'dropdown',
