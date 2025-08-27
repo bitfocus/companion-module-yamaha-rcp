@@ -25,6 +25,11 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
+3.5.11
+
+- Increase max channels for larger consoles
+- Fix KeepAlive settings
+
 3.5.8
 
 - Add Device Label variable
