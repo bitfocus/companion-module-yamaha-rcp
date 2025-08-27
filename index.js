@@ -1,6 +1,6 @@
 // Control module for Yamaha Pro Audio digital mixers
 // Andrew Broughton <andy@checkcheckonetwo.com>
-// Jun 2025 Version 3.5.10 (for Companion v3/v4)
+// Aug 2025 Version 3.5.11 (for Companion v3/v4)
 
 const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
 
@@ -125,11 +125,10 @@ class instance extends InstanceBase {
 			},
 			{
 				type: 'static-text',
-				label: '**NOTE** KeepAlive will attempt to keep the connection alive by regularly sending an innocuous message to the device.',
+				label: '**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
 				width: 12,
 			},
 		]
-		//config.kaInterval = (['TF', 'DM3', 'DM7'].includes(options.model)) ? config.kaInterval
 		return config
 	}
 
@@ -179,7 +178,7 @@ class instance extends InstanceBase {
 				}
 				if (config.keepAlive) {
 					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
-					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), config.kaInterval * 1000)
+					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), KA_INTERVAL)
 				}
 			})
 
