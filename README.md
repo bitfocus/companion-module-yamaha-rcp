@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.11 - for Companion v3/4
+## Yamaha Remote Control Protocol v3.5.12 - for Companion v3/4
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,6 +24,11 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.5.12
+
+- Fix missing MuteGrpCtrl/On Action for DM7
+- Add local variable support
 
 3.5.11
 

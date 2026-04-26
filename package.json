@@ -3,13 +3,13 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.5.11",
+	"version": "3.5.12",
 	"main": "index.js",
 	"scripts": {
 		"postinstall": "husky",
 		"format": "prettier -w .",
 		"package": "yarn companion-module-build",
-		"package-dev": "yarn companion-module-build --dev",
+		"package:dev": "yarn companion-module-build --dev",
 		"lint:raw": "eslint",
 		"lint": "yarn lint:raw ."
 	},
@@ -19,11 +19,11 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^2.2.2",
+		"@companion-module/tools": "^2.6.1",
 		"husky": "^9.1.7"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.11.3",
+		"@companion-module/base": "^1.14.1",
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
