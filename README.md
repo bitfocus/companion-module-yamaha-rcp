@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.12 - for Companion v3/4
+## Yamaha Remote Control Protocol v3.5.13 - for Companion v3/4
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,6 +24,11 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.5.13
+
+- Revert back to module/base 1.12
+- Fix logging error
 
 3.5.12
 

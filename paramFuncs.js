@@ -259,8 +259,8 @@ module.exports = {
 
 			return parsedOptions
 		} catch (error) {
-			this.log('error', `\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
-			this.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
+			context.log('error', `\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
+			context.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
 		}
 	},
 

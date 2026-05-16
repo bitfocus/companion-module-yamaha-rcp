@@ -3,7 +3,7 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.5.12",
+	"version": "3.5.13",
 	"main": "index.js",
 	"scripts": {
 		"postinstall": "husky",
@@ -19,11 +19,11 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^2.6.1",
+		"@companion-module/tools": "^3.0.0",
 		"husky": "^9.1.7"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.14.1",
+		"@companion-module/base": "^1.12.0",
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
