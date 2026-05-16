@@ -530,15 +530,11 @@ class instance extends InstanceBase {
 	// Start requesting meter data
 	startMeters() {
 		let mtrFeedbacks = rcpCommands.filter((f) => f.Type == 'mtr')
-		let fbNames = Array.from(mtrFeedbacks, (f) => f.Address)
-		fbNames.forEach((fb) => {
-			let cmd = this.dataStore[fb]
-			if (cmd) {
-				for (let key in cmd[0]) {
-					let cmdToSend = { Address: fb, X: 0, Y: key }
-					cmdToSend.prefix = 'get'
-					this.addToCmdQueue(cmdToSend)
-				}
+		mtrFeedbacks.forEach((rcpCmd) => {
+			let pickoffCount = rcpCmd.Pickoff ? rcpCmd.Pickoff.split('|').length : 1
+			for (let y = 0; y < pickoffCount; y++) {
+				let cmdToSend = { Address: rcpCmd.Address, X: 0, Y: y, prefix: 'get' }
+				this.addToCmdQueue(cmdToSend)
 			}
 		})
 	}
