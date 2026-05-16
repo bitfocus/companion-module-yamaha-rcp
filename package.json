@@ -19,12 +19,15 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^3.0.0",
+		"@companion-module/tools": "^2.0.0",
 		"husky": "^9.1.7"
 	},
 	"dependencies": {
 		"@companion-module/base": "^1.12.0",
 		"companion-module-utils": "^0.5.0"
+	},
+	"resolutions": {
+		"serialize-javascript": "7.0.5"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
