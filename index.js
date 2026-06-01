@@ -13,6 +13,7 @@ const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
+const DEFAULT_FADER_POLL_INTERVAL = 100
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -32,6 +33,7 @@ class instance extends InstanceBase {
 		this.queueTimer
 		this.fadeTimers = {}
 		this.meterTimer = {}
+		this.faderLevelTimer = {}
 		this.kaTimer = {}
 		this.variables = []
 		this.newConsole()
@@ -52,6 +54,7 @@ class instance extends InstanceBase {
 			clearTimeout(timer)
 		}
 		clearInterval(this.meterTimer)
+		clearInterval(this.faderLevelTimer)
 		this.socket?.destroy()
 		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
 	}
@@ -129,6 +132,16 @@ class instance extends InstanceBase {
 				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
 			},
 			{
+				type: 'number',
+				id: 'faderPollSpeed',
+				label: 'Fader poll interval (40 - 1000 ms)',
+				width: 9,
+				default: DEFAULT_FADER_POLL_INTERVAL,
+				min: 40,
+				max: 1000,
+				isVisible: (options) => options.faderLevelVariables && !['RIO', 'TIO', 'RSIO'].includes(options.model),
+			},
+			{
 				type: 'static-text',
 				label: '**NOTE** Enable fader level variables to use fades in level change actions.',
 				width: 9,
@@ -186,6 +199,7 @@ class instance extends InstanceBase {
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
 				clearInterval(this.meterTimer)
+				clearInterval(this.faderLevelTimer)
 				clearInterval(this.kaTimer)
 				varFuncs.getVars(this)
 				varFuncs.getFaderLevelVars(this)
@@ -194,6 +208,10 @@ class instance extends InstanceBase {
 				if (config.metering) {
 					this.startMeters()
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
+				}
+				if (config.faderLevelVariables) {
+					const faderPollSpeed = Math.min(Math.max(config.faderPollSpeed || DEFAULT_FADER_POLL_INTERVAL, 40), 1000)
+					this.faderLevelTimer = setInterval(() => varFuncs.getFaderLevelVars(this), faderPollSpeed)
 				}
 				if (config.keepAlive) {
 					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
