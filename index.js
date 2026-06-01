@@ -13,7 +13,7 @@ const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
-const DEFAULT_FADER_POLL_INTERVAL = 100
+const DEFAULT_FADER_POLL_INTERVAL = 1000
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -347,7 +347,14 @@ class instance extends InstanceBase {
 				let nextCmdVal = paramFuncs.parseVal(this, nextCmd)
 				if (nextCmdVal == undefined) {
 					this.cmdQueue.shift()
-					this.cmdQueue.push(nextCmd)
+					const matchingGet = this.cmdQueue.findIndex(
+						(c) => c.prefix == 'get' && c.Address == nextCmd.Address && c.X == nextCmd.X && c.Y == nextCmd.Y
+					)
+					if (matchingGet > -1) {
+						this.cmdQueue.splice(matchingGet + 1, 0, nextCmd)
+					} else {
+						this.cmdQueue.push(nextCmd)
+					}
 
 					this.queueTimer = setTimeout(() => {
 						this.processCmdQueue()
