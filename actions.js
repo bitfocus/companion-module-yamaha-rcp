@@ -217,11 +217,11 @@ module.exports = {
 			if (rcpCommand.RW.includes('w')) {
 				newAction.callback = async (action, context) => {
 					let foundCmd = paramFuncs.findRcpCmd(action.actionId) // Find which command
-					let XArr = JSON.parse(await context.parseVariablesInString(action.options.X || 0))
+					let XArr = JSON.parse(await context.parseVariablesInString(String(action.options.X || 0)))
 					if (!Array.isArray(XArr)) {
 						XArr = [XArr]
 					}
-					let YArr = JSON.parse(await context.parseVariablesInString(action.options.Y || 0))
+					let YArr = JSON.parse(await context.parseVariablesInString(String(action.options.Y || 0)))
 					if (!Array.isArray(YArr)) {
 						YArr = [YArr]
 					}
