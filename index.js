@@ -477,12 +477,21 @@ class instance extends InstanceBase {
 							],
 							feedbacks: [
 								{
+									feedbackId: actionId,
+									options: {
+										X: x,
+										Y: y,
+										createVariable: true,
+									},
+								},
+								{
 									feedbackId: 'Meter',
 									options: {
-										position: 'left',
+										position: 'bottom',
 										padding: 1,
 										meterVal1: faderVariable,
 										meterVal2: '',
+										scale: 'fader',
 									},
 								},
 							],
@@ -533,12 +542,21 @@ class instance extends InstanceBase {
 							],
 							feedbacks: [
 								{
+									feedbackId: actionId,
+									options: {
+										X: x,
+										Y: y,
+										createVariable: true,
+									},
+								},
+								{
 									feedbackId: 'Meter',
 									options: {
-										position: 'left',
+										position: 'bottom',
 										padding: 1,
 										meterVal1: faderVariable,
 										meterVal2: '',
+										scale: 'fader',
 									},
 								},
 								...(meterVariable
@@ -550,6 +568,7 @@ class instance extends InstanceBase {
 													padding: 1,
 													meterVal1: meterVariable,
 													meterVal2: '',
+													scale: 'meter',
 												},
 											},
 										]

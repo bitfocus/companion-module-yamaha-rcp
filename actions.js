@@ -293,6 +293,16 @@ module.exports = {
 					default: '',
 					useVariables: true,
 				},
+				{
+					type: 'dropdown',
+					label: 'Scale',
+					id: 'scale',
+					default: 'meter',
+					choices: [
+						{ id: 'meter', label: 'Meter' },
+						{ id: 'fader', label: 'Fader Position' },
+					],
+				},
 			],
 			callback: async (feedback, context) => {
 				let position = feedback.options.position
@@ -314,6 +324,12 @@ module.exports = {
 						default:
 							return 100 // mtrVal > 0
 					}
+				}
+				const faderVal = (level) => {
+					if (String(level).toUpperCase() == '-INF') return 0
+					const value = Number(level)
+					if (isNaN(value)) return 0
+					return Math.min(Math.max(((value + 90) / 100) * 100, 0), 100)
 				}
 				switch (position) {
 					case 'left':
@@ -351,15 +367,43 @@ module.exports = {
 				const options1 = {
 					width: feedback.image.width,
 					height: feedback.image.height,
-					colors: [
-						{ size: 45, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
-						{ size: 52, color: combineRgb(255, 165, 0), background: combineRgb(255, 165, 0), backgroundOpacity: 64 },
-						{ size: 1, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
-					],
+					colors:
+						feedback.options.scale == 'fader'
+							? [
+									{
+										size: 100,
+										color: combineRgb(0, 96, 255),
+										background: combineRgb(0, 96, 255),
+										backgroundOpacity: 64,
+									},
+								]
+							: [
+									{
+										size: 45,
+										color: combineRgb(0, 255, 0),
+										background: combineRgb(0, 255, 0),
+										backgroundOpacity: 64,
+									},
+									{
+										size: 52,
+										color: combineRgb(255, 165, 0),
+										background: combineRgb(255, 165, 0),
+										backgroundOpacity: 64,
+									},
+									{
+										size: 1,
+										color: combineRgb(255, 0, 0),
+										background: combineRgb(255, 0, 0),
+										backgroundOpacity: 64,
+									},
+								],
 					barLength: bLength,
 					barWidth: bWidth,
 					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
-					value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal1))),
+					value:
+						feedback.options.scale == 'fader'
+							? faderVal(await context.parseVariablesInString(feedback.options.meterVal1))
+							: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal1))),
 					offsetX: ofsX1,
 					offsetY: ofsY1,
 					opacity: 255,
@@ -376,7 +420,10 @@ module.exports = {
 				if (feedback.options.meterVal2) {
 					options2 = {
 						...options1,
-						value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal2))),
+						value:
+							feedback.options.scale == 'fader'
+								? faderVal(await context.parseVariablesInString(feedback.options.meterVal2))
+								: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal2))),
 						offsetX: ofsX2,
 						offsetY: ofsY2,
 					}
