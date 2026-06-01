@@ -124,6 +124,11 @@ module.exports = {
 
 		const paramFuncs = require('./paramFuncs.js')
 		const faderLevelCommands = rcpCommands.filter((cmd) => paramFuncs.isFaderLevel(cmd) && cmd.RW.includes('r'))
+		const faderLevelAddresses = new Set(faderLevelCommands.map((cmd) => cmd.Address))
+		const hasPendingFaderPoll = instance.cmdQueue?.some(
+			(cmd) => cmd.prefix == 'get' && faderLevelAddresses.has(cmd.Address)
+		)
+		if (hasPendingFaderPoll) return
 
 		for (const rcpCmd of faderLevelCommands) {
 			const xCount = Math.max(parseInt(rcpCmd.X) || 1, 1)

@@ -304,7 +304,19 @@ class instance extends InstanceBase {
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
 		} else {
-			this.cmdQueue.push(cmdToAdd)
+			if (cmdToAdd.prefix == 'set') {
+				this.cmdQueue = this.cmdQueue.filter(
+					(c) => !(c.prefix == 'get' && c.Address == cmdToAdd.Address && c.X == cmdToAdd.X && c.Y == cmdToAdd.Y)
+				)
+				const firstGet = this.cmdQueue.findIndex((c) => c.prefix == 'get')
+				if (firstGet > -1) {
+					this.cmdQueue.splice(firstGet, 0, cmdToAdd)
+				} else {
+					this.cmdQueue.push(cmdToAdd)
+				}
+			} else {
+				this.cmdQueue.push(cmdToAdd)
+			}
 		}
 
 		if (this.queueTimer) {
