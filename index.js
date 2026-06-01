@@ -340,6 +340,41 @@ class instance extends InstanceBase {
 	createPresets() {
 		var meterCmds = global.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
 		this.rcpPresets = []
+		const faderMeterNames = {
+			InCh: 'InCh',
+			StInCh: 'StInCh',
+			FxRtnCh: 'FxRtnCh',
+			Mix: 'Mix',
+			Mtrx: 'Mtrx',
+			St: 'St',
+			Mono: 'Mono',
+		}
+		const getMeterVariable = (faderName, x) => {
+			let meterName = faderMeterNames[faderName]
+			if (!meterName) return ''
+
+			const meterCmd = meterCmds.find((c) => c.Address.endsWith(`/Meter/${meterName}`))
+			if (meterCmd === undefined) return ''
+
+			const pickoffs = meterCmd.Pickoff?.split('|')
+			const pickoff = pickoffs?.includes('PreFader') ? 'PreFader' : pickoffs?.[0]
+			return `$(${this.label}:V_Meter_${meterName}_${x}${pickoff ? `_${pickoff}` : ''})`
+		}
+		const getFaderVariable = (rcpCmd, x, y) => {
+			return `$(${this.label}:${paramFuncs.getIndexedVariableName(rcpCmd, x - 1, y - 1)})`
+		}
+		const getFaderLabel = (faderName, x, y, yCount) => {
+			if (faderName == 'St') return `ST ${x}`
+			if (faderName == 'Mtrx') return `MTRX ${x}`
+			if (faderName == 'FxRtnCh') return `FX RTN ${x}`
+			if (faderName == 'StInCh') return `ST IN ${x}`
+			if (faderName == 'InCh') return `CH ${x}`
+			if (faderName == 'Fx') return yCount > 1 ? `FX ${x}-${y}` : `FX ${x}`
+			return `${faderName} ${x}`
+		}
+		const faderCmds = global.rcpCommands
+			.filter((c) => paramFuncs.isFaderLevel(c) && c.RW.includes('w'))
+			.sort((a, b) => (a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1))
 		var meterPreset = {
 				type: 'button',
 				category: 'Level Meters',
@@ -398,6 +433,130 @@ class instance extends InstanceBase {
 						curPreset.feedbacks[2].options.X = 2 // Right channel
 					}
 					this.rcpPresets.push(curPreset)
+				}
+			}
+
+			for (const c of faderCmds) {
+				const faderName = c.Address.split('/').at(-3)
+				const xCount = Math.max(parseInt(c.X) || 1, 1)
+				const yCount = Math.max(parseInt(c.Y) || 1, 1)
+				const actionId = c.Address.replace(/:/g, '_')
+
+				for (let x = 1; x <= xCount; x++) {
+					for (let y = 1; y <= yCount; y++) {
+						const label = getFaderLabel(faderName, x, y, yCount)
+						const faderVariable = getFaderVariable(c, x, y)
+						const meterVariable = getMeterVariable(faderName, x)
+
+						this.rcpPresets.push({
+							type: 'button',
+							category: 'Level Meters - Fader Control Buttons',
+							name: `${label} fade to 0 dB`,
+							style: {
+								text: `${label}\\n0 dB`,
+								size: 'auto',
+								color: combineRgb(255, 255, 255),
+								bgcolor: combineRgb(0, 0, 0),
+							},
+							steps: [
+								{
+									down: [
+										{
+											actionId,
+											options: {
+												X: x,
+												Y: y,
+												Val: 0,
+												Fade: 1,
+												Rel: false,
+											},
+										},
+									],
+									up: [],
+								},
+							],
+							feedbacks: [
+								{
+									feedbackId: 'Meter',
+									options: {
+										position: 'left',
+										padding: 1,
+										meterVal1: faderVariable,
+										meterVal2: '',
+									},
+								},
+							],
+						})
+
+						this.rcpPresets.push({
+							type: 'button',
+							category: 'Level Meters - Fader Control Knobs',
+							name: `${label} fader control`,
+							options: {
+								rotaryActions: true,
+							},
+							style: {
+								text: `${label}\\n${faderVariable}`,
+								size: 'auto',
+								color: combineRgb(255, 255, 255),
+								bgcolor: combineRgb(0, 0, 0),
+							},
+							steps: [
+								{
+									down: [],
+									up: [],
+									rotate_left: [
+										{
+											actionId,
+											options: {
+												X: x,
+												Y: y,
+												Val: -1,
+												Fade: 0,
+												Rel: true,
+											},
+										},
+									],
+									rotate_right: [
+										{
+											actionId,
+											options: {
+												X: x,
+												Y: y,
+												Val: 1,
+												Fade: 0,
+												Rel: true,
+											},
+										},
+									],
+								},
+							],
+							feedbacks: [
+								{
+									feedbackId: 'Meter',
+									options: {
+										position: 'left',
+										padding: 1,
+										meterVal1: faderVariable,
+										meterVal2: '',
+									},
+								},
+								...(meterVariable
+									? [
+											{
+												feedbackId: 'Meter',
+												options: {
+													position: 'right',
+													padding: 1,
+													meterVal1: meterVariable,
+													meterVal2: '',
+												},
+											},
+										]
+									: []),
+							],
+						})
+					}
 				}
 			}
 
