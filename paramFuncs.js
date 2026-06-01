@@ -29,6 +29,21 @@ module.exports = {
 		)
 	},
 
+	isFaderLevel: (rcpCmd) => {
+		return module.exports.isFadeableLevel(rcpCmd) && rcpCmd.Address.includes('/Fader/Level')
+	},
+
+	getBaseVariableName: (rcpCmd) => {
+		return `V_${rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')}`
+	},
+
+	getIndexedVariableName: (rcpCmd, x, y) => {
+		let varName = module.exports.getBaseVariableName(rcpCmd)
+		if (parseInt(rcpCmd.X) > 1) varName += `_${parseInt(x) + 1}`
+		if (parseInt(rcpCmd.Y) > 1) varName += `_${parseInt(y) + 1}`
+		return varName
+	},
+
 	getFadeKey: (cmd) => `${cmd.Address}:${cmd.X ?? 0}:${cmd.Y ?? 0}`,
 
 	cancelFade: (instance, cmd) => {

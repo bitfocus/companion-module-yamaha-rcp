@@ -122,6 +122,14 @@ class instance extends InstanceBase {
 			},
 			{
 				type: 'checkbox',
+				id: 'faderLevelVariables',
+				label: 'Enable Fader Level Variables?',
+				width: 3,
+				default: false,
+				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
+			},
+			{
+				type: 'checkbox',
 				id: 'keepAlive',
 				label: 'Enable KeepAlive?',
 				width: 3,
@@ -174,6 +182,7 @@ class instance extends InstanceBase {
 				clearInterval(this.meterTimer)
 				clearInterval(this.kaTimer)
 				varFuncs.getVars(this)
+				varFuncs.getFaderLevelVars(this)
 				this.queueTimer = {}
 				this.processCmdQueue()
 				if (config.metering) {
@@ -503,6 +512,7 @@ class instance extends InstanceBase {
 		}
 		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
 			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
+			varFuncs.setFaderLevelVar(this, cmd)
 			this.checkFeedbacks(dsAddr.replace(/:/g, '_')) // Make sure variables are updated
 		}
 	}
