@@ -129,6 +129,12 @@ class instance extends InstanceBase {
 				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
 			},
 			{
+				type: 'static-text',
+				label: '**NOTE** Enable fader level variables to use fades in level change actions.',
+				width: 9,
+				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
+			},
+			{
 				type: 'checkbox',
 				id: 'keepAlive',
 				label: 'Enable KeepAlive?',
