@@ -1,4 +1,46 @@
 module.exports = {
+	createFadeOption: () => {
+		return {
+			type: 'dropdown',
+			label: 'Fading',
+			id: 'Fade',
+			default: 0,
+			choices: [
+				{ id: 0, label: 'Off' },
+				{ id: 1, label: '1s' },
+				{ id: 2, label: '2s' },
+				{ id: 3, label: '3s' },
+				{ id: 5, label: '5s' },
+				{ id: 10, label: '10s' },
+			],
+			minChoicesForSearch: 0,
+		}
+	},
+
+	isFadeableLevel: (rcpCmd) => {
+		return (
+			rcpCmd !== undefined &&
+			rcpCmd.Type == 'integer' &&
+			rcpCmd.Unit == 'dB' &&
+			parseInt(rcpCmd.Min) <= -32768 &&
+			parseInt(rcpCmd.Max) == 1000 &&
+			parseInt(rcpCmd.Scale) == 100 &&
+			rcpCmd.Address.endsWith('/Level')
+		)
+	},
+
+	getFadeKey: (cmd) => `${cmd.Address}:${cmd.X ?? 0}:${cmd.Y ?? 0}`,
+
+	cancelFade: (instance, cmd) => {
+		if (instance.fadeTimers == undefined || cmd == undefined) return
+
+		const fadeKey = module.exports.getFadeKey(cmd)
+		if (instance.fadeTimers[fadeKey] != undefined) {
+			clearTimeout(instance.fadeTimers[fadeKey])
+			delete instance.fadeTimers[fadeKey]
+		}
+	},
+
 	makeChNames: (r) => {
 		for (let i = 1; i <= 288; i++) {
 			r.chNames.push({ id: i, label: `CH${i}` })
@@ -320,6 +362,91 @@ module.exports = {
 		val = Math.min(Math.max(val, rcpCmd.Min), rcpCmd.Max) // Clamp it
 
 		return val
+	},
+
+	fadeCmd: (instance, cmd) => {
+		const FADE_STEP_DURATION_MS = 50
+		const FADE_STEP_COALESCE_MS = 10
+		const FADER_MIN = -9000
+
+		let rcpCmd = module.exports.findRcpCmd(cmd.Address)
+		if (!module.exports.isFadeableLevel(rcpCmd)) {
+			module.exports.cancelFade(instance, cmd)
+			instance.addToCmdQueue(cmd)
+			return
+		}
+		const toDisplayValue = (value) => (value <= parseInt(rcpCmd.Min) ? '-Inf' : value / parseInt(rcpCmd.Scale))
+
+		let fadeTimeMs = Number(cmd.Fade || 0) * 1000
+		if (!(fadeTimeMs > 0)) {
+			module.exports.cancelFade(instance, cmd)
+			instance.addToCmdQueue(cmd)
+			return
+		}
+
+		let start = instance.getFromDataStore(cmd)
+		if (start === undefined) {
+			instance.log('warn', `Cannot fade ${cmd.Address}; current value is not available yet`)
+			return
+		}
+
+		let end = module.exports.parseVal(instance, cmd)
+		if (end === undefined) {
+			return
+		}
+
+		start = parseInt(start)
+		end = parseInt(end)
+		if (isNaN(start) || isNaN(end)) {
+			instance.log('warn', `Cannot fade ${cmd.Address}; start or end value is not numeric`)
+			return
+		}
+
+		if (start == end) {
+			fadeTimeMs = 0
+		}
+
+		if (fadeTimeMs <= FADE_STEP_COALESCE_MS) {
+			const endCmd = { ...cmd, Val: toDisplayValue(end), Rel: false }
+			instance.addToCmdQueue(endCmd)
+			return
+		}
+
+		const numericStart = Math.max(start, FADER_MIN)
+		const numericEnd = Math.max(end, FADER_MIN)
+		const totalLevelChange = numericEnd - numericStart
+		let elapsedMs = 0
+		if (instance.fadeTimers == undefined) instance.fadeTimers = {}
+		const fadeKey = module.exports.getFadeKey(cmd)
+		module.exports.cancelFade(instance, cmd)
+
+		const step = () => {
+			if (elapsedMs >= fadeTimeMs) {
+				const endCmd = { ...cmd, Val: toDisplayValue(end), Rel: false }
+				instance.addToCmdQueue(endCmd)
+				delete instance.fadeTimers[fadeKey]
+				return
+			}
+
+			const nextStepDeltaMs =
+				elapsedMs + FADE_STEP_DURATION_MS + FADE_STEP_COALESCE_MS > fadeTimeMs
+					? fadeTimeMs - elapsedMs
+					: FADE_STEP_DURATION_MS
+			const level = Math.round(numericStart + totalLevelChange * ((elapsedMs + nextStepDeltaMs / 2) / fadeTimeMs))
+			const stepCmd = {
+				...cmd,
+				Val: toDisplayValue(Math.min(Math.max(level, parseInt(rcpCmd.Min)), parseInt(rcpCmd.Max))),
+				Rel: false,
+			}
+			instance.addToCmdQueue(stepCmd)
+
+			instance.fadeTimers[fadeKey] = setTimeout(() => {
+				elapsedMs += nextStepDeltaMs
+				step()
+			}, nextStepDeltaMs)
+		}
+
+		step()
 	},
 
 	findRcpCmd: (cmdName, cmdAction = '') => {

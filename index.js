@@ -30,6 +30,7 @@ class instance extends InstanceBase {
 		this.dataStore = {} // status, Address (using ":"), X, Y, Val
 		this.cmdQueue = [] // prefix, Address (using ":"), X, Y, Val
 		this.queueTimer
+		this.fadeTimers = {}
 		this.meterTimer = {}
 		this.kaTimer = {}
 		this.variables = []
@@ -47,6 +48,9 @@ class instance extends InstanceBase {
 	// Module deletion
 	async destroy() {
 		clearTimeout(this.queueTimer)
+		for (const timer of Object.values(this.fadeTimers || {})) {
+			clearTimeout(timer)
+		}
 		clearInterval(this.meterTimer)
 		this.socket?.destroy()
 		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)

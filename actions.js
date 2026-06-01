@@ -146,6 +146,10 @@ module.exports = {
 		
 						paramsToAdd.push(ValOpts)
 
+						if (paramFuncs.isFadeableLevel(rcpCmd)) {
+							paramsToAdd.push(paramFuncs.createFadeOption())
+						}
+
 						if (rcpCmd.RW.includes('r')) {
 							paramsToAdd.push({
 								type: 'checkbox',
@@ -231,7 +235,12 @@ module.exports = {
 							let actionCmd = options
 							actionCmd.Address = foundCmd.Address
 							actionCmd.prefix = 'set'
-							instance.addToCmdQueue(actionCmd)
+							if (paramFuncs.isFadeableLevel(foundCmd) && Number(actionCmd.Fade || 0) > 0) {
+								paramFuncs.fadeCmd(instance, actionCmd)
+							} else {
+								paramFuncs.cancelFade(instance, actionCmd)
+								instance.addToCmdQueue(actionCmd)
+							}
 						}
 					}
 				}

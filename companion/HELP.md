@@ -31,3 +31,7 @@ Note that this module only works to connected hardware. It does not work with th
 **DYNAMIC CHANNEL PARAMETERS**
 
 > If you add color feedback for a button, (e.g. InCh/Label/Color or DCA/Label/Color), the module will pull the color from the matching channel and change the button color accordingly.
+
+**FADER LEVEL FADES**
+
+> Fader level actions include a **Fading** option. Choose a duration to move from the current stored level to the requested level over time. The action must have a current value available from the console before a fade can start.
