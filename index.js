@@ -546,6 +546,7 @@ class instance extends InstanceBase {
 									options: {
 										X: x,
 										Y: y,
+										Val: 0,
 										createVariable: true,
 									},
 								},
@@ -609,6 +610,7 @@ class instance extends InstanceBase {
 									options: {
 										X: x,
 										Y: y,
+										Val: 0,
 										createVariable: true,
 									},
 								},
