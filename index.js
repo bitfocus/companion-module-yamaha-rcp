@@ -528,13 +528,11 @@ class instance extends InstanceBase {
 									},
 								},
 								{
-									feedbackId: 'Meter',
+									feedbackId: 'LevelMeter',
 									options: {
 										position: 'bottom',
 										padding: 1,
-										meterVal1: faderVariable,
-										meterVal2: '',
-										scale: 'fader',
+										level: faderVariable,
 									},
 								},
 							],
@@ -593,13 +591,11 @@ class instance extends InstanceBase {
 									},
 								},
 								{
-									feedbackId: 'Meter',
+									feedbackId: 'LevelMeter',
 									options: {
 										position: 'bottom',
 										padding: 1,
-										meterVal1: faderVariable,
-										meterVal2: '',
-										scale: 'fader',
+										level: faderVariable,
 									},
 								},
 								...(meterVariable
@@ -611,7 +607,6 @@ class instance extends InstanceBase {
 													padding: 1,
 													meterVal1: meterVariable,
 													meterVal2: '',
-													scale: 'meter',
 												},
 											},
 										]
