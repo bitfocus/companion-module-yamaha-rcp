@@ -309,7 +309,7 @@ class instance extends InstanceBase {
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
 		} else {
-			if (cmdToAdd.prefix == 'set') {
+			if (cmdToAdd.prefix == 'set' && paramFuncs.isFaderLevel(rcpCmd)) {
 				this.cmdQueue = this.cmdQueue.filter(
 					(c) => !(c.prefix == 'get' && c.Address == cmdToAdd.Address && c.X == cmdToAdd.X && c.Y == cmdToAdd.Y)
 				)
@@ -347,16 +347,21 @@ class instance extends InstanceBase {
 		if (this.cmdQueue.length > 0) {
 			// Messages still to send?
 			let nextCmd = this.cmdQueue[0] // Oldest
+			let nextRcpCmd = paramFuncs.findRcpCmd(nextCmd.Address)
 
 			if (nextCmd.prefix == 'set') {
 				let nextCmdVal = paramFuncs.parseVal(this, nextCmd)
 				if (nextCmdVal == undefined) {
 					this.cmdQueue.shift()
-					const matchingGet = this.cmdQueue.findIndex(
-						(c) => c.prefix == 'get' && c.Address == nextCmd.Address && c.X == nextCmd.X && c.Y == nextCmd.Y
-					)
-					if (matchingGet > -1) {
-						this.cmdQueue.splice(matchingGet + 1, 0, nextCmd)
+					if (paramFuncs.isFaderLevel(nextRcpCmd)) {
+						const matchingGet = this.cmdQueue.findIndex(
+							(c) => c.prefix == 'get' && c.Address == nextCmd.Address && c.X == nextCmd.X && c.Y == nextCmd.Y
+						)
+						if (matchingGet > -1) {
+							this.cmdQueue.splice(matchingGet + 1, 0, nextCmd)
+						} else {
+							this.cmdQueue.push(nextCmd)
+						}
 					} else {
 						this.cmdQueue.push(nextCmd)
 					}
