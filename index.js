@@ -402,16 +402,26 @@ class instance extends InstanceBase {
 			St: 'St',
 			Mono: 'Mono',
 		}
-		const getMeterVariable = (faderName, x) => {
+		const getMeterInfo = (faderName, x) => {
 			let meterName = faderMeterNames[faderName]
-			if (!meterName) return ''
+			if (!meterName) return undefined
 
 			const meterCmd = meterCmds.find((c) => c.Address.endsWith(`/Meter/${meterName}`))
-			if (meterCmd === undefined) return ''
+			if (meterCmd === undefined) return undefined
 
 			const pickoffs = meterCmd.Pickoff?.split('|')
-			const pickoff = pickoffs?.includes('PreFader') ? 'PreFader' : pickoffs?.[0]
-			return `$(${this.label}:V_Meter_${meterName}_${x}${pickoff ? `_${pickoff}` : ''})`
+			const pickoffIndex = pickoffs ? (meterCmd.Index < 2100 ? 1 : parseInt(meterCmd.Y) || 1) : 1
+			const pickoff = pickoffs?.[pickoffIndex - 1]
+
+			return {
+				feedbackId: meterCmd.Address.replace(/:/g, '_'),
+				options: {
+					X: x,
+					Y: pickoffIndex,
+					createVariable: true,
+				},
+				variable: `$(${this.label}:V_Meter_${meterName}_${x}${pickoff ? `_${pickoff}` : ''})`,
+			}
 		}
 		const getFaderVariable = (rcpCmd, x, y) => {
 			return `$(${this.label}:${paramFuncs.getIndexedVariableName(rcpCmd, x - 1, y - 1)})`
@@ -499,7 +509,7 @@ class instance extends InstanceBase {
 					for (let y = 1; y <= yCount; y++) {
 						const label = getFaderLabel(faderName, x, y, yCount)
 						const faderVariable = getFaderVariable(c, x, y)
-						const meterVariable = getMeterVariable(faderName, x)
+						const meterInfo = getMeterInfo(faderName, x)
 
 						this.rcpPresets.push({
 							type: 'button',
@@ -608,16 +618,20 @@ class instance extends InstanceBase {
 										level: faderVariable,
 									},
 								},
-								...(meterVariable
+								...(meterInfo
 									? [
 											{
 												feedbackId: 'Meter',
 												options: {
 													position: 'right',
 													padding: 1,
-													meterVal1: meterVariable,
+													meterVal1: meterInfo.variable,
 													meterVal2: '',
 												},
+											},
+											{
+												feedbackId: meterInfo.feedbackId,
+												options: meterInfo.options,
 											},
 										]
 									: []),
