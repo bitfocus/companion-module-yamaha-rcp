@@ -420,6 +420,7 @@ class instance extends InstanceBase {
 				options: {
 					X: x,
 					Y: pickoffIndex,
+					Val: 0,
 					createVariable: true,
 				},
 				variable: `$(${this.label}:V_Meter_${meterName}_${x}${pickoff ? `_${pickoff}` : ''})`,
