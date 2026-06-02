@@ -300,6 +300,8 @@ class instance extends InstanceBase {
 		clearTimeout(this.queueTimer)
 		let cmdToAdd = JSON.parse(JSON.stringify(cmd)) // Deep Clone
 		let rcpCmd = paramFuncs.findRcpCmd(cmdToAdd.Address)
+		const prioritizeFaderCommand =
+			paramFuncs.isFaderLevel(rcpCmd) && (config.faderLevelVariables || Number(cmdToAdd.Fade || 0) > 0)
 		let i = this.cmdQueue.findIndex(
 			(c) =>
 				c.prefix == cmdToAdd.prefix &&
@@ -309,7 +311,7 @@ class instance extends InstanceBase {
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
 		} else {
-			if (cmdToAdd.prefix == 'set' && paramFuncs.isFaderLevel(rcpCmd)) {
+			if (cmdToAdd.prefix == 'set' && prioritizeFaderCommand) {
 				this.cmdQueue = this.cmdQueue.filter(
 					(c) => !(c.prefix == 'get' && c.Address == cmdToAdd.Address && c.X == cmdToAdd.X && c.Y == cmdToAdd.Y)
 				)
@@ -353,7 +355,7 @@ class instance extends InstanceBase {
 				let nextCmdVal = paramFuncs.parseVal(this, nextCmd)
 				if (nextCmdVal == undefined) {
 					this.cmdQueue.shift()
-					if (paramFuncs.isFaderLevel(nextRcpCmd)) {
+					if (paramFuncs.isFaderLevel(nextRcpCmd) && (config.faderLevelVariables || Number(nextCmd.Fade || 0) > 0)) {
 						const matchingGet = this.cmdQueue.findIndex(
 							(c) => c.prefix == 'get' && c.Address == nextCmd.Address && c.X == nextCmd.X && c.Y == nextCmd.Y
 						)
