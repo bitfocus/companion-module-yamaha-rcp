@@ -39,6 +39,7 @@ module.exports = {
 		let valOptionIdx = newFeedback.options.findIndex((opt) => opt.id == 'Val')
 		if (valOptionIdx > -1) {
 			newFeedback.options[valOptionIdx].isVisible = (options) => !options.createVariable
+			newFeedback.options[valOptionIdx].required = false
 		}
 
 		newFeedback.callback = async (feedback, context) => {
