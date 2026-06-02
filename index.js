@@ -13,6 +13,8 @@ const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
+const MIN_FADER_POLL_INTERVAL = 500
+const MAX_FADER_POLL_INTERVAL = 2000
 const DEFAULT_FADER_POLL_INTERVAL = 1000
 
 // Instance Setup
@@ -134,11 +136,11 @@ class instance extends InstanceBase {
 			{
 				type: 'number',
 				id: 'faderPollSpeed',
-				label: 'Fader poll interval (40 - 1000 ms)',
+				label: 'Fader poll interval (500 - 2000 ms)',
 				width: 9,
 				default: DEFAULT_FADER_POLL_INTERVAL,
-				min: 40,
-				max: 1000,
+				min: MIN_FADER_POLL_INTERVAL,
+				max: MAX_FADER_POLL_INTERVAL,
 				isVisible: (options) => options.faderLevelVariables && !['RIO', 'TIO', 'RSIO'].includes(options.model),
 			},
 			{
@@ -210,7 +212,10 @@ class instance extends InstanceBase {
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
 				}
 				if (config.faderLevelVariables) {
-					const faderPollSpeed = Math.min(Math.max(config.faderPollSpeed || DEFAULT_FADER_POLL_INTERVAL, 40), 1000)
+					const faderPollSpeed = Math.min(
+						Math.max(config.faderPollSpeed || DEFAULT_FADER_POLL_INTERVAL, MIN_FADER_POLL_INTERVAL),
+						MAX_FADER_POLL_INTERVAL
+					)
 					this.faderLevelTimer = setInterval(() => varFuncs.getFaderLevelVars(this), faderPollSpeed)
 				}
 				if (config.keepAlive) {
@@ -493,7 +498,7 @@ class instance extends InstanceBase {
 
 						this.rcpPresets.push({
 							type: 'button',
-							category: 'Level Meters - Fader Control Buttons',
+							category: 'Fader Control Buttons',
 							name: `${label} fade to 0 dB`,
 							style: {
 								text: `${label}\\n0 dB`,
@@ -540,7 +545,7 @@ class instance extends InstanceBase {
 
 						this.rcpPresets.push({
 							type: 'button',
-							category: 'Level Meters - Fader Control Knobs',
+							category: 'Fader Control Knobs',
 							name: `${label} fader control`,
 							options: {
 								rotaryActions: true,
