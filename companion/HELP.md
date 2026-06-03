@@ -28,12 +28,6 @@ Note that this module only works to connected hardware. It does not work with th
 
 > Use **@(internal:custom_MyCustomVar)** in the value field to update a custom variable within a feedback. Custom variable must already exist
 
-> Enable **Fader Level Variables** in the module config to create and poll fader level variables such as **V_InCh_Fader_Level_1**. Values are shown in dB, with **-Inf** at the bottom of the fader range.
-
 **DYNAMIC CHANNEL PARAMETERS**
 
 > If you add color feedback for a button, (e.g. InCh/Label/Color or DCA/Label/Color), the module will pull the color from the matching channel and change the button color accordingly.
-
-**FADER LEVEL FADES**
-
-> Fader level actions include a **Fading** option. Choose a duration to move from the current stored level to the requested level over time. The action must have a current value available from the console before a fade can start.
