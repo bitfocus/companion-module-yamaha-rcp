@@ -146,7 +146,7 @@ module.exports = {
 		
 						paramsToAdd.push(ValOpts)
 
-						if (paramFuncs.isFadeableLevel(rcpCmd)) {
+						if (paramFuncs.isLevel(rcpCmd)) {
 							paramsToAdd.push(paramFuncs.createFadeOption())
 						}
 
@@ -235,7 +235,7 @@ module.exports = {
 							let actionCmd = options
 							actionCmd.Address = foundCmd.Address
 							actionCmd.prefix = 'set'
-							if (paramFuncs.isFadeableLevel(foundCmd) && Number(actionCmd.Fade || 0) > 0) {
+							if (paramFuncs.isLevel(foundCmd) && Number(actionCmd.Fade || 0) > 0) {
 								paramFuncs.fadeCmd(instance, actionCmd)
 							} else {
 								paramFuncs.cancelFade(instance, actionCmd)
