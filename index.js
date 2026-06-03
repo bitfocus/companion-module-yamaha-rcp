@@ -13,9 +13,6 @@ const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
-const MIN_FADER_POLL_INTERVAL = 500
-const MAX_FADER_POLL_INTERVAL = 2000
-const DEFAULT_FADER_POLL_INTERVAL = 1000
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -35,7 +32,6 @@ class instance extends InstanceBase {
 		this.queueTimer
 		this.fadeTimers = {}
 		this.meterTimer = {}
-		this.faderLevelTimer = {}
 		this.kaTimer = {}
 		this.variables = []
 		this.newConsole()
@@ -56,7 +52,6 @@ class instance extends InstanceBase {
 			clearTimeout(timer)
 		}
 		clearInterval(this.meterTimer)
-		clearInterval(this.faderLevelTimer)
 		this.socket?.destroy()
 		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
 	}
@@ -127,30 +122,6 @@ class instance extends InstanceBase {
 			},
 			{
 				type: 'checkbox',
-				id: 'faderLevelVariables',
-				label: 'Enable Fader Level Variables?',
-				width: 3,
-				default: false,
-				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
-			},
-			{
-				type: 'number',
-				id: 'faderPollSpeed',
-				label: 'Fader poll interval (500 - 2000 ms)',
-				width: 9,
-				default: DEFAULT_FADER_POLL_INTERVAL,
-				min: MIN_FADER_POLL_INTERVAL,
-				max: MAX_FADER_POLL_INTERVAL,
-				isVisible: (options) => options.faderLevelVariables && !['RIO', 'TIO', 'RSIO'].includes(options.model),
-			},
-			{
-				type: 'static-text',
-				label: '**NOTE** Enable fader level variables to use fades in level change actions.',
-				width: 9,
-				isVisible: (options) => !['RIO', 'TIO', 'RSIO'].includes(options.model),
-			},
-			{
-				type: 'checkbox',
 				id: 'keepAlive',
 				label: 'Enable KeepAlive?',
 				width: 3,
@@ -201,22 +172,13 @@ class instance extends InstanceBase {
 			this.socket.on('connect', () => {
 				this.log('info', `Connected!`)
 				clearInterval(this.meterTimer)
-				clearInterval(this.faderLevelTimer)
 				clearInterval(this.kaTimer)
 				varFuncs.getVars(this)
-				varFuncs.getFaderLevelVars(this)
 				this.queueTimer = {}
 				this.processCmdQueue()
 				if (config.metering) {
 					this.startMeters()
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
-				}
-				if (config.faderLevelVariables) {
-					const faderPollSpeed = Math.min(
-						Math.max(config.faderPollSpeed || DEFAULT_FADER_POLL_INTERVAL, MIN_FADER_POLL_INTERVAL),
-						MAX_FADER_POLL_INTERVAL
-					)
-					this.faderLevelTimer = setInterval(() => varFuncs.getFaderLevelVars(this), faderPollSpeed)
 				}
 				if (config.keepAlive) {
 					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
@@ -300,8 +262,6 @@ class instance extends InstanceBase {
 		clearTimeout(this.queueTimer)
 		let cmdToAdd = JSON.parse(JSON.stringify(cmd)) // Deep Clone
 		let rcpCmd = paramFuncs.findRcpCmd(cmdToAdd.Address)
-		const prioritizeFaderCommand =
-			paramFuncs.isFaderLevel(rcpCmd) && (config.faderLevelVariables || Number(cmdToAdd.Fade || 0) > 0)
 		let i = this.cmdQueue.findIndex(
 			(c) =>
 				c.prefix == cmdToAdd.prefix &&
@@ -311,19 +271,7 @@ class instance extends InstanceBase {
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
 		} else {
-			if (cmdToAdd.prefix == 'set' && prioritizeFaderCommand) {
-				this.cmdQueue = this.cmdQueue.filter(
-					(c) => !(c.prefix == 'get' && c.Address == cmdToAdd.Address && c.X == cmdToAdd.X && c.Y == cmdToAdd.Y)
-				)
-				const firstGet = this.cmdQueue.findIndex((c) => c.prefix == 'get')
-				if (firstGet > -1) {
-					this.cmdQueue.splice(firstGet, 0, cmdToAdd)
-				} else {
-					this.cmdQueue.push(cmdToAdd)
-				}
-			} else {
-				this.cmdQueue.push(cmdToAdd)
-			}
+			this.cmdQueue.push(cmdToAdd)
 		}
 
 		if (this.queueTimer) {
@@ -349,24 +297,12 @@ class instance extends InstanceBase {
 		if (this.cmdQueue.length > 0) {
 			// Messages still to send?
 			let nextCmd = this.cmdQueue[0] // Oldest
-			let nextRcpCmd = paramFuncs.findRcpCmd(nextCmd.Address)
 
 			if (nextCmd.prefix == 'set') {
 				let nextCmdVal = paramFuncs.parseVal(this, nextCmd)
 				if (nextCmdVal == undefined) {
 					this.cmdQueue.shift()
-					if (paramFuncs.isFaderLevel(nextRcpCmd) && (config.faderLevelVariables || Number(nextCmd.Fade || 0) > 0)) {
-						const matchingGet = this.cmdQueue.findIndex(
-							(c) => c.prefix == 'get' && c.Address == nextCmd.Address && c.X == nextCmd.X && c.Y == nextCmd.Y
-						)
-						if (matchingGet > -1) {
-							this.cmdQueue.splice(matchingGet + 1, 0, nextCmd)
-						} else {
-							this.cmdQueue.push(nextCmd)
-						}
-					} else {
-						this.cmdQueue.push(nextCmd)
-					}
+					this.cmdQueue.push(nextCmd)
 
 					this.queueTimer = setTimeout(() => {
 						this.processCmdQueue()
@@ -441,6 +377,8 @@ class instance extends InstanceBase {
 		const faderCmds = global.rcpCommands
 			.filter((c) => paramFuncs.isFaderLevel(c) && c.RW.includes('w'))
 			.sort((a, b) => (a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1))
+		const inChFaderOnCmd = global.rcpCommands.find((c) => c.Address.endsWith('/InCh/Fader/On') && c.RW.includes('w'))
+		const inChFaderOnActionId = inChFaderOnCmd?.Address.replace(/:/g, '_')
 		var meterPreset = {
 				type: 'button',
 				category: 'Level Meters',
@@ -513,13 +451,28 @@ class instance extends InstanceBase {
 						const label = getFaderLabel(faderName, x, y, yCount)
 						const faderVariable = getFaderVariable(c, x, y)
 						const meterInfo = getMeterInfo(faderName, x)
+						const faderButtonText = `${label}\\n${faderVariable}`
+						const faderOnFeedback =
+							faderName == 'InCh' && inChFaderOnActionId
+								? {
+										feedbackId: inChFaderOnActionId,
+										options: {
+											X: x,
+											Val: 1,
+											createVariable: true,
+										},
+										style: {
+											bgcolor: combineRgb(204, 101, 0),
+										},
+									}
+								: undefined
 
 						this.rcpPresets.push({
 							type: 'button',
 							category: 'Fader Control Buttons',
-							name: `${label} fade to 0 dB`,
+							name: faderButtonText,
 							style: {
-								text: `${label}\\n0 dB`,
+								text: faderButtonText,
 								size: 'auto',
 								color: combineRgb(255, 255, 255),
 								bgcolor: combineRgb(0, 0, 0),
@@ -533,6 +486,21 @@ class instance extends InstanceBase {
 												X: x,
 												Y: y,
 												Val: 0,
+												Fade: 1,
+												Rel: false,
+											},
+										},
+									],
+									up: [],
+								},
+								{
+									down: [
+										{
+											actionId,
+											options: {
+												X: x,
+												Y: y,
+												Val: '-Inf',
 												Fade: 1,
 												Rel: false,
 											},
@@ -562,6 +530,19 @@ class instance extends InstanceBase {
 							],
 						})
 
+						const knobPushAction =
+							faderName == 'InCh' && inChFaderOnActionId
+								? [
+										{
+											actionId: inChFaderOnActionId,
+											options: {
+												X: x,
+												Val: 'Toggle',
+											},
+										},
+									]
+								: []
+
 						this.rcpPresets.push({
 							type: 'button',
 							category: 'Fader Control Knobs',
@@ -577,7 +558,7 @@ class instance extends InstanceBase {
 							},
 							steps: [
 								{
-									down: [],
+									down: knobPushAction,
 									up: [],
 									rotate_left: [
 										{
@@ -615,6 +596,7 @@ class instance extends InstanceBase {
 										createVariable: true,
 									},
 								},
+								...(faderOnFeedback ? [faderOnFeedback] : []),
 								{
 									feedbackId: 'LevelMeter',
 									options: {
@@ -757,7 +739,6 @@ class instance extends InstanceBase {
 		}
 		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
 			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
-			varFuncs.setFaderLevelVar(this, cmd)
 			this.checkFeedbacks(dsAddr.replace(/:/g, '_')) // Make sure variables are updated
 		}
 	}
