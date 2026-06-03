@@ -52,10 +52,6 @@ module.exports = {
 			}
 		}
 
-		if (config.faderLevelVariables) {
-			module.exports.addFaderLevelVariableDefinitions(instance)
-		}
-
 		instance.setVariableDefinitions(instance.variables)
 		instance.setVariableValues({
 			cuedStInChannels: '[]',
@@ -95,73 +91,6 @@ module.exports = {
 				instance.sendCmd('sscurrentt_ex scene_b')
 			}
 		}
-	},
-
-	addFaderLevelVariableDefinitions: (instance) => {
-		const paramFuncs = require('./paramFuncs.js')
-		const faderLevelCommands = rcpCommands.filter((cmd) => paramFuncs.isFaderLevel(cmd) && cmd.RW.includes('r'))
-
-		for (const rcpCmd of faderLevelCommands) {
-			const xCount = Math.max(parseInt(rcpCmd.X) || 1, 1)
-			const yCount = Math.max(parseInt(rcpCmd.Y) || 1, 1)
-
-			for (let x = 0; x < xCount; x++) {
-				for (let y = 0; y < yCount; y++) {
-					const variableId = paramFuncs.getIndexedVariableName(rcpCmd, x, y)
-					if (instance.variables.findIndex((v) => v.variableId === variableId) == -1) {
-						instance.variables.push({
-							variableId,
-							name: `${rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1)}${xCount > 1 ? ` ${x + 1}` : ''}${yCount > 1 ? ` ${y + 1}` : ''}`,
-						})
-					}
-				}
-			}
-		}
-	},
-
-	getFaderLevelVars: (instance) => {
-		if (!config.faderLevelVariables) return
-
-		const paramFuncs = require('./paramFuncs.js')
-		const faderLevelCommands = rcpCommands.filter((cmd) => paramFuncs.isFaderLevel(cmd) && cmd.RW.includes('r'))
-		const faderLevelAddresses = new Set(faderLevelCommands.map((cmd) => cmd.Address))
-		const hasPendingFaderPoll = instance.cmdQueue?.some(
-			(cmd) => cmd.prefix == 'get' && faderLevelAddresses.has(cmd.Address)
-		)
-		if (hasPendingFaderPoll) return
-
-		for (const rcpCmd of faderLevelCommands) {
-			const xCount = Math.max(parseInt(rcpCmd.X) || 1, 1)
-			const yCount = Math.max(parseInt(rcpCmd.Y) || 1, 1)
-
-			for (let x = 0; x < xCount; x++) {
-				for (let y = 0; y < yCount; y++) {
-					instance.addToCmdQueue({
-						prefix: 'get',
-						Address: rcpCmd.Address,
-						X: x,
-						Y: y,
-					})
-				}
-			}
-		}
-	},
-
-	setFaderLevelVar: (instance, msg) => {
-		if (!config.faderLevelVariables) return false
-
-		const paramFuncs = require('./paramFuncs.js')
-		const rcpCmd = paramFuncs.findRcpCmd(msg.Address, msg.Action)
-		if (!paramFuncs.isFaderLevel(rcpCmd)) return false
-
-		const variableId = paramFuncs.getIndexedVariableName(rcpCmd, msg.X || 0, msg.Y || 0)
-		let data = parseInt(msg.Val)
-		if (isNaN(data)) return false
-
-		const value = {}
-		value[variableId] = data == -32768 ? '-Inf' : data / rcpCmd.Scale
-		instance.setVariableValues(value)
-		return true
 	},
 
 	setVar: (instance, msg) => {
@@ -223,8 +152,6 @@ module.exports = {
 				instance.setVariableValues({ curSceneComment: msg.ScnComment })
 				break
 			default: {
-				if (module.exports.setFaderLevelVar(instance, msg)) return
-
 				let cmdName = msg.Address.slice(msg.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 				let varName = ''
 
