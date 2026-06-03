@@ -31,6 +31,7 @@ class instance extends InstanceBase {
 		this.cmdQueue = [] // prefix, Address (using ":"), X, Y, Val
 		this.queueTimer
 		this.fadeTimers = {}
+		this.fadeQueue = []
 		this.meterTimer = {}
 		this.kaTimer = {}
 		this.variables = []
@@ -48,9 +49,10 @@ class instance extends InstanceBase {
 	// Module deletion
 	async destroy() {
 		clearTimeout(this.queueTimer)
-		for (const timer of Object.values(this.fadeTimers || {})) {
-			clearTimeout(timer)
+		for (const fade of Object.values(this.fadeTimers || {})) {
+			clearTimeout(fade?.timer)
 		}
+		this.fadeQueue = []
 		clearInterval(this.meterTimer)
 		this.socket?.destroy()
 		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
@@ -103,6 +105,35 @@ class instance extends InstanceBase {
 				label: '',
 				width: 6,
 				isVisible: (options) => !!options.bonjour_host || !['RIO', 'TIO', 'RSIO'].includes(options.model),
+			},
+			{
+				type: 'checkbox',
+				id: 'cancelFadesOnSceneRecall',
+				label: 'Cancel fades on scene recall?',
+				width: 4,
+				default: true,
+			},
+			{
+				type: 'number',
+				id: 'maxConcurrentFades',
+				label: 'Maximum concurrent fades',
+				width: 4,
+				default: 4,
+				min: 1,
+				max: 32,
+			},
+			{
+				type: 'dropdown',
+				id: 'fadeLimitMode',
+				label: 'When maximum concurrent fades exceeded',
+				width: 4,
+				default: 'queue',
+				choices: [
+					{ id: 'cancel', label: 'Cancel new fade' },
+					{ id: 'queue', label: 'Queue new fade' },
+					{ id: 'rateLimit', label: 'Rate limit fades' },
+				],
+				minChoicesForSearch: 0,
 			},
 			{
 				type: 'checkbox',

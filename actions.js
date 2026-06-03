@@ -238,6 +238,9 @@ module.exports = {
 							if (paramFuncs.isLevel(foundCmd) && Number(actionCmd.Fade || 0) > 0) {
 								paramFuncs.fadeCmd(instance, actionCmd)
 							} else {
+								if (config.cancelFadesOnSceneRecall !== false && paramFuncs.isSceneRecall(foundCmd)) {
+									paramFuncs.cancelAllFades(instance)
+								}
 								paramFuncs.cancelFade(instance, actionCmd)
 								instance.addToCmdQueue(actionCmd)
 							}

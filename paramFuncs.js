@@ -1,3 +1,43 @@
+const DEFAULT_MAX_ACTIVE_FADES = 4
+const FADE_STEP_DURATION_MS = 50
+const FADE_STEP_COALESCE_MS = 10
+const FADER_MIN = -9000
+
+const getMaxActiveFades = () => Math.min(Math.max(parseInt(config.maxConcurrentFades || DEFAULT_MAX_ACTIVE_FADES), 1), 32)
+
+const getFadeLimitMode = () => {
+	if (['cancel', 'queue', 'rateLimit'].includes(config.fadeLimitMode)) return config.fadeLimitMode
+	return 'queue'
+}
+
+const getFadeStore = (instance) => {
+	if (instance.fadeTimers == undefined) instance.fadeTimers = {}
+	if (instance.fadeQueue == undefined) instance.fadeQueue = []
+}
+
+const activeFadeCount = (instance) => {
+	getFadeStore(instance)
+	return Object.values(instance.fadeTimers).filter((fade) => fade?.active).length
+}
+
+const startQueuedFades = (instance) => {
+	getFadeStore(instance)
+
+	while (activeFadeCount(instance) < getMaxActiveFades() && instance.fadeQueue.length > 0) {
+		const fade = instance.fadeQueue.shift()
+		if (instance.fadeTimers[fade.key] != undefined) {
+			fade.start()
+		}
+	}
+}
+
+const getFadeStepDuration = (instance) => {
+	const maxActiveFades = getMaxActiveFades()
+	const fadeCount = activeFadeCount(instance)
+	const rateLimitMultiplier = getFadeLimitMode() == 'rateLimit' ? Math.max(Math.ceil(fadeCount / maxActiveFades), 1) : 1
+	return FADE_STEP_DURATION_MS * rateLimitMultiplier
+}
+
 module.exports = {
 	createFadeOption: () => {
 		return {
@@ -33,6 +73,10 @@ module.exports = {
 		return module.exports.isLevel(rcpCmd) && rcpCmd.Address.includes('/Fader/Level')
 	},
 
+	isSceneRecall: (rcpCmd) => {
+		return rcpCmd !== undefined && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000 && rcpCmd.Index != 1001
+	},
+
 	getBaseVariableName: (rcpCmd) => {
 		return `V_${rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')}`
 	},
@@ -46,14 +90,28 @@ module.exports = {
 
 	getFadeKey: (cmd) => `${cmd.Address}:${cmd.X ?? 0}:${cmd.Y ?? 0}`,
 
-	cancelFade: (instance, cmd) => {
+	cancelFade: (instance, cmd, startNextQueuedFade = true) => {
 		if (instance.fadeTimers == undefined || cmd == undefined) return
 
 		const fadeKey = module.exports.getFadeKey(cmd)
-		if (instance.fadeTimers[fadeKey] != undefined) {
-			clearTimeout(instance.fadeTimers[fadeKey])
+		const fade = instance.fadeTimers[fadeKey]
+		if (fade != undefined) {
+			clearTimeout(fade.timer)
 			delete instance.fadeTimers[fadeKey]
 		}
+		if (instance.fadeQueue != undefined) {
+			instance.fadeQueue = instance.fadeQueue.filter((queuedFade) => queuedFade.key != fadeKey)
+		}
+		if (startNextQueuedFade) startQueuedFades(instance)
+	},
+
+	cancelAllFades: (instance) => {
+		getFadeStore(instance)
+		for (const fade of Object.values(instance.fadeTimers)) {
+			clearTimeout(fade?.timer)
+		}
+		instance.fadeTimers = {}
+		instance.fadeQueue = []
 	},
 
 	makeChNames: (r) => {
@@ -380,11 +438,6 @@ module.exports = {
 	},
 
 	fadeCmd: (instance, cmd) => {
-		const MAX_ACTIVE_FADES = 4
-		const FADE_STEP_DURATION_MS = 50
-		const FADE_STEP_COALESCE_MS = 10
-		const FADER_MIN = -9000
-
 		let rcpCmd = module.exports.findRcpCmd(cmd.Address)
 		if (!module.exports.isLevel(rcpCmd)) {
 			module.exports.cancelFade(instance, cmd)
@@ -432,27 +485,27 @@ module.exports = {
 		const numericEnd = Math.max(end, FADER_MIN)
 		const totalLevelChange = numericEnd - numericStart
 		let elapsedMs = 0
-		if (instance.fadeTimers == undefined) instance.fadeTimers = {}
+		getFadeStore(instance)
 		const fadeKey = module.exports.getFadeKey(cmd)
-		const activeFadeCount = Object.keys(instance.fadeTimers).filter((key) => key != fadeKey).length
-		if (activeFadeCount >= MAX_ACTIVE_FADES) {
-			instance.log('warn', `Cannot fade ${cmd.Address}; maximum of ${MAX_ACTIVE_FADES} active fades is already running`)
-			return
-		}
-		module.exports.cancelFade(instance, cmd)
+		module.exports.cancelFade(instance, cmd, false)
 
 		const step = () => {
+			const fade = instance.fadeTimers[fadeKey]
+			if (fade == undefined) return
+
 			if (elapsedMs >= fadeTimeMs) {
 				const endCmd = { ...cmd, Val: toDisplayValue(end), Rel: false }
 				instance.addToCmdQueue(endCmd)
 				delete instance.fadeTimers[fadeKey]
+				startQueuedFades(instance)
 				return
 			}
 
+			const fadeStepDurationMs = getFadeStepDuration(instance)
 			const nextStepDeltaMs =
-				elapsedMs + FADE_STEP_DURATION_MS + FADE_STEP_COALESCE_MS > fadeTimeMs
+				elapsedMs + fadeStepDurationMs + FADE_STEP_COALESCE_MS > fadeTimeMs
 					? fadeTimeMs - elapsedMs
-					: FADE_STEP_DURATION_MS
+					: fadeStepDurationMs
 			const level = Math.round(numericStart + totalLevelChange * ((elapsedMs + nextStepDeltaMs / 2) / fadeTimeMs))
 			const stepCmd = {
 				...cmd,
@@ -461,13 +514,35 @@ module.exports = {
 			}
 			instance.addToCmdQueue(stepCmd)
 
-			instance.fadeTimers[fadeKey] = setTimeout(() => {
+			fade.timer = setTimeout(() => {
 				elapsedMs += nextStepDeltaMs
 				step()
 			}, nextStepDeltaMs)
 		}
 
-		step()
+		const startFade = () => {
+			instance.fadeTimers[fadeKey] = {
+				active: true,
+				timer: undefined,
+			}
+			step()
+		}
+
+		const fadeLimitMode = getFadeLimitMode()
+		if (activeFadeCount(instance) < getMaxActiveFades() || fadeLimitMode == 'rateLimit') {
+			startFade()
+		} else if (fadeLimitMode == 'cancel') {
+			instance.log('warn', `Cannot fade ${cmd.Address}; maximum of ${getMaxActiveFades()} active fades is already running`)
+		} else {
+			instance.fadeTimers[fadeKey] = {
+				active: false,
+				timer: undefined,
+			}
+			instance.fadeQueue.push({
+				key: fadeKey,
+				start: startFade,
+			})
+		}
 	},
 
 	findRcpCmd: (cmdName, cmdAction = '') => {
