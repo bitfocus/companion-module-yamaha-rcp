@@ -17,7 +17,7 @@ module.exports = {
 		}
 	},
 
-	isFadeableLevel: (rcpCmd) => {
+	isLevel: (rcpCmd) => {
 		return (
 			rcpCmd !== undefined &&
 			rcpCmd.Type == 'integer' &&
@@ -30,7 +30,7 @@ module.exports = {
 	},
 
 	isFaderLevel: (rcpCmd) => {
-		return module.exports.isFadeableLevel(rcpCmd) && rcpCmd.Address.includes('/Fader/Level')
+		return module.exports.isLevel(rcpCmd) && rcpCmd.Address.includes('/Fader/Level')
 	},
 
 	getBaseVariableName: (rcpCmd) => {
@@ -380,12 +380,13 @@ module.exports = {
 	},
 
 	fadeCmd: (instance, cmd) => {
+		const MAX_ACTIVE_FADES = 4
 		const FADE_STEP_DURATION_MS = 50
 		const FADE_STEP_COALESCE_MS = 10
 		const FADER_MIN = -9000
 
 		let rcpCmd = module.exports.findRcpCmd(cmd.Address)
-		if (!module.exports.isFadeableLevel(rcpCmd)) {
+		if (!module.exports.isLevel(rcpCmd)) {
 			module.exports.cancelFade(instance, cmd)
 			instance.addToCmdQueue(cmd)
 			return
@@ -433,6 +434,11 @@ module.exports = {
 		let elapsedMs = 0
 		if (instance.fadeTimers == undefined) instance.fadeTimers = {}
 		const fadeKey = module.exports.getFadeKey(cmd)
+		const activeFadeCount = Object.keys(instance.fadeTimers).filter((key) => key != fadeKey).length
+		if (activeFadeCount >= MAX_ACTIVE_FADES) {
+			instance.log('warn', `Cannot fade ${cmd.Address}; maximum of ${MAX_ACTIVE_FADES} active fades is already running`)
+			return
+		}
 		module.exports.cancelFade(instance, cmd)
 
 		const step = () => {
