@@ -32,6 +32,7 @@ class instance extends InstanceBase {
 		this.queueTimer
 		this.fadeTimers = {}
 		this.fadeQueue = []
+		this.currentSceneKey = undefined
 		this.meterTimer = {}
 		this.kaTimer = {}
 		this.variables = []
@@ -95,6 +96,8 @@ class instance extends InstanceBase {
 				type: 'textinput',
 				id: 'host',
 				label: 'IP Address of Device',
+				tooltip:
+					'For RIVAGE PM systems, use the DSP ENGINE IP SETTING address from SETUP > NETWORK > FOR MIXER CONTROL, not necessarily the CONSOLE IP SETTING address. The DSP ENGINE IP SETTING must be enabled on the console.',
 				width: 6,
 				default: '192.168.0.128',
 				regex: Regex.IP,
@@ -110,6 +113,8 @@ class instance extends InstanceBase {
 				type: 'checkbox',
 				id: 'cancelFadesOnSceneRecall',
 				label: 'Cancel fades on scene recall?',
+				tooltip:
+					'Recalling a scene from the console surface while Companion fades are running can cause the console and Companion to fight over fader values. Keep this enabled to cancel active and queued fades when the module detects a scene change.',
 				width: 4,
 				default: true,
 			},
@@ -117,8 +122,10 @@ class instance extends InstanceBase {
 				type: 'number',
 				id: 'maxConcurrentFades',
 				label: 'Maximum concurrent fades',
+				tooltip:
+					'More simultaneous fades create more RCP traffic. Recalling a scene from the console surface during active fades is an edge case that can cause unexpected fader movement, so keep this conservative.',
 				width: 4,
-				default: 4,
+				default: 6,
 				min: 1,
 				max: 32,
 			},
@@ -126,6 +133,8 @@ class instance extends InstanceBase {
 				type: 'dropdown',
 				id: 'fadeLimitMode',
 				label: 'When maximum concurrent fades exceeded',
+				tooltip:
+					'Controls what happens when too many fades are active. Recalling a scene from the console surface during active fades is an edge case that can cause unexpected fader movement.',
 				width: 4,
 				default: 'queue',
 				choices: [
@@ -136,9 +145,22 @@ class instance extends InstanceBase {
 				minChoicesForSearch: 0,
 			},
 			{
+				type: 'number',
+				id: 'fadeStepInterval',
+				label: 'Fade step interval (ms)',
+				tooltip:
+					'Lower values send more frequent level updates. Recalling a scene from the console surface during active fades is an edge case that can cause unexpected fader movement, so keep this conservative.',
+				width: 4,
+				default: 40,
+				min: 10,
+				max: 500,
+			},
+			{
 				type: 'checkbox',
 				id: 'metering',
 				label: 'Enable Metering?',
+				tooltip:
+					'Metering adds ongoing polling traffic. Large systems can feel slower when many live preset buttons are visible because Companion requests feedback data for displayed buttons.',
 				width: 3,
 				default: false,
 			},
@@ -146,6 +168,8 @@ class instance extends InstanceBase {
 				type: 'number',
 				id: 'meterSpeed',
 				label: 'Metering interval (40 - 1000 ms)',
+				tooltip:
+					'Lower values increase polling traffic. On larger systems, keep this conservative, especially when using preset pages with many dynamic labels, meters, or feedbacks visible.',
 				width: 8,
 				default: 100,
 				min: 40,
@@ -160,7 +184,8 @@ class instance extends InstanceBase {
 			},
 			{
 				type: 'static-text',
-				label: '**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
+				label:
+					'**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
 				width: 12,
 			},
 		]
@@ -297,7 +322,7 @@ class instance extends InstanceBase {
 			(c) =>
 				c.prefix == cmdToAdd.prefix &&
 				c.Address == cmdToAdd.Address &&
-				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y))
+				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y)),
 		)
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
@@ -318,7 +343,7 @@ class instance extends InstanceBase {
 		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
 		if (cmd != undefined) {
 			let i = this.cmdQueue.findIndex(
-				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y
+				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y,
 			)
 			if (i > -1) {
 				this.cmdQueue.splice(i, 1) // Got value from matching request so remove it!
@@ -360,7 +385,9 @@ class instance extends InstanceBase {
 
 	// Create the preset definitions
 	createPresets() {
-		var meterCmds = global.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
+		var meterCmds = global.rcpCommands
+			.filter((c) => c.Action == 'mtrinfo')
+			.sort((a, b) => (a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1))
 		this.rcpPresets = []
 		const faderMeterNames = {
 			InCh: 'InCh',
@@ -396,6 +423,44 @@ class instance extends InstanceBase {
 		const getFaderVariable = (rcpCmd, x, y) => {
 			return `$(${this.label}:${paramFuncs.getIndexedVariableName(rcpCmd, x - 1, y - 1)})`
 		}
+		const getLabelNameInfo = (rcpCmd, x, y) => {
+			const labelNameCmd = global.rcpCommands.find(
+				(cmd) => cmd.Address == rcpCmd.Address.replace('/Fader/Level', '/Label/Name') && cmd.RW.includes('r'),
+			)
+			if (!labelNameCmd) return undefined
+
+			return {
+				feedbackId: labelNameCmd.Address.replace(/:/g, '_'),
+				options: {
+					X: x,
+					Y: y,
+					Val: '',
+					createVariable: true,
+				},
+				variable: `$(${this.label}:${paramFuncs.getIndexedVariableName(labelNameCmd, x - 1, y - 1)})`,
+			}
+		}
+		const getCueInfo = (faderName, x) => {
+			const cueCmd = global.rcpCommands.find(
+				(cmd) => cmd.Address == `MIXER:Current/Cue/${faderName}/On` && cmd.RW.includes('w'),
+			)
+			if (!cueCmd) return undefined
+
+			return {
+				actionId: cueCmd.Address.replace(/:/g, '_'),
+				options: {
+					X: x,
+					Y: 1,
+					Val: 'Toggle',
+				},
+				feedbackOptions: {
+					X: x,
+					Y: 1,
+					Val: 1,
+					createVariable: true,
+				},
+			}
+		}
 		const getFaderLabel = (faderName, x, y, yCount) => {
 			if (faderName == 'St') return `ST ${x}`
 			if (faderName == 'Mtrx') return `MTRX ${x}`
@@ -405,251 +470,600 @@ class instance extends InstanceBase {
 			if (faderName == 'Fx') return yCount > 1 ? `FX ${x}-${y}` : `FX ${x}`
 			return `${faderName} ${x}`
 		}
+		const getFaderSortRank = (rcpCmd) => {
+			const faderName = rcpCmd.Address.split('/').at(-3)
+			const monoBeforeStereoOrder = {
+				InCh: 10,
+				Mono: 20,
+				Mix: 30,
+				Mtrx: 40,
+				DCA: 50,
+				StInCh: 60,
+				FxRtnCh: 70,
+				St: 80,
+			}
+			return monoBeforeStereoOrder[faderName] ?? 100
+		}
 		const faderCmds = global.rcpCommands
 			.filter((c) => paramFuncs.isFaderLevel(c) && c.RW.includes('w'))
-			.sort((a, b) => (a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1))
-		const inChFaderOnCmd = global.rcpCommands.find((c) => c.Address.endsWith('/InCh/Fader/On') && c.RW.includes('w'))
-		const inChFaderOnActionId = inChFaderOnCmd?.Address.replace(/:/g, '_')
-		var meterPreset = {
+			.sort((a, b) => {
+				const rankA = getFaderSortRank(a)
+				const rankB = getFaderSortRank(b)
+				if (rankA != rankB) return rankA - rankB
+				return a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1
+			})
+		const getFaderOnInfo = (rcpCmd, x, y) => {
+			const faderOnCmd = global.rcpCommands.find(
+				(cmd) => cmd.Address == rcpCmd.Address.replace('/Fader/Level', '/Fader/On') && cmd.RW.includes('w'),
+			)
+			if (!faderOnCmd) return undefined
+
+			const actionId = faderOnCmd.Address.replace(/:/g, '_')
+			return {
+				actionId,
+				toggleOptions: {
+					X: x,
+					Y: y,
+					Val: 'Toggle',
+				},
+				onOptions: {
+					X: x,
+					Y: y,
+					Val: 1,
+				},
+				offOptions: {
+					X: x,
+					Y: y,
+					Val: 0,
+				},
+				feedback: {
+					feedbackId: actionId,
+					options: {
+						X: x,
+						Y: y,
+						Val: 1,
+						createVariable: true,
+					},
+					style: {
+						bgcolor: combineRgb(204, 101, 0),
+					},
+				},
+			}
+		}
+		const getFaderSelectInfo = (rcpCmd, x, y) => {
+			const selectAddresses = [
+				rcpCmd.Address.replace('/Fader/Level', '/Fader/Select'),
+				rcpCmd.Address.replace('/Fader/Level', '/Select'),
+				rcpCmd.Address.replace('/Fader/Level', '/PatchSelect'),
+			]
+			const faderSelectCmd = global.rcpCommands.find(
+				(cmd) => selectAddresses.includes(cmd.Address) && cmd.RW.includes('w'),
+			)
+			if (!faderSelectCmd) return undefined
+
+			const actionId = faderSelectCmd.Address.replace(/:/g, '_')
+			return {
+				actionId,
+				options: {
+					X: x,
+					Y: y,
+					Val: 1,
+				},
+				feedback: faderSelectCmd.RW.includes('r')
+					? {
+							feedbackId: actionId,
+							options: {
+								X: x,
+								Y: y,
+								Val: 1,
+								createVariable: true,
+							},
+							style: {
+								bgcolor: combineRgb(0, 153, 0),
+							},
+						}
+					: undefined,
+			}
+		}
+		const sceneRecallCmd = global.rcpCommands.find((c) => c.Index == 1000 && c.RW.includes('w'))
+		const sceneRecallIncCmd = global.rcpCommands.find((c) => c.Index == 1010 && c.RW.includes('w'))
+		const sceneRecallDecCmd = global.rcpCommands.find((c) => c.Index == 1011 && c.RW.includes('w'))
+		const formatSceneNumber = (rcpCmd, sceneNumber) => {
+			if (rcpCmd.Type == 'string') return `${sceneNumber}.00`
+			return sceneNumber
+		}
+		const getSceneCurrentAddress = (bank) => {
+			if (['TF', 'DM3', 'DM7'].includes(config.model)) return `scene_${bank == 1 ? 'a' : 'b'}`
+			return 'MIXER:Lib/Scene'
+		}
+		const getSceneBankLabel = (bank) => (bank == 1 ? 'A' : 'B')
+		const getSceneNameVariable = (address, sceneNumber) =>
+			`$(${this.label}:${paramFuncs.getSceneNameVariableName(address, sceneNumber)})`
+		const addSceneNameVariable = (address, sceneNumber, sceneText) => {
+			const variableId = paramFuncs.getSceneNameVariableName(address, sceneNumber)
+			if (!this.variables.find((variable) => variable.variableId == variableId)) {
+				this.variables.push({ variableId, name: `Scene ${sceneText} Name` })
+			}
+		}
+		const addCurrentScenePreset = () => {
+			this.rcpPresets.push({
 				type: 'button',
-				category: 'Level Meters',
-				name: '',
+				category: 'Scene Recall Buttons',
+				name: 'Current Scene',
 				style: {
-					text: '',
+					text: `SCENE\\n$(this:curScene)\\n$(this:curSceneName)`,
 					size: 'auto',
+					show_topbar: false,
 					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
+					bgcolor: combineRgb(0, 0, 51),
 				},
 				steps: [],
-				feedbacks: [
+				feedbacks: [],
+			})
+		}
+		const addSceneRecallPreset = (rcpCmd, sceneNumber, bank) => {
+			const actionId = rcpCmd.Address.replace(/:/g, '_')
+			const hasBanks = parseInt(rcpCmd.Y) > 1
+			const sceneText = hasBanks ? `${getSceneBankLabel(bank)} ${sceneNumber}` : `${sceneNumber}`
+			const formattedSceneNumber = formatSceneNumber(rcpCmd, sceneNumber)
+			const sceneAddress = getSceneCurrentAddress(bank)
+			addSceneNameVariable(sceneAddress, formattedSceneNumber, sceneText)
+			this.rcpPresets.push({
+				type: 'button',
+				category: 'Scene Recall Buttons',
+				name: `Recall Scene ${sceneText}`,
+				style: {
+					text: `Recall\\nScene\\n${sceneText}\\n${getSceneNameVariable(sceneAddress, formattedSceneNumber)}`,
+					size: 'auto',
+					show_topbar: false,
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 51),
+				},
+				steps: [
 					{
-						feedbackId: 'Meter',
-						options: {
-							position: 'right',
-							padding: 1,
-							meterVal1: '',
-							meterVal2: '',
-						},
-					},
-					{
-						feedbackId: '',
-						options: {
-							X: 1,
-							Y: 1,
-							createVariable: true,
-						},
-						style: {
-						}
+						down: [
+							{
+								actionId,
+								options: {
+									X: 1,
+									Y: bank,
+									Val: formattedSceneNumber,
+								},
+							},
+						],
+						up: [],
 					},
 				],
-			}
-			
-			for (const c of meterCmds) {
-				var curPreset = JSON.parse(JSON.stringify(meterPreset))
-				// console.log(c)
-				var addrParts = c.Address.split('/')
-				var cmdName = (addrParts.length > 1) ? addrParts[2] : ''
-				var pickoffIndex = (c.Index < 2100) ? 1 : c.Y
-				var pickoffName = ''
-				if (c.Pickoff) {
-					cmdName = (addrParts.length > 0) ? addrParts[addrParts.length - 1] : ''
-					var pickoffParts = c.Pickoff.split('|')
-					pickoffName = `_${pickoffParts[pickoffIndex - 1]}` 
+				feedbacks: [
+					{
+						feedbackId: 'CurrentScene',
+						options: {
+							sceneKey: `${sceneAddress}:${formattedSceneNumber}`,
+						},
+						style: {
+							bgcolor: combineRgb(0, 0, 153),
+						},
+					},
+				],
+			})
+		}
+		const addSceneStepPreset = (rcpCmd, direction) => {
+			const actionId = rcpCmd.Address.replace(/:/g, '_')
+			this.rcpPresets.push({
+				type: 'button',
+				category: 'Scene Recall Buttons',
+				name: `Recall ${direction} Scene`,
+				style: {
+					text: `RECALL\\n${direction}\\nScene`,
+					size: 14,
+					show_topbar: false,
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 51),
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId,
+								options: {
+									X: 1,
+									Y: 1,
+									Val: '',
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [],
+			})
+		}
+		if (sceneRecallCmd) addCurrentScenePreset()
+		if (sceneRecallDecCmd) addSceneStepPreset(sceneRecallDecCmd, 'Previous')
+		if (sceneRecallIncCmd) addSceneStepPreset(sceneRecallIncCmd, 'Next')
+		if (sceneRecallCmd) {
+			const sceneCount = Math.min(Math.max(parseInt(sceneRecallCmd.Max) || 1, 1), 99)
+			const bankCount = Math.max(parseInt(sceneRecallCmd.Y) || 1, 1)
+			for (let bank = 1; bank <= bankCount; bank++) {
+				for (let sceneNumber = 1; sceneNumber <= sceneCount; sceneNumber++) {
+					addSceneRecallPreset(sceneRecallCmd, sceneNumber, bank)
 				}
-				if (cmdName) {
-					curPreset.name = `Meter Level Indicator - ${cmdName}`
-					curPreset.style.text = `${cmdName}\\nMeter`
-					curPreset.feedbacks[0].options.meterVal1 = `$(${this.label}:V_Meter_${cmdName}_1${pickoffName})`
-					curPreset.feedbacks[1].feedbackId = c.Address.replace(/:/g, '_')
-					curPreset.feedbacks[1].options.Y = pickoffIndex
-					if (cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh') { // Make a Stereo Meter
-						curPreset.feedbacks[0].options.meterVal2 = `$(${this.label}:V_Meter_${cmdName}_2${pickoffName})`
-						curPreset.feedbacks.push(JSON.parse(JSON.stringify(curPreset.feedbacks[1])))
-						curPreset.feedbacks[2].options.X = 2 // Right channel
-					}
-					this.rcpPresets.push(curPreset)
-				}
 			}
+			this.setVariableDefinitions(this.variables)
+		}
+		var meterPreset = {
+			type: 'button',
+			category: 'Level Meters',
+			name: '',
+			style: {
+				text: '',
+				size: 'auto',
+				show_topbar: false,
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 0, 0),
+			},
+			steps: [],
+			feedbacks: [
+				{
+					feedbackId: 'Meter',
+					options: {
+						position: 'right',
+						padding: 1,
+						meterVal1: '',
+						meterVal2: '',
+					},
+				},
+				{
+					feedbackId: '',
+					options: {
+						X: 1,
+						Y: 1,
+						createVariable: true,
+					},
+					style: {},
+				},
+			],
+		}
 
-			for (const c of faderCmds) {
-				const faderName = c.Address.split('/').at(-3)
-				const xCount = Math.max(parseInt(c.X) || 1, 1)
-				const yCount = Math.max(parseInt(c.Y) || 1, 1)
-				const actionId = c.Address.replace(/:/g, '_')
+		for (const c of meterCmds) {
+			var curPreset = JSON.parse(JSON.stringify(meterPreset))
+			// console.log(c)
+			var addrParts = c.Address.split('/')
+			var cmdName = addrParts.length > 1 ? addrParts[2] : ''
+			var pickoffIndex = c.Index < 2100 ? 1 : c.Y
+			var pickoffName = ''
+			if (c.Pickoff) {
+				cmdName = addrParts.length > 0 ? addrParts[addrParts.length - 1] : ''
+				var pickoffParts = c.Pickoff.split('|')
+				pickoffName = `_${pickoffParts[pickoffIndex - 1]}`
+			}
+			if (cmdName) {
+				curPreset.name = `Meter Level Indicator - ${cmdName}`
+				curPreset.style.text = `${cmdName}\\nMeter\\n`
+				curPreset.feedbacks[0].options.meterVal1 = `$(${this.label}:V_Meter_${cmdName}_1${pickoffName})`
+				curPreset.feedbacks[1].feedbackId = c.Address.replace(/:/g, '_')
+				curPreset.feedbacks[1].options.Y = pickoffIndex
+				if (cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh') {
+					// Make a Stereo Meter
+					curPreset.feedbacks[0].options.meterVal2 = `$(${this.label}:V_Meter_${cmdName}_2${pickoffName})`
+					curPreset.feedbacks.push(JSON.parse(JSON.stringify(curPreset.feedbacks[1])))
+					curPreset.feedbacks[2].options.X = 2 // Right channel
+				}
+				this.rcpPresets.push(curPreset)
+			}
+		}
 
-				for (let x = 1; x <= xCount; x++) {
-					for (let y = 1; y <= yCount; y++) {
-						const label = getFaderLabel(faderName, x, y, yCount)
-						const faderVariable = getFaderVariable(c, x, y)
-						const meterInfo = getMeterInfo(faderName, x)
-						const faderButtonText = `${label}\\n${faderVariable}`
-						const faderOnFeedback =
-							faderName == 'InCh' && inChFaderOnActionId
-								? {
-										feedbackId: inChFaderOnActionId,
+		for (const c of faderCmds) {
+			const faderName = c.Address.split('/').at(-3)
+			const xCount = Math.max(parseInt(c.X) || 1, 1)
+			const yCount = Math.max(parseInt(c.Y) || 1, 1)
+			const actionId = c.Address.replace(/:/g, '_')
+
+			for (let x = 1; x <= xCount; x++) {
+				for (let y = 1; y <= yCount; y++) {
+					const label = getFaderLabel(faderName, x, y, yCount)
+					const faderVariable = getFaderVariable(c, x, y)
+					const labelNameInfo = getLabelNameInfo(c, x, y)
+					const meterInfo = getMeterInfo(faderName, x)
+					const faderButtonText = `${label}\\n${labelNameInfo?.variable || ''}\\n${faderVariable} dB\\n`
+					const onOffButtonText = `${label}\\n${labelNameInfo?.variable || ''}\\nON/OFF`
+					const faderOnInfo = getFaderOnInfo(c, x, y)
+					const faderSelectInfo = getFaderSelectInfo(c, x, y)
+					const cueInfo = getCueInfo(faderName, x)
+					const cueButtonText = `CUE\\n${label}\\n${labelNameInfo?.variable || ''}`
+
+					this.rcpPresets.push({
+						type: 'button',
+						category: 'Fader Control Buttons (Fade -inf / 0db)',
+						name: faderButtonText,
+						style: {
+							text: faderButtonText,
+							size: 14,
+							show_topbar: false,
+							color: combineRgb(255, 255, 255),
+							bgcolor: combineRgb(0, 0, 0),
+						},
+						steps: [
+							{
+								down: [
+									{
+										actionId,
 										options: {
 											X: x,
-											Val: 1,
-											createVariable: true,
+											Y: y,
+											Val: 0,
+											Fade: 1,
+											Rel: false,
 										},
-										style: {
-											bgcolor: combineRgb(204, 101, 0),
-										},
-									}
-								: undefined
-
-						this.rcpPresets.push({
-							type: 'button',
-							category: 'Fader Control Buttons',
-							name: faderButtonText,
-							style: {
-								text: faderButtonText,
-								size: 'auto',
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(0, 0, 0),
+									},
+								],
+								up: [],
 							},
-							steps: [
-								{
-									down: [
-										{
-											actionId,
-											options: {
-												X: x,
-												Y: y,
-												Val: 0,
-												Fade: 1,
-												Rel: false,
-											},
+							{
+								down: [
+									{
+										actionId,
+										options: {
+											X: x,
+											Y: y,
+											Val: '-Inf',
+											Fade: 1,
+											Rel: false,
 										},
-									],
-									up: [],
-								},
-								{
-									down: [
-										{
-											actionId,
-											options: {
-												X: x,
-												Y: y,
-												Val: '-Inf',
-												Fade: 1,
-												Rel: false,
-											},
-										},
-									],
-									up: [],
-								},
-							],
-							feedbacks: [
-								{
-									feedbackId: actionId,
-									options: {
-										X: x,
-										Y: y,
-										Val: 0,
-										createVariable: true,
 									},
+								],
+								up: [],
+							},
+						],
+						feedbacks: [
+							{
+								feedbackId: actionId,
+								options: {
+									X: x,
+									Y: y,
+									Val: 0,
+									createVariable: true,
 								},
-								{
-									feedbackId: 'LevelMeter',
-									options: {
-										position: 'bottom',
-										padding: 1,
-										level: faderVariable,
-									},
+							},
+							{
+								feedbackId: 'LevelMeter',
+								options: {
+									position: 'bottom',
+									padding: 1,
+									level: faderVariable,
 								},
-							],
-						})
-
-						const knobPushAction =
-							faderName == 'InCh' && inChFaderOnActionId
+							},
+							...(faderOnInfo ? [faderOnInfo.feedback] : []),
+							...(labelNameInfo
 								? [
 										{
-											actionId: inChFaderOnActionId,
-											options: {
-												X: x,
-												Val: 'Toggle',
-											},
+											feedbackId: labelNameInfo.feedbackId,
+											options: labelNameInfo.options,
 										},
 									]
-								: []
+								: []),
+						],
+					})
 
+					if (faderOnInfo) {
 						this.rcpPresets.push({
 							type: 'button',
-							category: 'Fader Control Knobs',
-							name: `${label} fader control`,
-							options: {
-								rotaryActions: true,
-							},
+							category: 'Fader Control Buttons (ON/OFF)',
+							name: `${label} on/off`,
 							style: {
-								text: `${label}\\n${faderVariable}`,
-								size: 'auto',
+								text: onOffButtonText,
+								size: 14,
+								show_topbar: false,
 								color: combineRgb(255, 255, 255),
 								bgcolor: combineRgb(0, 0, 0),
 							},
 							steps: [
 								{
-									down: knobPushAction,
+									down: [
+										{
+											actionId: faderOnInfo.actionId,
+											options: faderOnInfo.onOptions,
+										},
+									],
 									up: [],
-									rotate_left: [
+								},
+								{
+									down: [
 										{
-											actionId,
-											options: {
-												X: x,
-												Y: y,
-												Val: -1,
-												Fade: 0,
-												Rel: true,
-											},
+											actionId: faderOnInfo.actionId,
+											options: faderOnInfo.offOptions,
 										},
 									],
-									rotate_right: [
-										{
-											actionId,
-											options: {
-												X: x,
-												Y: y,
-												Val: 1,
-												Fade: 0,
-												Rel: true,
+									up: [],
+								},
+							],
+							feedbacks: [
+								faderOnInfo.feedback,
+								...(labelNameInfo
+									? [
+											{
+												feedbackId: labelNameInfo.feedbackId,
+												options: labelNameInfo.options,
 											},
+										]
+									: []),
+							],
+						})
+					}
+
+					if (faderSelectInfo) {
+						this.rcpPresets.push({
+							type: 'button',
+							category: 'Fader Select Buttons',
+							name: `${label} select`,
+							style: {
+								text: `${label}\\n${labelNameInfo?.variable || ''}\\nSELECT`,
+								size: 14,
+								show_topbar: false,
+								color: combineRgb(255, 255, 255),
+								bgcolor: combineRgb(0, 0, 0),
+							},
+							steps: [
+								{
+									down: [
+										{
+											actionId: faderSelectInfo.actionId,
+											options: faderSelectInfo.options,
 										},
 									],
+									up: [],
+								},
+							],
+							feedbacks: [
+								...(faderSelectInfo.feedback ? [faderSelectInfo.feedback] : []),
+								...(labelNameInfo
+									? [
+											{
+												feedbackId: labelNameInfo.feedbackId,
+												options: labelNameInfo.options,
+											},
+										]
+									: []),
+							],
+						})
+					}
+
+					const knobPushAction = faderOnInfo
+						? [
+								{
+									actionId: faderOnInfo.actionId,
+									options: faderOnInfo.toggleOptions,
+								},
+							]
+						: []
+
+					this.rcpPresets.push({
+						type: 'button',
+						category: 'Fader Control Knobs',
+						name: `${label} fader control`,
+						options: {
+							rotaryActions: true,
+						},
+						style: {
+							text: faderButtonText,
+							size: 14,
+							show_topbar: false,
+							color: combineRgb(255, 255, 255),
+							bgcolor: combineRgb(0, 0, 0),
+						},
+						steps: [
+							{
+								down: knobPushAction,
+								up: [],
+								rotate_left: [
+									{
+										actionId,
+										options: {
+											X: x,
+											Y: y,
+											Val: -1,
+											Fade: 0,
+											Rel: true,
+										},
+									},
+								],
+								rotate_right: [
+									{
+										actionId,
+										options: {
+											X: x,
+											Y: y,
+											Val: 1,
+											Fade: 0,
+											Rel: true,
+										},
+									},
+								],
+							},
+						],
+						feedbacks: [
+							{
+								feedbackId: actionId,
+								options: {
+									X: x,
+									Y: y,
+									Val: 0,
+									createVariable: true,
+								},
+							},
+							...(faderOnInfo ? [faderOnInfo.feedback] : []),
+							...(labelNameInfo
+								? [
+										{
+											feedbackId: labelNameInfo.feedbackId,
+											options: labelNameInfo.options,
+										},
+									]
+								: []),
+							{
+								feedbackId: 'LevelMeter',
+								options: {
+									position: 'bottom',
+									padding: 1,
+									level: faderVariable,
+								},
+							},
+							...(meterInfo
+								? [
+										{
+											feedbackId: 'Meter',
+											options: {
+												position: 'right',
+												padding: 1,
+												meterVal1: meterInfo.variable,
+												meterVal2: '',
+											},
+										},
+										{
+											feedbackId: meterInfo.feedbackId,
+											options: meterInfo.options,
+										},
+									]
+								: []),
+						],
+					})
+
+					if (cueInfo && y == 1) {
+						this.rcpPresets.push({
+							type: 'button',
+							category: 'Cue Buttons',
+							name: cueButtonText,
+							style: {
+								text: cueButtonText,
+								size: 14,
+								show_topbar: false,
+								color: combineRgb(255, 255, 255),
+								bgcolor: combineRgb(0, 0, 0),
+							},
+							steps: [
+								{
+									down: [
+										{
+											actionId: cueInfo.actionId,
+											options: cueInfo.options,
+										},
+									],
+									up: [],
 								},
 							],
 							feedbacks: [
 								{
-									feedbackId: actionId,
-									options: {
-										X: x,
-										Y: y,
-										Val: 0,
-										createVariable: true,
+									feedbackId: cueInfo.actionId,
+									options: cueInfo.feedbackOptions,
+									style: {
+										bgcolor: combineRgb(204, 101, 0),
 									},
 								},
-								...(faderOnFeedback ? [faderOnFeedback] : []),
-								{
-									feedbackId: 'LevelMeter',
-									options: {
-										position: 'bottom',
-										padding: 1,
-										level: faderVariable,
-									},
-								},
-								...(meterInfo
+								...(labelNameInfo
 									? [
 											{
-												feedbackId: 'Meter',
-												options: {
-													position: 'right',
-													padding: 1,
-													meterVal1: meterInfo.variable,
-													meterVal2: '',
-												},
-											},
-											{
-												feedbackId: meterInfo.feedbackId,
-												options: meterInfo.options,
+												feedbackId: labelNameInfo.feedbackId,
+												options: labelNameInfo.options,
 											},
 										]
 									: []),
@@ -658,8 +1072,9 @@ class instance extends InstanceBase {
 					}
 				}
 			}
+		}
 
-/*
+		/*
 			{
 				type: 'button',
 				category: 'Macros',
@@ -727,7 +1142,7 @@ class instance extends InstanceBase {
 				actionId: aId,
 				options: { X: cX, Y: cY, Val: cV },
 			},
-			`${aId} ${cX} ${cY}` // uniqueId to stop duplicates
+			`${aId} ${cX} ${cY}`, // uniqueId to stop duplicates
 		)
 	}
 
@@ -736,7 +1151,7 @@ class instance extends InstanceBase {
 			c = c.trim()
 			this.log(
 				'debug',
-				`[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`
+				`[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`,
 			)
 
 			if (this.socket !== undefined && this.socket.isConnected) {

@@ -1,9 +1,13 @@
-const DEFAULT_MAX_ACTIVE_FADES = 4
-const FADE_STEP_DURATION_MS = 50
+const DEFAULT_MAX_ACTIVE_FADES = 6
+const DEFAULT_FADE_STEP_DURATION_MS = 40
 const FADE_STEP_COALESCE_MS = 10
 const FADER_MIN = -9000
 
-const getMaxActiveFades = () => Math.min(Math.max(parseInt(config.maxConcurrentFades || DEFAULT_MAX_ACTIVE_FADES), 1), 32)
+const getMaxActiveFades = () =>
+	Math.min(Math.max(parseInt(config.maxConcurrentFades || DEFAULT_MAX_ACTIVE_FADES), 1), 32)
+
+const getBaseFadeStepDuration = () =>
+	Math.min(Math.max(parseInt(config.fadeStepInterval || DEFAULT_FADE_STEP_DURATION_MS), 10), 500)
 
 const getFadeLimitMode = () => {
 	if (['cancel', 'queue', 'rateLimit'].includes(config.fadeLimitMode)) return config.fadeLimitMode
@@ -35,7 +39,7 @@ const getFadeStepDuration = (instance) => {
 	const maxActiveFades = getMaxActiveFades()
 	const fadeCount = activeFadeCount(instance)
 	const rateLimitMultiplier = getFadeLimitMode() == 'rateLimit' ? Math.max(Math.ceil(fadeCount / maxActiveFades), 1) : 1
-	return FADE_STEP_DURATION_MS * rateLimitMultiplier
+	return getBaseFadeStepDuration() * rateLimitMultiplier
 }
 
 module.exports = {
@@ -44,6 +48,8 @@ module.exports = {
 			type: 'dropdown',
 			label: 'Fading',
 			id: 'Fade',
+			tooltip:
+				'Recalling a scene from the console surface while Companion fades are running can cause unexpected fader movement. The module can cancel fades on scene changes, but avoid recalling scenes mid-fade where possible.',
 			default: 0,
 			choices: [
 				{ id: 0, label: 'Off' },
@@ -75,6 +81,10 @@ module.exports = {
 
 	isSceneRecall: (rcpCmd) => {
 		return rcpCmd !== undefined && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000 && rcpCmd.Index != 1001
+	},
+
+	getSceneNameVariableName: (address, sceneNumber) => {
+		return `scene_${String(address).replace(/[^a-zA-Z0-9]/g, '_')}_${String(sceneNumber).replace(/[^a-zA-Z0-9]/g, '_')}`
 	},
 
 	getBaseVariableName: (rcpCmd) => {
@@ -154,8 +164,7 @@ module.exports = {
 				fname = 'TIO Parameters-1.txt'
 				break
 			case 'RSIO':
-					fname = 'RSio Parameters-1.txt'
-	
+				fname = 'RSio Parameters-1.txt'
 		}
 
 		// Read the DataFile
@@ -324,7 +333,7 @@ module.exports = {
 			cmdStart = 'event'
 			cmdName = cmdName.replace('/Bank', '') // Remove "Bank" from command
 			options.X = ''
-			options.Y = (config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
+			options.Y = config.model == 'DM7' ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
 		}
 
 		if (rcpCmd.Index >= 2000) {
@@ -532,7 +541,10 @@ module.exports = {
 		if (activeFadeCount(instance) < getMaxActiveFades() || fadeLimitMode == 'rateLimit') {
 			startFade()
 		} else if (fadeLimitMode == 'cancel') {
-			instance.log('warn', `Cannot fade ${cmd.Address}; maximum of ${getMaxActiveFades()} active fades is already running`)
+			instance.log(
+				'warn',
+				`Cannot fade ${cmd.Address}; maximum of ${getMaxActiveFades()} active fades is already running`,
+			)
 		} else {
 			instance.fadeTimers[fadeKey] = {
 				active: false,

@@ -23,7 +23,7 @@ module.exports = {
 				id: 'X',
 				default: 1,
 				required: true,
-				useVariables: { local: true }
+				useVariables: { local: true },
 			}
 			if (rsioChoices[actionName] !== undefined) {
 				XOpts = {
@@ -62,7 +62,11 @@ module.exports = {
 				useVariables: { local: true },
 				allowCustom: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
+			if (
+				(config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') &&
+				rcpCmd.Index >= 1000 &&
+				rcpCmd.Index < 2000
+			) {
 				YOpts = {
 					...YOpts,
 					type: 'dropdown',
@@ -108,7 +112,7 @@ module.exports = {
 			required: true,
 			minChoicesForSearch: 0,
 			allowCustom: true,
-			useVariables: { local: true }
+			useVariables: { local: true },
 		}
 		switch (rcpCmd.Type) {
 			case 'bool':
@@ -143,7 +147,7 @@ module.exports = {
 							type: 'textinput',
 							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
 						}
-		
+
 						paramsToAdd.push(ValOpts)
 
 						if (paramFuncs.isLevel(rcpCmd)) {
@@ -165,11 +169,10 @@ module.exports = {
 			case 'string':
 			case 'binary':
 				if (actionName.startsWith('CustomFaderBank')) ValOpts.choices = rcpNames.customChNames
-				else if (actionName.endsWith('Color')) ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
+				else if (actionName.endsWith('Color'))
+					ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
 				else if (actionName.endsWith('Icon')) ValOpts.choices = rcpNames.chIcons
-				
 				else if (rcpNames[actionName] !== undefined) ValOpts.choices = rcpNames[actionName]
-
 				else if ((config.model == 'PM' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/' }
 				} else {
@@ -460,6 +463,26 @@ module.exports = {
 				}
 
 				return { imageBuffer: graphics.bar(options) }
+			},
+		}
+
+		feedbacks['CurrentScene'] = {
+			type: 'boolean',
+			name: 'Current Scene',
+			description: 'Change style when this scene is currently loaded',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 0, 153),
+			},
+			options: [
+				{
+					type: 'textinput',
+					label: 'Scene Key',
+					id: 'sceneKey',
+					default: '',
+				},
+			],
+			callback: async (feedback) => {
+				return instance.currentSceneKey == feedback.options.sceneKey
 			},
 		}
 
