@@ -13,6 +13,8 @@ const RCP_PORT = 49280
 const MSG_DELAY = 5
 const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
+const DEFAULT_FADE_STEP_INTERVAL = 40
+const CLQL_DEFAULT_METER_SPEED = 80
 
 // Instance Setup
 class instance extends InstanceBase {
@@ -151,7 +153,7 @@ class instance extends InstanceBase {
 				tooltip:
 					'Lower values send more frequent level updates. Recalling a scene from the console surface during active fades is an edge case that can cause unexpected fader movement, so keep this conservative.',
 				width: 4,
-				default: 40,
+				default: DEFAULT_FADE_STEP_INTERVAL,
 				min: 10,
 				max: 500,
 			},
@@ -171,7 +173,7 @@ class instance extends InstanceBase {
 				tooltip:
 					'Lower values increase polling traffic. On larger systems, keep this conservative, especially when using preset pages with many dynamic labels, meters, or feedbacks visible.',
 				width: 8,
-				default: 100,
+				default: CLQL_DEFAULT_METER_SPEED,
 				min: 40,
 				max: 1000,
 			},

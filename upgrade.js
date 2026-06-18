@@ -76,10 +76,10 @@ module.exports = [
 							isAction
 								? "Action '" + newAction.actionId + "' -> '" + actionAddress
 								: "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress
-						}' ...`
+						}' ...`,
 					)
 					console.log(
-						`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+						`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`,
 					)
 
 					if (isAction) {
@@ -121,10 +121,13 @@ module.exports = [
 			return updates
 		}
 
-		if (updates.updatedConfig !== undefined) { // set default value for new configs
-			if (updates.updatedConfig.meterSpeed == undefined) updates.updatedConfig.meterSpeed = 100 
+		if (updates.updatedConfig !== undefined) {
+			// set default value for new configs
+			if (updates.updatedConfig.meterSpeed == undefined) {
+				updates.updatedConfig.meterSpeed = updates.updatedConfig.model == 'CL/QL' ? 80 : 100
+			}
 			if (updates.updatedConfig.kaIntervalL == undefined) updates.updatedConfig.kaIntervalL = 10
-			if (updates.updatedConfig.kaIntervalH == undefined) updates.updatedConfig.kaIntervalH = 10 
+			if (updates.updatedConfig.kaIntervalH == undefined) updates.updatedConfig.kaIntervalH = 10
 		}
 
 		let checkUpgrade = (action, isAction) => {
@@ -145,10 +148,10 @@ module.exports = [
 						isAction
 							? "Action '" + action.actionId + "' -> '" + actionAddress
 							: "Feedback '" + action.feedbackId + "' -> '" + actionAddress
-					}' ...`
+					}' ...`,
 				)
 				console.log(
-					`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+					`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`,
 				)
 
 				if (isAction) {
@@ -173,5 +176,4 @@ module.exports = [
 
 		return updates
 	}),
-
 ]

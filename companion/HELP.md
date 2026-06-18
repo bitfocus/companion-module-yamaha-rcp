@@ -28,7 +28,7 @@ Note that this module only works to connected hardware. It does not work with th
 
 > Scene recalls triggered from Companion actions or Companion scene recall presets are handled correctly and will cancel active fades before the recall is sent.
 
-> Keep **Cancel fades on scene recall?** enabled unless you have a specific reason not to. The conservative defaults are 6 maximum concurrent fades, a 40 ms fade step interval, and a 100 ms metering interval.
+> Keep **Cancel fades on scene recall?** enabled unless you have a specific reason not to. The conservative defaults are 6 maximum concurrent fades, a 40 ms fade step interval, and an 80 ms metering interval for CL/QL consoles.
 
 **VARIABLES**
 
