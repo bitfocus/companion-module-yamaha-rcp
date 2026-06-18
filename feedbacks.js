@@ -13,19 +13,20 @@ module.exports = {
 			newFeedback.type = 'boolean' // New feedback style
 
 			if (newFeedback.options.length > 0) {
-				let lastOptions = newFeedback.options[newFeedback.options.length - 1]
-				if (lastOptions.label == 'State') {
-					lastOptions.choices.pop() // Get rid of the Toggle setting for Feedbacks
-					lastOptions.default = 1 // Don't select Toggle if there's no Toggle!
+				let stateOption = newFeedback.options.find((option) => option.label == 'State')
+				if (stateOption) {
+					stateOption.choices.pop() // Get rid of the Toggle setting for Feedbacks
+					stateOption.default = 1 // Don't select Toggle if there's no Toggle!
 				}
-				if (lastOptions.label == 'Relative') {
-					newFeedback.options.pop() // Get rid of Relative checkbox for feedback
-				}
+				newFeedback.options = newFeedback.options.filter(
+					(option) => option.label != 'Relative' && option.label != 'Fading'
+				)
 			}
 			newFeedback.options.push({
 				type: 'checkbox',
 				label: 'Auto-Create Variable',
 				id: 'createVariable',
+				tooltip: 'Creates a Companion variable from this feedback value so it can be shown on buttons or used by other controls.',
 				default: false,
 			})
 		}
@@ -38,6 +39,7 @@ module.exports = {
 		let valOptionIdx = newFeedback.options.findIndex((opt) => opt.id == 'Val')
 		if (valOptionIdx > -1) {
 			newFeedback.options[valOptionIdx].isVisible = (options) => !options.createVariable
+			newFeedback.options[valOptionIdx].required = false
 		}
 
 		newFeedback.callback = async (feedback, context) => {

@@ -1,4 +1,129 @@
+const DEFAULT_MAX_ACTIVE_FADES = 6
+const DEFAULT_FADE_STEP_DURATION_MS = 40
+const FADE_STEP_COALESCE_MS = 10
+const FADER_MIN = -9000
+
+const getMaxActiveFades = () =>
+	Math.min(Math.max(parseInt(config.maxConcurrentFades || DEFAULT_MAX_ACTIVE_FADES), 1), 32)
+
+const getBaseFadeStepDuration = () =>
+	Math.min(Math.max(parseInt(config.fadeStepInterval || DEFAULT_FADE_STEP_DURATION_MS), 10), 500)
+
+const getFadeLimitMode = () => {
+	if (['cancel', 'queue', 'rateLimit'].includes(config.fadeLimitMode)) return config.fadeLimitMode
+	return 'queue'
+}
+
+const getFadeStore = (instance) => {
+	if (instance.fadeTimers == undefined) instance.fadeTimers = {}
+	if (instance.fadeQueue == undefined) instance.fadeQueue = []
+}
+
+const activeFadeCount = (instance) => {
+	getFadeStore(instance)
+	return Object.values(instance.fadeTimers).filter((fade) => fade?.active).length
+}
+
+const startQueuedFades = (instance) => {
+	getFadeStore(instance)
+
+	while (activeFadeCount(instance) < getMaxActiveFades() && instance.fadeQueue.length > 0) {
+		const fade = instance.fadeQueue.shift()
+		if (instance.fadeTimers[fade.key] != undefined) {
+			fade.start()
+		}
+	}
+}
+
+const getFadeStepDuration = (instance) => {
+	const maxActiveFades = getMaxActiveFades()
+	const fadeCount = activeFadeCount(instance)
+	const rateLimitMultiplier = getFadeLimitMode() == 'rateLimit' ? Math.max(Math.ceil(fadeCount / maxActiveFades), 1) : 1
+	return getBaseFadeStepDuration() * rateLimitMultiplier
+}
+
 module.exports = {
+	createFadeOption: () => {
+		return {
+			type: 'dropdown',
+			label: 'Fading',
+			id: 'Fade',
+			tooltip:
+				'Recalling a scene from the console surface while Companion fades are running can cause unexpected fader movement. The module can cancel fades on scene changes, but avoid recalling scenes mid-fade where possible.',
+			default: 0,
+			choices: [
+				{ id: 0, label: 'Off' },
+				{ id: 1, label: '1s' },
+				{ id: 2, label: '2s' },
+				{ id: 3, label: '3s' },
+				{ id: 5, label: '5s' },
+				{ id: 10, label: '10s' },
+			],
+			minChoicesForSearch: 0,
+		}
+	},
+
+	isLevel: (rcpCmd) => {
+		return (
+			rcpCmd !== undefined &&
+			rcpCmd.Type == 'integer' &&
+			rcpCmd.Unit == 'dB' &&
+			parseInt(rcpCmd.Min) <= -32768 &&
+			parseInt(rcpCmd.Max) == 1000 &&
+			parseInt(rcpCmd.Scale) == 100 &&
+			rcpCmd.Address.endsWith('/Level')
+		)
+	},
+
+	isFaderLevel: (rcpCmd) => {
+		return module.exports.isLevel(rcpCmd) && rcpCmd.Address.includes('/Fader/Level')
+	},
+
+	isSceneRecall: (rcpCmd) => {
+		return rcpCmd !== undefined && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000 && rcpCmd.Index != 1001
+	},
+
+	getSceneNameVariableName: (address, sceneNumber) => {
+		return `scene_${String(address).replace(/[^a-zA-Z0-9]/g, '_')}_${String(sceneNumber).replace(/[^a-zA-Z0-9]/g, '_')}`
+	},
+
+	getBaseVariableName: (rcpCmd) => {
+		return `V_${rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1).replace(/\//g, '_')}`
+	},
+
+	getIndexedVariableName: (rcpCmd, x, y) => {
+		let varName = module.exports.getBaseVariableName(rcpCmd)
+		if (parseInt(rcpCmd.X) > 1) varName += `_${parseInt(x) + 1}`
+		if (parseInt(rcpCmd.Y) > 1) varName += `_${parseInt(y) + 1}`
+		return varName
+	},
+
+	getFadeKey: (cmd) => `${cmd.Address}:${cmd.X ?? 0}:${cmd.Y ?? 0}`,
+
+	cancelFade: (instance, cmd, startNextQueuedFade = true) => {
+		if (instance.fadeTimers == undefined || cmd == undefined) return
+
+		const fadeKey = module.exports.getFadeKey(cmd)
+		const fade = instance.fadeTimers[fadeKey]
+		if (fade != undefined) {
+			clearTimeout(fade.timer)
+			delete instance.fadeTimers[fadeKey]
+		}
+		if (instance.fadeQueue != undefined) {
+			instance.fadeQueue = instance.fadeQueue.filter((queuedFade) => queuedFade.key != fadeKey)
+		}
+		if (startNextQueuedFade) startQueuedFades(instance)
+	},
+
+	cancelAllFades: (instance) => {
+		getFadeStore(instance)
+		for (const fade of Object.values(instance.fadeTimers)) {
+			clearTimeout(fade?.timer)
+		}
+		instance.fadeTimers = {}
+		instance.fadeQueue = []
+	},
+
 	makeChNames: (r) => {
 		for (let i = 1; i <= 288; i++) {
 			r.chNames.push({ id: i, label: `CH${i}` })
@@ -39,8 +164,7 @@ module.exports = {
 				fname = 'TIO Parameters-1.txt'
 				break
 			case 'RSIO':
-					fname = 'RSio Parameters-1.txt'
-	
+				fname = 'RSio Parameters-1.txt'
 		}
 
 		// Read the DataFile
@@ -209,7 +333,7 @@ module.exports = {
 			cmdStart = 'event'
 			cmdName = cmdName.replace('/Bank', '') // Remove "Bank" from command
 			options.X = ''
-			options.Y = (config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
+			options.Y = config.model == 'DM7' ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
 		}
 
 		if (rcpCmd.Index >= 2000) {
@@ -320,6 +444,117 @@ module.exports = {
 		val = Math.min(Math.max(val, rcpCmd.Min), rcpCmd.Max) // Clamp it
 
 		return val
+	},
+
+	fadeCmd: (instance, cmd) => {
+		let rcpCmd = module.exports.findRcpCmd(cmd.Address)
+		if (!module.exports.isLevel(rcpCmd)) {
+			module.exports.cancelFade(instance, cmd)
+			instance.addToCmdQueue(cmd)
+			return
+		}
+		const toDisplayValue = (value) => (value <= parseInt(rcpCmd.Min) ? '-Inf' : value / parseInt(rcpCmd.Scale))
+
+		let fadeTimeMs = Number(cmd.Fade || 0) * 1000
+		if (!(fadeTimeMs > 0)) {
+			module.exports.cancelFade(instance, cmd)
+			instance.addToCmdQueue(cmd)
+			return
+		}
+
+		let start = instance.getFromDataStore(cmd)
+		if (start === undefined) {
+			instance.log('warn', `Cannot fade ${cmd.Address}; current value is not available yet`)
+			return
+		}
+
+		let end = module.exports.parseVal(instance, cmd)
+		if (end === undefined) {
+			return
+		}
+
+		start = parseInt(start)
+		end = parseInt(end)
+		if (isNaN(start) || isNaN(end)) {
+			instance.log('warn', `Cannot fade ${cmd.Address}; start or end value is not numeric`)
+			return
+		}
+
+		if (start == end) {
+			fadeTimeMs = 0
+		}
+
+		if (fadeTimeMs <= FADE_STEP_COALESCE_MS) {
+			const endCmd = { ...cmd, Val: toDisplayValue(end), Rel: false }
+			instance.addToCmdQueue(endCmd)
+			return
+		}
+
+		const numericStart = Math.max(start, FADER_MIN)
+		const numericEnd = Math.max(end, FADER_MIN)
+		const totalLevelChange = numericEnd - numericStart
+		let elapsedMs = 0
+		getFadeStore(instance)
+		const fadeKey = module.exports.getFadeKey(cmd)
+		module.exports.cancelFade(instance, cmd, false)
+
+		const step = () => {
+			const fade = instance.fadeTimers[fadeKey]
+			if (fade == undefined) return
+
+			if (elapsedMs >= fadeTimeMs) {
+				const endCmd = { ...cmd, Val: toDisplayValue(end), Rel: false }
+				instance.addToCmdQueue(endCmd)
+				delete instance.fadeTimers[fadeKey]
+				startQueuedFades(instance)
+				return
+			}
+
+			const fadeStepDurationMs = getFadeStepDuration(instance)
+			const nextStepDeltaMs =
+				elapsedMs + fadeStepDurationMs + FADE_STEP_COALESCE_MS > fadeTimeMs
+					? fadeTimeMs - elapsedMs
+					: fadeStepDurationMs
+			const level = Math.round(numericStart + totalLevelChange * ((elapsedMs + nextStepDeltaMs / 2) / fadeTimeMs))
+			const stepCmd = {
+				...cmd,
+				Val: toDisplayValue(Math.min(Math.max(level, parseInt(rcpCmd.Min)), parseInt(rcpCmd.Max))),
+				Rel: false,
+			}
+			instance.addToCmdQueue(stepCmd)
+
+			fade.timer = setTimeout(() => {
+				elapsedMs += nextStepDeltaMs
+				step()
+			}, nextStepDeltaMs)
+		}
+
+		const startFade = () => {
+			instance.fadeTimers[fadeKey] = {
+				active: true,
+				timer: undefined,
+			}
+			step()
+		}
+
+		const fadeLimitMode = getFadeLimitMode()
+		if (activeFadeCount(instance) < getMaxActiveFades() || fadeLimitMode == 'rateLimit') {
+			startFade()
+		} else if (fadeLimitMode == 'cancel') {
+			instance.log(
+				'warn',
+				`Cannot fade ${cmd.Address}; maximum of ${getMaxActiveFades()} active fades is already running`,
+			)
+		} else {
+			instance.fadeTimers[fadeKey] = {
+				active: false,
+				timer: undefined,
+			}
+			instance.fadeQueue.push({
+				key: fadeKey,
+				start: startFade,
+			})
+		}
 	},
 
 	findRcpCmd: (cmdName, cmdAction = '') => {

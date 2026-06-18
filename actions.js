@@ -23,7 +23,7 @@ module.exports = {
 				id: 'X',
 				default: 1,
 				required: true,
-				useVariables: { local: true }
+				useVariables: { local: true },
 			}
 			if (rsioChoices[actionName] !== undefined) {
 				XOpts = {
@@ -62,7 +62,11 @@ module.exports = {
 				useVariables: { local: true },
 				allowCustom: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
+			if (
+				(config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') &&
+				rcpCmd.Index >= 1000 &&
+				rcpCmd.Index < 2000
+			) {
 				YOpts = {
 					...YOpts,
 					type: 'dropdown',
@@ -108,7 +112,7 @@ module.exports = {
 			required: true,
 			minChoicesForSearch: 0,
 			allowCustom: true,
-			useVariables: { local: true }
+			useVariables: { local: true },
 		}
 		switch (rcpCmd.Type) {
 			case 'bool':
@@ -143,8 +147,12 @@ module.exports = {
 							type: 'textinput',
 							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
 						}
-		
+
 						paramsToAdd.push(ValOpts)
+
+						if (paramFuncs.isLevel(rcpCmd)) {
+							paramsToAdd.push(paramFuncs.createFadeOption())
+						}
 
 						if (rcpCmd.RW.includes('r')) {
 							paramsToAdd.push({
@@ -161,11 +169,10 @@ module.exports = {
 			case 'string':
 			case 'binary':
 				if (actionName.startsWith('CustomFaderBank')) ValOpts.choices = rcpNames.customChNames
-				else if (actionName.endsWith('Color')) ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
+				else if (actionName.endsWith('Color'))
+					ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
 				else if (actionName.endsWith('Icon')) ValOpts.choices = rcpNames.chIcons
-				
 				else if (rcpNames[actionName] !== undefined) ValOpts.choices = rcpNames[actionName]
-
 				else if ((config.model == 'PM' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/' }
 				} else {
@@ -213,11 +220,11 @@ module.exports = {
 			if (rcpCommand.RW.includes('w')) {
 				newAction.callback = async (action, context) => {
 					let foundCmd = paramFuncs.findRcpCmd(action.actionId) // Find which command
-					let XArr = JSON.parse(await context.parseVariablesInString(action.options.X || 0))
+					let XArr = JSON.parse(await context.parseVariablesInString(String(action.options.X || 0)))
 					if (!Array.isArray(XArr)) {
 						XArr = [XArr]
 					}
-					let YArr = JSON.parse(await context.parseVariablesInString(action.options.Y || 0))
+					let YArr = JSON.parse(await context.parseVariablesInString(String(action.options.Y || 0)))
 					if (!Array.isArray(YArr)) {
 						YArr = [YArr]
 					}
@@ -231,7 +238,15 @@ module.exports = {
 							let actionCmd = options
 							actionCmd.Address = foundCmd.Address
 							actionCmd.prefix = 'set'
-							instance.addToCmdQueue(actionCmd)
+							if (paramFuncs.isLevel(foundCmd) && Number(actionCmd.Fade || 0) > 0) {
+								paramFuncs.fadeCmd(instance, actionCmd)
+							} else {
+								if (config.cancelFadesOnSceneRecall !== false && paramFuncs.isSceneRecall(foundCmd)) {
+									paramFuncs.cancelAllFades(instance)
+								}
+								paramFuncs.cancelFade(instance, actionCmd)
+								instance.addToCmdQueue(actionCmd)
+							}
 						}
 					}
 				}
@@ -386,6 +401,88 @@ module.exports = {
 				}
 
 				return { imageBuffer: graphics.stackImage(bars) }
+			},
+		}
+
+		feedbacks['LevelMeter'] = {
+			type: 'advanced',
+			name: 'LevelMeter',
+			description: 'Show a horizontal fader level position meter on the button',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Position',
+					id: 'position',
+					default: 'bottom',
+					choices: [
+						{ id: 'top', label: 'top' },
+						{ id: 'bottom', label: 'bottom' },
+					],
+				},
+				{
+					type: 'number',
+					label: 'Padding',
+					id: 'padding',
+					tooltip: 'Distance from edge of button',
+					min: 0,
+					max: 72,
+					default: 1,
+					required: true,
+				},
+				{
+					type: 'textinput',
+					label: 'Level',
+					id: 'level',
+					default: '-20',
+					useVariables: true,
+				},
+			],
+			callback: async (feedback, context) => {
+				const padding = feedback.options.padding
+				const barWidth = 7
+				const level = await context.parseVariablesInString(feedback.options.level)
+				const faderVal = (level) => {
+					if (String(level).toUpperCase() == '-INF') return 0
+					const value = Number(level)
+					if (isNaN(value)) return 0
+					return Math.min(Math.max(value + 90, 0), 100)
+				}
+				const options = {
+					width: feedback.image.width,
+					height: feedback.image.height,
+					colors: [
+						{ size: 100, color: combineRgb(0, 96, 255), background: combineRgb(0, 96, 255), backgroundOpacity: 64 },
+					],
+					barLength: feedback.image.width - 10,
+					barWidth,
+					type: 'horizontal',
+					value: faderVal(level),
+					offsetX: 5,
+					offsetY: feedback.options.position == 'top' ? padding : feedback.image.height - barWidth - padding,
+					opacity: 255,
+				}
+
+				return { imageBuffer: graphics.bar(options) }
+			},
+		}
+
+		feedbacks['CurrentScene'] = {
+			type: 'boolean',
+			name: 'Current Scene',
+			description: 'Change style when this scene is currently loaded',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 0, 153),
+			},
+			options: [
+				{
+					type: 'textinput',
+					label: 'Scene Key',
+					id: 'sceneKey',
+					default: '',
+				},
+			],
+			callback: async (feedback) => {
+				return instance.currentSceneKey == feedback.options.sceneKey
 			},
 		}
 
