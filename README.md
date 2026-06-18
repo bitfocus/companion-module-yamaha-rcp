@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v3.5.13 - for Companion v3/4
+## Yamaha Remote Control Protocol v3.6.0 - for Companion v3/4
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -24,6 +24,10 @@ _Andrew Broughton_
 ---
 
 **REVISION HISTORY**
+
+3.6.0
+
+- Add fading functions, fader indicators and new presets - thank you to @themusicnerd
 
 3.5.13
 
