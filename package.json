@@ -26,7 +26,7 @@
 		"husky": "^9.1.7"
 	},
 	"dependencies": {
-		"@companion-module/base": "^2.0.4",
+		"@companion-module/base": "^1.14.1",
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
