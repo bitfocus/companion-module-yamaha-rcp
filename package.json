@@ -30,5 +30,5 @@
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.4.1"
+	"packageManager": "yarn@4.13.0"
 }
