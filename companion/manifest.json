@@ -1,5 +1,6 @@
 {
 	"id": "yamaha-rcp",
+	"type": "module",
 	"name": "yamaha-rcp",
 	"shortname": "yamaha-rcp",
 	"description": "yamaha-rcp",
