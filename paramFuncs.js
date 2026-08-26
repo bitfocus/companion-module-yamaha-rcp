@@ -247,20 +247,20 @@ module.exports = {
 			let parsedOptions = JSON.parse(JSON.stringify(optionsToParse)) // Deep Clone
 
 			parsedOptions.X =
-				optionsToParse.X == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.X)) - 1
+				optionsToParse.X == undefined ? 0 : parseInt(String(optionsToParse.X)) - 1
 			parsedOptions.Y =
-				optionsToParse.Y == undefined ? 0 : parseInt(await context.parseVariablesInString(optionsToParse.Y)) - 1
+				optionsToParse.Y == undefined ? 0 : parseInt(String(optionsToParse.Y)) - 1
 
 			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
 			parsedOptions.X = Math.max(parsedOptions.X, 0)
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-			parsedOptions.Val = await context.parseVariablesInString(optionsToParse.Val)
+			parsedOptions.Val = String(optionsToParse.Val)
 			parsedOptions.Val = parsedOptions.Val === undefined ? '' : parsedOptions.Val
 
 			return parsedOptions
 		} catch (error) {
-			this.log('error', `\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
-			this.log('error', `parseOptions: STACK TRACE:\n${error.stack}\n`)
+			console.error(`\nparseOptions: optionsToParse = ${JSON.stringify(optionsToParse)}`)
+			console.error(`parseOptions: STACK TRACE:\n${error.stack}\n`)
 		}
 	},
 

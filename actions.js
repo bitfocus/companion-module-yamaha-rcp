@@ -213,11 +213,11 @@ module.exports = {
 			if (rcpCommand.RW.includes('w')) {
 				newAction.callback = async (action, context) => {
 					let foundCmd = paramFuncs.findRcpCmd(action.actionId) // Find which command
-					let XArr = JSON.parse(await context.parseVariablesInString(action.options.X || 0))
+					let XArr = JSON.parse(String(action.options.X || '0'))
 					if (!Array.isArray(XArr)) {
 						XArr = [XArr]
 					}
-					let YArr = JSON.parse(await context.parseVariablesInString(action.options.Y || 0))
+					let YArr = JSON.parse(String(action.options.Y || '0'))
 					if (!Array.isArray(YArr)) {
 						YArr = [YArr]
 					}
@@ -350,7 +350,7 @@ module.exports = {
 					barLength: bLength,
 					barWidth: bWidth,
 					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
-					value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal1))),
+					value: bVal(1 * (String(feedback.options.meterVal1))),
 					offsetX: ofsX1,
 					offsetY: ofsY1,
 					opacity: 255,
@@ -367,7 +367,7 @@ module.exports = {
 				if (feedback.options.meterVal2) {
 					options2 = {
 						...options1,
-						value: bVal(1 * (await context.parseVariablesInString(feedback.options.meterVal2))),
+						value: bVal(1 * (String(feedback.options.meterVal2))),
 						offsetX: ofsX2,
 						offsetY: ofsY2,
 					}
