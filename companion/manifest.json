@@ -10,7 +10,7 @@
 	"maintainers": [],
 	"legacyIds": ["yamaha-scp"],
 	"runtime": {
-		"type": "node18",
+		"type": "node24",
 		"api": "nodejs-ipc",
 		"apiVersion": "0.0.0",
 		"entrypoint": "../index.js"
