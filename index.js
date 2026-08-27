@@ -15,7 +15,7 @@ const METER_REFRESH = 10000 // 10 seconds
 const KA_INTERVAL = 10000 // 10 seconds
 
 // Instance Setup
-class instance extends InstanceBase {
+export default class instance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 	}
@@ -544,4 +544,4 @@ class instance extends InstanceBase {
 	}
 }
 
-runEntrypoint(instance, upgrade)
+export const UpgradeScripts = upgrade
