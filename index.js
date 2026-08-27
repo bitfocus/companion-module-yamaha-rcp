@@ -544,4 +544,4 @@ export default class instance extends InstanceBase {
 	}
 }
 
-export const UpgradeScripts = upgrade
+export const UpgradeScripts = [upgrade]
