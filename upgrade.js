@@ -1,29 +1,35 @@
+import paramFuncsModule from './paramFuncs.js'
+
 /*
 // Do the upgrades of actions, release actions and feedback
 */
 
-module.exports = [
-	(upg111to112 = () => ({
+const UpgradeScripts = [
+	() => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	})),
+		}),
 
-	(upg112to113 = () => ({
+	() => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	})),
+		}),
 
-	(upg113to160 = () => ({
+	() => ({
 		updatedConfig: null,
 		updatedActions: [],
-		updatedFeedbacks: [],
-	})),
+			updatedFeedbacks: [],
+		}),
 
 	// Upgrade  2.x > 3.0.x, changes scene action parameter format
-	(upg2xxto30x = (context, props) => {
-		var paramFuncs = require('./paramFuncs')
+	(context, props) => {
+		const paramFuncs = paramFuncsModule
+		const unwrapOption = (option) => (option && typeof option === 'object' && 'value' in option ? option.value : option)
+		const wrapOption = (option) =>
+			option && typeof option === 'object' && 'value' in option ? option : { isExpression: false, value: option }
+		const isExpression = (option) => Boolean(option && typeof option === 'object' && option.isExpression)
 
 		console.log('\nYamaha-RCP Upgrade: Running 2.x -> 3.x Upgrade.')
 		var updates = {
@@ -38,7 +44,7 @@ module.exports = [
 		}
 
 		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
-		rcpCommands = paramFuncs.getParams(context, context.currentConfig)
+		globalThis.rcpCommands = paramFuncs.getParams(context, context.currentConfig)
 		console.log('\n')
 
 		let checkUpgrade = (action, isAction) => {
@@ -51,22 +57,26 @@ module.exports = [
 
 			if (actionAddress.startsWith('MIXER_Lib')) {
 				actionAddress = 'MIXER_Lib/Scene/Recall'
-				newAction.options.Val = action.options.X
-				newAction.options.X = 0
+				newAction.options.Val = wrapOption(newAction.options.X)
+				newAction.options.X = wrapOption(0)
 				changed = true
 			}
 
 			if (actionAddress.startsWith('scene')) {
 				actionAddress = 'MIXER_Lib/Bank/Scene/Recall'
-				newAction.options.Val = action.options.X
-				newAction.options.X = 0
-				newAction.options.Y = action.options.Y == 'a' ? 1 : 2
+				newAction.options.Val = wrapOption(newAction.options.X)
+				newAction.options.X = wrapOption(0)
+				newAction.options.Y = wrapOption(unwrapOption(action.options.Y) == 'a' ? 1 : 2)
+				changed = true
 			}
 
 			rcpCmd = paramFuncs.findRcpCmd(actionAddress)
 			if (rcpCmd !== undefined) {
-				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && newAction.options.Val !== 'Toggle') {
-					newAction.options.Val = newAction.options.Val == -32768 ? '-Inf' : newAction.options.Val / rcpCmd.Scale
+				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && unwrapOption(newAction.options.Val) !== 'Toggle') {
+					if (!isExpression(newAction.options.Val)) {
+						const value = unwrapOption(newAction.options.Val)
+						newAction.options.Val = wrapOption(value == -32768 ? '-Inf' : value / rcpCmd.Scale)
+					}
 					changed = true
 				}
 
@@ -79,7 +89,7 @@ module.exports = [
 						}' ...`
 					)
 					console.log(
-						`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+						`X: ${unwrapOption(action.options.X)} -> ${unwrapOption(newAction.options.X)}, Y: ${unwrapOption(action.options.Y)} -> ${unwrapOption(newAction.options.Y)}, Val: ${unwrapOption(action.options.Val)} -> ${unwrapOption(newAction.options.Val)}\n`
 					)
 
 					if (isAction) {
@@ -106,9 +116,9 @@ module.exports = [
 		}
 
 		return updates
-	}),
+	},
 
-	(upg30xto34x = (context, props) => {
+	(context, props) => {
 		console.log('\nYamaha-RCP Upgrade: Running 3.x -> 3.4 Upgrade.')
 		var updates = {
 			updatedConfig: props.config || {},
@@ -172,6 +182,8 @@ module.exports = [
 		}
 
 		return updates
-	}),
+	},
 
 ]
+
+export default UpgradeScripts

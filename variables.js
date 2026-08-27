@@ -1,53 +1,66 @@
-module.exports = {
+import wtMtrTable from './wtMtrTable.json' with { type: 'json' }
+import paramFuncs from './paramFuncs.js'
+
+const varFuncs = {
+	formatFeedbackValue: (cmd, data) => {
+		const rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
+		if (rcpCmd.Type == 'mtr') {
+			if (globalThis.config.model == 'DM7') {
+				data = Math.round(wtMtrTable[data])
+			} else {
+				data = data - 126
+			}
+		}
+		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq') {
+			data = data == -32768 ? '-Inf' : data / rcpCmd.Scale
+		}
+		return data
+	},
+
 	initVars: (instance) => {
-		instance.variables = [
-			{ variableId: 'modelName', name: 'Device Model Name' },
-			{ variableId: 'deviceName', name: 'Device Label' },
-			{ variableId: 'runMode', name: 'Device Run Mode' },
-		]
-		if (!['TF', 'DM3', 'DM7'].includes(config.model)) {
-			instance.variables.push({ variableId: 'error', name: 'Device Status'})
+		instance.variables = {
+			modelName: { name: 'Device Model Name' },
+			deviceName: { name: 'Device Label' },
+			runMode: { name: 'Device Run Mode' },
+		}
+		const addVariable = (variableId, name) => {
+			instance.variables[variableId] = { name }
+		}
+		if (!['TF', 'DM3', 'DM7'].includes(globalThis.config.model)) {
+			addVariable('error', 'Device Status')
 		}
 
-		if (config.model.slice(-2) != 'IO') {
+		if (globalThis.config.model.slice(-2) != 'IO') {
 			// Not TIO, RIO or RSio
-			instance.variables.push(
-				{ variableId: 'curScene', name: 'Current Scene Number' },
-				{ variableId: 'curSceneName', name: 'Current Scene Name' },
-				{ variableId: 'curSceneComment', name: 'Current Scene Comment' },
-			)
+			addVariable('curScene', 'Current Scene Number')
+			addVariable('curSceneName', 'Current Scene Name')
+			addVariable('curSceneComment', 'Current Scene Comment')
 
-			switch (config.model) {
+			switch (globalThis.config.model) {
 				case 'CL/QL':
 					{
-						instance.variables.push(
-							{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
-							{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' },
-							{ variableId: 'cuedMixes', name: 'Mixes Cued' },
-							{ variableId: 'cuedMatrices', name: 'Matrices Cued' },
-							{ variableId: 'cuedDCAs', name: 'DCAs Cued' }
-						)
+						addVariable('cuedInChannels', 'Inputs Cued')
+						addVariable('cuedStInChannels', 'Stereo Inputs Cued')
+						addVariable('cuedMixes', 'Mixes Cued')
+						addVariable('cuedMatrices', 'Matrices Cued')
+						addVariable('cuedDCAs', 'DCAs Cued')
 					}
 					break
 
 				case 'DM3':
 					{
-						instance.variables.push(
-							{ variableId: 'cuedStInChannels', name: 'Stereo Inputs Cued' },
-							{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
-							{ variableId: 'cuedMixes', name: 'Mixes Cued' },
-							{ variableId: 'cuedMatrices', name: 'Matrices Cued' }
-						)
+						addVariable('cuedStInChannels', 'Stereo Inputs Cued')
+						addVariable('cuedInChannels', 'Inputs Cued')
+						addVariable('cuedMixes', 'Mixes Cued')
+						addVariable('cuedMatrices', 'Matrices Cued')
 					}
 					break
 
 				case 'PM': {
-					instance.variables.push(
-						{ variableId: 'cuedInChannels', name: 'Inputs Cued' },
-						{ variableId: 'cuedMixes', name: 'Mixes Cued' },
-						{ variableId: 'cuedMatrices', name: 'Matrices Cued' },
-						{ variableId: 'cuedDCAs', name: 'DCAs Cued' }
-					)
+					addVariable('cuedInChannels', 'Inputs Cued')
+					addVariable('cuedMixes', 'Mixes Cued')
+					addVariable('cuedMatrices', 'Matrices Cued')
+					addVariable('cuedDCAs', 'DCAs Cued')
 				}
 			}
 		}
@@ -67,9 +80,9 @@ module.exports = {
 		instance.sendCmd('devinfo productname') // Request Device Model
 		instance.sendCmd('devinfo devicename')  // Request Device Label
 		instance.sendCmd('devstatus runmode')   // Request Run Mode
-		if (!['TF', 'DM3', 'DM7'].includes(config.model)) instance.sendCmd('devstatus error') // Request error status
+		if (!['TF', 'DM3', 'DM7'].includes(globalThis.config.model)) instance.sendCmd('devstatus error') // Request error status
 		
-		switch (config.model) {
+		switch (globalThis.config.model) {
 			case 'CL/QL': {
 				instance.sendCmd('sscurrent_ex MIXER:Lib/Scene') // Request Current Scene Number
 				break
@@ -124,7 +137,7 @@ module.exports = {
 				break
 			case 'sscurrent_ex':
 				// Request Current Scene Info once we know what scene we have
-				if (config.model == 'TF' || config.model == 'DM3') {
+				if (globalThis.config.model == 'TF' || globalThis.config.model == 'DM3') {
 					instance.setVariableValues({
 						curScene: `${msg.Address.toUpperCase().slice(-1)}${msg.Val.toString().padStart(2, '0')}`,
 					})
@@ -137,7 +150,7 @@ module.exports = {
 			case 'sscurrentt_ex':
 				instance.setVariableValues({ curScene: msg.Val })
 				// Request Current Scene Info once we know what scene we have
-				switch (config.model) {
+				switch (globalThis.config.model) {
 					case 'PM':
 						instance.sendCmd(`ssinfot_ex MIXER:Lib/Scene "${msg.Val}"`)
 						break
@@ -195,23 +208,15 @@ module.exports = {
 	},
 
 	fbCreatesVar: (instance, cmd, data) => {
-		const wtMtrTable = require('./wtMtrTable.json')
-		const paramFuncs = require('./paramFuncs.js')
 		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 
 		if (rcpCmd.Type == 'mtr') {
-			if (config.model == 'DM7') {
-				data = Math.round(wtMtrTable[data])
-			} else {
-				data = data - 126
-			}
+			data = varFuncs.formatFeedbackValue(cmd, data)
 			if (rcpCmd.Pickoff && cmd.Y > 0) {
 				cmd.Y = rcpCmd.Pickoff.split('|')[cmd.Y - 1] || undefined
 			}
-		}
-
-		if (rcpCmd.Type == 'integer' || rcpCmd.Type == 'freq') {
-			data = data == -32768 ? '-Inf' : data / rcpCmd.Scale
+		} else {
+			data = varFuncs.formatFeedbackValue(cmd, data)
 		}
 
 		if (cmd.createVariable) {
@@ -222,12 +227,9 @@ module.exports = {
 			varName = varName + (cmd.X ? `_${cmd.X}` : '')
 			varName = varName + (cmd.Y ? `_${cmd.Y}` : '')
 
-			let varToAdd = { variableId: varName, name: 'Auto-Created Variable' }
-			let varIndex = instance.variables.findIndex((i) => i.variableId === varToAdd.variableId)
-
 			// Add new Auto-created variable and value
-			if (varIndex == -1) {
-				instance.variables.push(varToAdd)
+			if (instance.variables[varName] === undefined) {
+				instance.variables[varName] = { name: 'Auto-Created Variable' }
 				instance.setVariableDefinitions(instance.variables)
 			}
 			let value = {}
@@ -244,3 +246,5 @@ module.exports = {
 		}
 	},
 }
+
+export default varFuncs

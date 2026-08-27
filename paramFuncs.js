@@ -1,4 +1,12 @@
-module.exports = {
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import rcpNames from './rcpNames.json' with { type: 'json' }
+import hpf from './hpf.json' with { type: 'json' }
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+
+const paramFuncs = {
 	makeChNames: (r) => {
 		for (let i = 1; i <= 288; i++) {
 			r.chNames.push({ id: i, label: `CH${i}` })
@@ -7,14 +15,12 @@ module.exports = {
 	},
 
 	getParams: (instance, cfg) => {
-		var rcpNames = require('./rcpNames.json')
-		rcpNames.chNames = module.exports.makeChNames(rcpNames)
+		rcpNames.chNames = paramFuncs.makeChNames(rcpNames)
 
 		instance.colorCommands = []
 
 		let fname = ''
 		let rcpCmds
-		const FS = require('fs')
 
 		switch (cfg.model) {
 			case 'CL/QL':
@@ -45,8 +51,8 @@ module.exports = {
 
 		// Read the DataFile
 		if (fname !== '') {
-			let data = FS.readFileSync(`${__dirname}/${fname}`)
-			rcpCmds = module.exports.parseData(data)
+			let data = fs.readFileSync(path.join(moduleDir, fname))
+			rcpCmds = paramFuncs.parseData(data)
 
 			rcpCmds.sort((a, b) => {
 				// Sort the commands
@@ -154,7 +160,7 @@ module.exports = {
 
 					case 'mtr':
 						params = RCP_METER_FIELDS
-						for (k = 3; k < line.length; k++) {
+						for (let k = 3; k < line.length; k++) {
 							params.push(k - 3)
 						}
 				}
@@ -174,7 +180,7 @@ module.exports = {
 		if (cmdToFmt == undefined) return
 
 		let cmdName = cmdToFmt.Address
-		let rcpCmd = module.exports.findRcpCmd(cmdName)
+		let rcpCmd = paramFuncs.findRcpCmd(cmdName)
 		let prefix = cmdToFmt.prefix
 		let cmdStart = prefix
 		let options = { X: cmdToFmt.X, Y: cmdToFmt.Y, Val: cmdToFmt.Val }
@@ -182,7 +188,7 @@ module.exports = {
 		if (rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
 			cmdStart = prefix == 'set' ? 'ssrecall' : 'sscurrent'
 			if (rcpCmd.Index == 1001) cmdStart = 'ssupdate' // store command
-			switch (config.model) {
+			switch (globalThis.config.model) {
 				case 'TF':
 				case 'DM3':
 					cmdStart = cmdStart + '_ex'
@@ -209,22 +215,22 @@ module.exports = {
 			cmdStart = 'event'
 			cmdName = cmdName.replace('/Bank', '') // Remove "Bank" from command
 			options.X = ''
-			options.Y = (config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
+			options.Y = (globalThis.config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
 		}
 
 		if (rcpCmd.Index >= 2000) {
 			// Meters
-			if (!config.metering) return
+			if (!globalThis.config.metering) return
 			cmdStart = 'mtrstart'
 			cmdName = cmdName.replace('/Meter', '') // Remove "Meter" from the beginning of the command
-			if (config.model == 'TIO' || config.model == 'RIO' || config.model == 'RSIO') {
+			if (globalThis.config.model == 'TIO' || globalThis.config.model == 'RIO' || globalThis.config.model == 'RSIO') {
 				cmdName = cmdName.replace(/\/.*Ch/, '/Dev')
 			}
 			if (rcpCmd.Pickoff) {
 				let pickoffs = rcpCmd.Pickoff.split('|')
 				cmdName += '/' + pickoffs[options.Y] // Add the Pickoff Parameter
 			}
-			options.X = config.meterSpeed
+			options.X = globalThis.config.meterSpeed
 			options.Y = ''
 		}
 
@@ -265,9 +271,8 @@ module.exports = {
 	},
 
 	parseVal: (context, cmd) => {
-		const hpf = require('./hpf')
 		let val = cmd.Val
-		let rcpCmd = module.exports.findRcpCmd(cmd.Address)
+		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 
 		if (rcpCmd.Type == 'string' || rcpCmd.Type == 'binary') {
 			return val
@@ -288,7 +293,7 @@ module.exports = {
 			}
 		}
 
-		if (!module.exports.isRelAction(cmd)) return val //Only continue if it's a relative action
+		if (!paramFuncs.isRelAction(cmd)) return val //Only continue if it's a relative action
 
 		let data = context.getFromDataStore(cmd)
 		if (data === undefined) return undefined
@@ -323,10 +328,10 @@ module.exports = {
 			if (cmdAction == 'mtr') {
 				cmdName = cmdName.replace('Current/', 'Current/Meter/')
 
-				if (config.model == 'TIO' || config.model == 'RIO') {
+				if (globalThis.config.model == 'TIO' || globalThis.config.model == 'RIO') {
 					cmdName = cmdName.replace('/Dev/OutputLevel', '/OutCh/OutputLevel')
-					cmdName = cmdName.replace(/\/Dev.*/, config.model == 'TIO' ? '/InCh/InputLevel' : '/InCh')
-				} else if (config.model == 'RSIO') {
+					cmdName = cmdName.replace(/\/Dev.*/, globalThis.config.model == 'TIO' ? '/InCh/InputLevel' : '/InCh')
+				} else if (globalThis.config.model == 'RSIO') {
 					cmdName = cmdName.replace('/Dev', cmdName.includes('InputLevel') ? '/InCh' : '/OutCh')
 				} else {
 					let lastSlash = cmdName.lastIndexOf('/')
@@ -334,7 +339,7 @@ module.exports = {
 				}
 			}
 			let cmdToFind = cmdName.replace(/:/g, '_')
-			rcpCmd = rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdToFind))
+			rcpCmd = globalThis.rcpCommands.find((cmd) => cmd.Address.replace(/:/g, '_').startsWith(cmdToFind))
 		}
 		return rcpCmd
 	},
@@ -347,3 +352,5 @@ module.exports = {
 		return false
 	},
 }
+
+export default paramFuncs

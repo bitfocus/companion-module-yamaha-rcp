@@ -1,9 +1,14 @@
-module.exports = {
+import rcpNames from './rcpNames.json' with { type: 'json' }
+import rsioChoices from './rsioChoices.json' with { type: 'json' }
+import { combineRgb } from '@companion-module/base'
+import { graphics } from 'companion-module-utils'
+import paramFuncs from './paramFuncs.js'
+import feedbackFuncs from './feedbacks.js'
+import varFuncs from './variables.js'
+
+const actionFuncs = {
 	// Create single Action/Feedback
 	createAction: (instance, rcpCmd) => {
-		const rcpNames = require('./rcpNames.json')
-		const rsioChoices = require('./rsioChoices.json')
-		const paramFuncs = require('./paramFuncs.js')
 
 		let newAction = {}
 		let paramsToAdd = []
@@ -22,7 +27,7 @@ module.exports = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'X',
 				default: 1,
-				required: true,
+				requiredExpression: 'true',
 				useVariables: { local: true }
 			}
 			if (rsioChoices[actionName] !== undefined) {
@@ -58,11 +63,11 @@ module.exports = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'Y',
 				default: 1,
-				required: true,
+				requiredExpression: 'true',
 				useVariables: { local: true },
 				allowCustom: true,
 			}
-			if ((config.model == 'TF' || config.model == 'DM3' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
+			if ((globalThis.config.model == 'TF' || globalThis.config.model == 'DM3' || globalThis.config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
 				YOpts = {
 					...YOpts,
 					type: 'dropdown',
@@ -87,7 +92,7 @@ module.exports = {
 				if (pickoffs) {
 					YOpts.label = 'Pickoff'
 					YOpts.choices = []
-					for (i = 0; i < pickoffs.length; i++) {
+					for (let i = 0; i < pickoffs.length; i++) {
 						YOpts.choices.push({ id: i + 1, label: pickoffs[i] })
 					}
 					YOpts.default = 1
@@ -105,7 +110,7 @@ module.exports = {
 			label: actionNameParts[rcpNameIdx],
 			id: 'Val',
 			default: rcpCmd.Default,
-			required: true,
+			requiredExpression: 'true',
 			minChoicesForSearch: 0,
 			allowCustom: true,
 			useVariables: { local: true }
@@ -161,12 +166,12 @@ module.exports = {
 			case 'string':
 			case 'binary':
 				if (actionName.startsWith('CustomFaderBank')) ValOpts.choices = rcpNames.customChNames
-				else if (actionName.endsWith('Color')) ValOpts.choices = config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
+				else if (actionName.endsWith('Color')) ValOpts.choices = globalThis.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
 				else if (actionName.endsWith('Icon')) ValOpts.choices = rcpNames.chIcons
 				
 				else if (rcpNames[actionName] !== undefined) ValOpts.choices = rcpNames[actionName]
 
-				else if ((config.model == 'PM' || config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+				else if ((globalThis.config.model == 'PM' || globalThis.config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/' }
 				} else {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '' }
@@ -177,6 +182,7 @@ module.exports = {
 		// Make sure the current value is stored in dataStore[]
 
 		if (rcpCmd.Index < 1000 && rcpCmd.RW.includes('r')) {
+			newAction.optionsToMonitorForSubscribe = ['X', 'Y']
 			newAction.subscribe = async (action, context) => {
 				let options = await paramFuncs.parseOptions(context, action.options)
 				if (options != undefined) {
@@ -193,21 +199,33 @@ module.exports = {
 	},
 	// Create the Actions & Feedbacks
 	updateActions: (instance) => {
-		const paramFuncs = require('./paramFuncs.js')
-		const feedbackFuncs = require('./feedbacks.js')
 
 		let commands = {}
 		let feedbacks = {}
 		let rcpCommand = {}
 		let actionName = ''
 
-		for (let i = 0; i < rcpCommands.length; i++) {
-			rcpCommand = rcpCommands[i]
+		for (let i = 0; i < globalThis.rcpCommands.length; i++) {
+			rcpCommand = globalThis.rcpCommands[i]
 			actionName = rcpCommand.Address.replace(/:/g, '_') // Change the : to _ as companion doesn't like colons in names
-			let newAction = module.exports.createAction(instance, rcpCommand)
+			let newAction = actionFuncs.createAction(instance, rcpCommand)
 
 			if (rcpCommand.RW.includes('r')) {
 				feedbacks[actionName] = feedbackFuncs.createFeedbackFromAction(instance, newAction) // only include commands that can be read from the console
+				const valueFeedbackId = `${actionName}_Value`
+				const valueRcpCommand = rcpCommand
+				feedbacks[valueFeedbackId] = {
+					type: 'value',
+					name: `${newAction.name} Value`,
+					options: JSON.parse(JSON.stringify(newAction.options.filter((option) => option.id === 'X' || option.id === 'Y'))),
+					callback: async (feedback, context) => {
+						const options = await paramFuncs.parseOptions(context, feedback.options)
+						if (options === undefined) return null
+						options.Address = valueRcpCommand.Address
+						const data = instance.getFromDataStore(options)
+						return data === undefined ? null : varFuncs.formatFeedbackValue(options, data)
+					},
+				}
 			}
 
 			if (rcpCommand.RW.includes('w')) {
@@ -240,11 +258,10 @@ module.exports = {
 			}
 		}
 
-		const { graphics } = require('companion-module-utils')
-		const { combineRgb } = require('@companion-module/base')
 
 		feedbacks['Meter'] = {
 			type: 'advanced',
+			affectedProperties: ['imageBuffer'],
 			name: 'VUMeter',
 			description: 'Show a Bargraph VU Meter on the button',
 			options: [
@@ -268,7 +285,7 @@ module.exports = {
 					min: 0,
 					max: 72,
 					default: 1,
-					required: true,
+				requiredExpression: 'true',
 				},
 				{
 					type: 'textinput',
@@ -393,3 +410,5 @@ module.exports = {
 		instance.setFeedbackDefinitions(feedbacks)
 	},
 }
+
+export default actionFuncs

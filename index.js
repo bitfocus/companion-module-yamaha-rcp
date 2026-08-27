@@ -2,12 +2,12 @@
 // Andrew Broughton <andy@checkcheckonetwo.com>
 // Aug 2025 Version 3.5.11 (for Companion v3/v4)
 
-const { InstanceBase, Regex, runEntrypoint, combineRgb, TCPHelper } = require('@companion-module/base')
+import { InstanceBase, Regex, combineRgb, TCPHelper } from '@companion-module/base'
 
-const paramFuncs = require('./paramFuncs')
-const actionFuncs = require('./actions.js')
-const varFuncs = require('./variables.js')
-const upgrade = require('./upgrade')
+import paramFuncs from './paramFuncs.js'
+import actionFuncs from './actions.js'
+import varFuncs from './variables.js'
+import upgradeScripts from './upgrade.js'
 
 const RCP_PORT = 49280
 const MSG_DELAY = 5
@@ -23,8 +23,8 @@ export default class instance extends InstanceBase {
 	// Startup
 	async init(cfg) {
 		this.updateStatus('Starting')
-		global.config = cfg
-		global.rcpCommands = []
+		globalThis.config = cfg
+		globalThis.rcpCommands = []
 		this.colorCommands = [] // Commands which have a color field
 		this.rcpPresets = []
 		this.dataStore = {} // status, Address (using ":"), X, Y, Val
@@ -32,14 +32,14 @@ export default class instance extends InstanceBase {
 		this.queueTimer
 		this.meterTimer = {}
 		this.kaTimer = {}
-		this.variables = []
+		this.variables = {}
 		this.newConsole()
 	}
 
 	// Change in Configuration
 	async configUpdated(cfg) {
-		config = cfg
-		if (config.model) {
+		globalThis.config = cfg
+		if (globalThis.config.model) {
 			this.newConsole()
 		}
 	}
@@ -134,13 +134,13 @@ export default class instance extends InstanceBase {
 
 	// Whenever the console type changes, update the info
 	newConsole() {
-		this.log('info', `Device selected: ${config.model}`)
-		rcpCommands = paramFuncs.getParams(this, config)
+		this.log('info', `Device selected: ${globalThis.config.model}`)
+		globalThis.rcpCommands = paramFuncs.getParams(this, globalThis.config)
 
 		actionFuncs.updateActions(this) // Re-do the actions once the console is chosen
 		varFuncs.initVars(this)
 		this.createPresets()
-		config.host = config.bonjour_host?.split(':')[0] || config.host
+		globalThis.config.host = globalThis.config.bonjour_host?.split(':')[0] || globalThis.config.host
 		this.initTCP()
 	}
 
@@ -154,8 +154,8 @@ export default class instance extends InstanceBase {
 		this.socket?.destroy()
 		delete this.socket
 
-		if (config.host) {
-			this.socket = new TCPHelper(config.host, RCP_PORT)
+		if (globalThis.config.host) {
+			this.socket = new TCPHelper(globalThis.config.host, RCP_PORT)
 
 			this.socket.on('status_change', (status, message) => {
 				this.updateStatus(status, message)
@@ -172,11 +172,11 @@ export default class instance extends InstanceBase {
 				varFuncs.getVars(this)
 				this.queueTimer = {}
 				this.processCmdQueue()
-				if (config.metering) {
+				if (globalThis.config.metering) {
 					this.startMeters()
 					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
 				}
-				if (config.keepAlive) {
+				if (globalThis.config.keepAlive) {
 					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
 					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), KA_INTERVAL)
 				}
@@ -200,7 +200,7 @@ export default class instance extends InstanceBase {
 					if (line.length == 0) {
 						continue
 					}
-					this.log('debug', `[${new Date().toJSON()}] Received: '${line}'`)
+					this.log('debug', `Received: '${line}'`)
 					receivedCmds = paramFuncs.parseData(line) // Break out the parameters
 
 					for (let i = 0; i < receivedCmds.length; i++) {
@@ -325,40 +325,22 @@ export default class instance extends InstanceBase {
 
 	// Create the preset definitions
 	createPresets() {
-		var meterCmds = global.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
-		this.rcpPresets = []
+		var meterCmds = globalThis.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
+		this.rcpPresets = {}
+		const presetStructure = [
+			{
+				id: 'level-meters',
+				name: 'Level Meters',
+				definitions: [],
+			},
+		]
 		var meterPreset = {
-				type: 'button',
-				category: 'Level Meters',
+				type: 'layered',
 				name: '',
-				style: {
-					text: '',
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
+				elements: [],
 				steps: [],
-				feedbacks: [
-					{
-						feedbackId: 'Meter',
-						options: {
-							position: 'right',
-							padding: 1,
-							meterVal1: '',
-							meterVal2: '',
-						},
-					},
-					{
-						feedbackId: '',
-						options: {
-							X: 1,
-							Y: 1,
-							createVariable: true,
-						},
-						style: {
-						}
-					},
-				],
+				feedbacks: [],
+				localVariables: [],
 			}
 			
 			for (const c of meterCmds) {
@@ -375,16 +357,85 @@ export default class instance extends InstanceBase {
 				}
 				if (cmdName) {
 					curPreset.name = `Meter Level Indicator - ${cmdName}`
-					curPreset.style.text = `${cmdName}\\nMeter`
-					curPreset.feedbacks[0].options.meterVal1 = `$(${this.label}:V_Meter_${cmdName}_1${pickoffName})`
-					curPreset.feedbacks[1].feedbackId = c.Address.replace(/:/g, '_')
-					curPreset.feedbacks[1].options.Y = pickoffIndex
-					if (cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh') { // Make a Stereo Meter
-						curPreset.feedbacks[0].options.meterVal2 = `$(${this.label}:V_Meter_${cmdName}_2${pickoffName})`
-						curPreset.feedbacks.push(JSON.parse(JSON.stringify(curPreset.feedbacks[1])))
-						curPreset.feedbacks[2].options.X = 2 // Right channel
+					const valueFeedbackId = `${c.Address.replace(/:/g, '_')}_Value`
+					const localValueName = 'meter_value_1'
+					const isStereo = cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh'
+					curPreset.elements.push({
+						type: 'text',
+						id: 'label',
+						x: 0,
+						y: 0,
+						width: 72,
+						height: 58,
+						text: `${cmdName}\\nMeter`,
+						fontsize: 18,
+						fontsizeAllowShrink: true,
+						color: combineRgb(255, 255, 255),
+						halign: 'center',
+						valign: 'center',
+					},
+					{
+						type: 'gauge',
+						id: 'meter-1',
+						x: isStereo ? 80 : 80,
+						y: 10,
+						width: isStereo ? 5 : 10,
+						height: 80,
+						value: { isExpression: true, value: `$(local:${localValueName})` },
+						min: -60,
+						max: 1,
+						origin: -60,
+						orientation: 'vertical',
+						roundedEnds: false,
+						fillEnabled: true,
+						fillWidth: 100,
+						multiColour: true,
+						stops: [
+							{ value: -60, color: combineRgb(0, 255, 0), gradient: false },
+							{ value: -18, color: combineRgb(255, 165, 0), gradient: false },
+							{ value: 0, color: combineRgb(255, 0, 0), gradient: false },
+						],
+						})
+					curPreset.localVariables.push({
+						variableType: 'feedback',
+						variableName: localValueName,
+						feedbackId: valueFeedbackId,
+						options: { X: 1, Y: pickoffIndex },
+					})
+					if (isStereo) { // Make a Stereo Meter
+						const localValueName2 = 'meter_value_2'
+						curPreset.elements.push({
+							type: 'gauge',
+							id: 'meter-2',
+								x: 90,
+								y: 10,
+								width: 5,
+								height: 80,
+							value: { isExpression: true, value: `$(local:${localValueName2})` },
+							min: -60,
+							max: 1,
+							origin: -60,
+								orientation: 'vertical',
+								roundedEnds: false,
+								fillEnabled: true,
+								fillWidth: 100,
+							multiColour: true,
+							stops: [
+								{ value: -60, color: combineRgb(0, 255, 0), gradient: false },
+								{ value: -18, color: combineRgb(255, 165, 0), gradient: false },
+								{ value: 0, color: combineRgb(255, 0, 0), gradient: false },
+							],
+						})
+						curPreset.localVariables.push({
+							variableType: 'feedback',
+							variableName: localValueName2,
+							feedbackId: valueFeedbackId,
+							options: { X: 2, Y: pickoffIndex },
+						})
 					}
-					this.rcpPresets.push(curPreset)
+					const presetId = `meter-${c.Address.replace(/[^a-zA-Z0-9_-]/g, '_')}-${pickoffIndex}`
+					this.rcpPresets[presetId] = curPreset
+					presetStructure[0].definitions.push(presetId)
 				}
 			}
 
@@ -420,7 +471,7 @@ export default class instance extends InstanceBase {
 
 */
 
-		this.setPresetDefinitions(this.rcpPresets)
+		this.setPresetDefinitions(presetStructure, this.rcpPresets)
 	}
 
 	// Track whether actions are being recorded
@@ -465,7 +516,7 @@ export default class instance extends InstanceBase {
 			c = c.trim()
 			this.log(
 				'debug',
-				`[${new Date().toJSON()}] Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${config.host}`
+				`Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${globalThis.config.host}`
 			)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
@@ -499,7 +550,8 @@ export default class instance extends InstanceBase {
 		}
 		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
 			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
-			this.checkFeedbacks(dsAddr.replace(/:/g, '_')) // Make sure variables are updated
+			const feedbackId = dsAddr.replace(/:/g, '_')
+			this.checkFeedbacks(feedbackId, `${feedbackId}_Value`) // Update boolean and value feedbacks
 		}
 	}
 
@@ -529,7 +581,7 @@ export default class instance extends InstanceBase {
 
 	// Start requesting meter data
 	startMeters() {
-		let mtrFeedbacks = rcpCommands.filter((f) => f.Type == 'mtr')
+		let mtrFeedbacks = globalThis.rcpCommands.filter((f) => f.Type == 'mtr')
 		let fbNames = Array.from(mtrFeedbacks, (f) => f.Address)
 		fbNames.forEach((fb) => {
 			let cmd = this.dataStore[fb]
@@ -544,4 +596,4 @@ export default class instance extends InstanceBase {
 	}
 }
 
-export const UpgradeScripts = [upgrade]
+export const UpgradeScripts = upgradeScripts

@@ -3,8 +3,13 @@
 	"legacy": [
 		"yamaha-scp"
 	],
-	"version": "3.5.14",
+	"version": "3.6.0",
 	"main": "index.js",
+	"type": "module",
+	"engines": {
+		"node": "^26",
+		"yarn": "^4"
+	},
 	"scripts": {
 		"postinstall": "husky",
 		"format": "prettier -w .",
@@ -27,5 +32,5 @@
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
+	"packageManager": "yarn@4.17.0"
 }

@@ -1,13 +1,16 @@
-module.exports = {
+import { combineRgb } from '@companion-module/base'
+import paramFuncs from './paramFuncs.js'
+import rcpNames from './rcpNames.json' with { type: 'json' }
+import varFuncs from './variables.js'
+
+const feedbackFuncs = {
 	createFeedbackFromAction: (instance, action) => {
-		const { combineRgb } = require('@companion-module/base')
-		const paramFuncs = require('./paramFuncs.js')
-		const rcpNames = require('./rcpNames.json')
 
 		let newFeedback = JSON.parse(JSON.stringify(action)) // Clone the Action to a matching feedback
 
 		if (instance.colorCommands.includes(action.name)) {
 			newFeedback.type = 'advanced' // Old feedback style
+			newFeedback.affectedProperties = ['color', 'bgcolor']
 			newFeedback.options.pop()
 		} else {
 			newFeedback.type = 'boolean' // New feedback style
@@ -37,11 +40,10 @@ module.exports = {
 
 		let valOptionIdx = newFeedback.options.findIndex((opt) => opt.id == 'Val')
 		if (valOptionIdx > -1) {
-			newFeedback.options[valOptionIdx].isVisible = (options) => !options.createVariable
+			newFeedback.options[valOptionIdx].isVisibleExpression = '!$(options:createVariable)'
 		}
 
 		newFeedback.callback = async (feedback, context) => {
-			const varFuncs = require('./variables.js')
 			let rcpCmd = paramFuncs.findRcpCmd(feedback.feedbackId)
 			if (rcpCmd === undefined) return
 
@@ -80,3 +82,5 @@ module.exports = {
 		return newFeedback
 	},
 }
+
+export default feedbackFuncs
