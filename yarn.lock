@@ -14,9 +14,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@companion-module/tools@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@companion-module/tools@npm:3.0.2"
+"@companion-module/tools@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "@companion-module/tools@npm:3.1.0"
   dependencies:
     "@eslint/js": "npm:^10.0.1"
     esbuild: "npm:^0.28.1"
@@ -25,7 +25,8 @@ __metadata:
     eslint-plugin-prettier: "npm:^5.5.6"
     find-up: "npm:^8.0.0"
     semver: "npm:^7.8.4"
-    tar: "npm:^7.5.16"
+    spdx-expression-parse: "npm:^5.0.0"
+    tar: "npm:^7.5.21"
     zx: "npm:^8.8.5"
   peerDependencies:
     "@companion-module/base": ^2.0.0
@@ -49,7 +50,7 @@ __metadata:
     companion-module-check: ./dist/scripts/check-connection.js
     companion-surface-build: ./dist/scripts/build-surface.js
     companion-surface-check: ./dist/scripts/check-surface.js
-  checksum: 10c0/9e0e8755f812990cfea3e742bb351ac643cb85e7e916960c0d33e555cec9a474abf053be1e67530021d4f16c64c499c3c3fbf4d31aeac9bd6676cf6acf8a5d8a
+  checksum: 10c0/a8c4236b3814916e76189c888bdf54e84e1e1e451fd1ed275fb6a7e1e0449e63b92bb41285cac60e4a4c981c184a912628ce078a8111ba95551d6d3ca2450776
   languageName: node
   linkType: hard
 
@@ -667,6 +668,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"spdx-exceptions@npm:^2.1.0":
+  version: 2.5.0
+  resolution: "spdx-exceptions@npm:2.5.0"
+  checksum: 10c0/37217b7762ee0ea0d8b7d0c29fd48b7e4dfb94096b109d6255b589c561f57da93bf4e328c0290046115961b9209a8051ad9f525e48d433082fc79f496a4ea940
+  languageName: node
+  linkType: hard
+
+"spdx-expression-parse@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "spdx-expression-parse@npm:5.0.0"
+  dependencies:
+    spdx-exceptions: "npm:^2.1.0"
+    spdx-license-ids: "npm:^3.0.0"
+  checksum: 10c0/26d0e79e1fda50301ba99c294788c4efb1aded6b8206dada2749d497c7772cfd6ee8ed43c9a0095dc77a3fcf2a39f421643381ec009a8b84bb95a5bb1a623510
+  languageName: node
+  linkType: hard
+
+"spdx-license-ids@npm:^3.0.0":
+  version: 3.0.23
+  resolution: "spdx-license-ids@npm:3.0.23"
+  checksum: 10c0/8495620f6f2a237749cce922ea2d593a66f7885c301b1a0f5542183e7041182f27f616a8f13345cefdea0c9b3e0899328e0aa8cec100cf4f3fac4bb3bd975515
+  languageName: node
+  linkType: hard
+
 "synckit@npm:^0.11.13":
   version: 0.11.13
   resolution: "synckit@npm:0.11.13"
@@ -683,7 +708,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tar@npm:^7.5.16":
+"tar@npm:^7.5.21":
   version: 7.5.22
   resolution: "tar@npm:7.5.22"
   dependencies:
@@ -722,7 +747,7 @@ __metadata:
   resolution: "yamaha-rcp@workspace:."
   dependencies:
     "@companion-module/base": "npm:^2.1.3"
-    "@companion-module/tools": "npm:^3.0.2"
+    "@companion-module/tools": "npm:^3.1.0"
     companion-module-utils: "npm:^0.5.0"
     husky: "npm:^9.1.7"
   languageName: unknown
