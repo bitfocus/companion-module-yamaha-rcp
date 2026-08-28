@@ -24,7 +24,7 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^3.0.2",
+		"@companion-module/tools": "^3.1.0",
 		"husky": "^9.1.7"
 	},
 	"dependencies": {
