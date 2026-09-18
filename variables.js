@@ -210,13 +210,9 @@ const varFuncs = {
 	fbCreatesVar: (instance, cmd, data) => {
 		let rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
 
-		if (rcpCmd.Type == 'mtr') {
-			data = varFuncs.formatFeedbackValue(cmd, data)
-			if (rcpCmd.Pickoff && cmd.Y > 0) {
-				cmd.Y = rcpCmd.Pickoff.split('|')[cmd.Y - 1] || undefined
-			}
-		} else {
-			data = varFuncs.formatFeedbackValue(cmd, data)
+		data = varFuncs.formatFeedbackValue(cmd, data)
+		if (rcpCmd.Type == 'mtr' && rcpCmd.Pickoff && cmd.Y > 0) {
+			cmd.Y = rcpCmd.Pickoff.split('|')[cmd.Y - 1] || undefined
 		}
 
 		if (cmd.createVariable) {

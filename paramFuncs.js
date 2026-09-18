@@ -114,13 +114,12 @@ const paramFuncs = {
 		const RCP_SCNINFO_FIELDS = ['Status', 'Action', 'Address', 'Val', 'TxtVal', 'ScnName', 'ScnComment', 'ScnType']
 		const RCP_METER_FIELDS = ['Status', 'Action', 'Address', 'Name']
 		let cmds = []
-		let line = []
 		const lines = data.toString().split('\x0A')
 
 		for (let i = 0; i < lines.length; i++) {
 			// I'm not going to even try to explain this next line,
 			// but it basically pulls out the space-separated values, except for spaces that are inside quotes!
-			line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
+			const line = lines[i].match(/(?:[^\s"]+|"[^"]*")+/g)
 
 			if (line !== null && line.length > 1 && ['OK', 'OKM', 'NOTIFY'].indexOf(line[0].toUpperCase()) !== -1) {
 				let rcpCommand = {}
@@ -165,7 +164,7 @@ const paramFuncs = {
 						}
 				}
 
-				for (var j = 0; j < Math.min(line.length, params.length); j++) {
+				for (let j = 0; j < Math.min(line.length, params.length); j++) {
 					rcpCommand[params[j]] = line[j].replace(/"/g, '').trim() // Add to rcpCommand object and get rid of any double quotes around the strings
 				}
 

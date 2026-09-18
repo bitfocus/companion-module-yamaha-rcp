@@ -10,7 +10,6 @@ const actionFuncs = {
 	// Create single Action/Feedback
 	createAction: (instance, rcpCmd) => {
 
-		let newAction = {}
 		let paramsToAdd = []
 		let actionName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 
@@ -18,7 +17,7 @@ const actionFuncs = {
 		let actionNameParts = actionName.split('/')
 		let rcpNameIdx = actionName.startsWith('Cue') || actionName.startsWith('Meter') ? 1 : 0
 
-		newAction = { name: actionName, options: [] }
+		let newAction = { name: actionName, options: [] }
 
 		// X parameter - always an integer
 		if (rcpCmd.X > 1) {
@@ -199,12 +198,8 @@ const actionFuncs = {
 
 		let commands = {}
 		let feedbacks = {}
-		let rcpCommand = {}
-		let actionName = ''
-
-		for (let i = 0; i < globalThis.rcpCommands.length; i++) {
-			rcpCommand = globalThis.rcpCommands[i]
-			actionName = rcpCommand.Address.replace(/:/g, '_') // Change the : to _ as companion doesn't like colons in names
+		for (const rcpCommand of globalThis.rcpCommands) {
+			const actionName = rcpCommand.Address.replace(/:/g, '_') // Change the : to _ as companion doesn't like colons in names
 			let newAction = actionFuncs.createAction(instance, rcpCommand)
 
 			if (rcpCommand.RW.includes('r')) {

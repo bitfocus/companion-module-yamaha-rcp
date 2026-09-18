@@ -1,4 +1,4 @@
-import paramFuncsModule from './paramFuncs.js'
+import paramFuncs from './paramFuncs.js'
 
 /*
 // Do the upgrades of actions, release actions and feedback
@@ -25,7 +25,6 @@ const UpgradeScripts = [
 
 	// Upgrade  2.x > 3.0.x, changes scene action parameter format
 	(context, props) => {
-		const paramFuncs = paramFuncsModule
 		const unwrapOption = (option) => (option && typeof option === 'object' && 'value' in option ? option.value : option)
 		const wrapOption = (option) =>
 			option && typeof option === 'object' && 'value' in option ? option : { isExpression: false, value: option }
@@ -131,11 +130,10 @@ const UpgradeScripts = [
 			return updates
 		}
 
-		if (updates.updatedConfig !== undefined) { // set default value for new configs
-			if (updates.updatedConfig.meterSpeed == undefined) updates.updatedConfig.meterSpeed = 100 
-			if (updates.updatedConfig.kaIntervalL == undefined) updates.updatedConfig.kaIntervalL = 10
-			if (updates.updatedConfig.kaIntervalH == undefined) updates.updatedConfig.kaIntervalH = 10 
-		}
+		// Set defaults for existing configurations.
+		if (updates.updatedConfig.meterSpeed == undefined) updates.updatedConfig.meterSpeed = 100
+		if (updates.updatedConfig.kaIntervalL == undefined) updates.updatedConfig.kaIntervalL = 10
+		if (updates.updatedConfig.kaIntervalH == undefined) updates.updatedConfig.kaIntervalH = 10
 
 		let checkUpgrade = (action, isAction) => {
 			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)

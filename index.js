@@ -26,10 +26,9 @@ export default class instance extends InstanceBase {
 		globalThis.config = cfg
 		globalThis.rcpCommands = []
 		this.colorCommands = [] // Commands which have a color field
-		this.rcpPresets = []
+		this.rcpPresets = {}
 		this.dataStore = {} // status, Address (using ":"), X, Y, Val
 		this.cmdQueue = [] // prefix, Address (using ":"), X, Y, Val
-		this.queueTimer
 		this.meterTimer = {}
 		this.kaTimer = {}
 		this.variables = {}
@@ -184,10 +183,6 @@ export default class instance extends InstanceBase {
 			this.socket.on('data', (chunk) => {
 				receiveBuffer += chunk
 				receivedLines = receiveBuffer.split('\x0A') // Split by line break
-				if (receivedLines.length == 0) {
-					return // No messages
-				}
-
 				if (receiveBuffer.endsWith('\x0A')) {
 					receiveBuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
 					receivedLines.splice(receivedLines.length - 1) // Remove it.
@@ -348,11 +343,8 @@ export default class instance extends InstanceBase {
 				var addrParts = c.Address.split('/')
 				var cmdName = (addrParts.length > 1) ? addrParts[2] : ''
 				var pickoffIndex = (c.Index < 2100) ? 1 : c.Y
-				var pickoffName = ''
 				if (c.Pickoff) {
 					cmdName = (addrParts.length > 0) ? addrParts[addrParts.length - 1] : ''
-					var pickoffParts = c.Pickoff.split('|')
-					pickoffName = `_${pickoffParts[pickoffIndex - 1]}` 
 				}
 				if (cmdName) {
 					curPreset.name = `Meter Level Indicator - ${cmdName}`
@@ -438,38 +430,6 @@ export default class instance extends InstanceBase {
 				}
 			}
 
-/*
-			{
-				type: 'button',
-				category: 'Macros',
-				name: 'Create RCP Macro',
-				style: {
-					text: 'Record RCP Macro',
-					png64: this.ICON_REC_INACTIVE,
-					pngalignment: 'center:center',
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [{ actionId: 'internal:Action Recorder: Set connections' }],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'macro',
-						options: {
-							mode: 'r',
-							fg: combineRgb(0, 0, 0),
-							bg: combineRgb(255, 0, 0),
-						},
-					},
-				],
-			},
-
-*/
-
 		this.setPresetDefinitions(presetStructure, this.rcpPresets)
 	}
 
@@ -529,10 +489,9 @@ export default class instance extends InstanceBase {
 
 	// Poll the console for it's status to update buttons via feedback
 	pollConsole() {
-		//varFuncs.getVars(this)
 		this.dataStore = {}
 		this.subscribeActions()
-		this.checkFeedbacks()
+		this.checkAllFeedbacks()
 	}
 
 	// Add a value to the dataStore
