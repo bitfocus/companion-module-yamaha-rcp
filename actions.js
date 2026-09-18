@@ -27,7 +27,6 @@ const actionFuncs = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'X',
 				default: 1,
-				requiredExpression: 'true',
 				useVariables: { local: true }
 			}
 			if (rsioChoices[actionName] !== undefined) {
@@ -63,7 +62,6 @@ const actionFuncs = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'Y',
 				default: 1,
-				requiredExpression: 'true',
 				useVariables: { local: true },
 				allowCustom: true,
 			}
@@ -110,7 +108,6 @@ const actionFuncs = {
 			label: actionNameParts[rcpNameIdx],
 			id: 'Val',
 			default: rcpCmd.Default,
-			requiredExpression: 'true',
 			minChoicesForSearch: 0,
 			allowCustom: true,
 			useVariables: { local: true }
@@ -285,7 +282,6 @@ const actionFuncs = {
 					min: 0,
 					max: 72,
 					default: 1,
-				requiredExpression: 'true',
 				},
 				{
 					type: 'textinput',
@@ -402,7 +398,10 @@ const actionFuncs = {
 					bars.push(options2.value == 100 ? graphics.bar(peak2) : graphics.bar(options2))
 				}
 
-				return { imageBuffer: graphics.stackImage(bars) }
+				return {
+					imageBuffer: Buffer.from(graphics.stackImage(bars)).toString('base64'),
+					imageBufferEncoding: { pixelFormat: 'RGBA' },
+				}
 			},
 		}
 

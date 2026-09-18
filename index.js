@@ -71,6 +71,7 @@ export default class instance extends InstanceBase {
 					{ id: 'TIO', label: 'TIO Preamp' },
 					{ id: 'RSIO', label: 'RSio IO Device' },
 				],
+				disableAutoExpression: true,
 			},
 			{
 				type: 'bonjour-device',
@@ -79,11 +80,7 @@ export default class instance extends InstanceBase {
 				width: 6,
 				default: '',
 				regex: Regex.IP,
-				isVisible: (options) => {
-					let vis = ['RIO', 'TIO', 'RSIO'].includes(options.model)
-					if (!vis) options.bonjour_host = undefined
-					return vis
-				},
+				isVisibleExpression: "$(options:model) == 'RIO' || $(options:model) == 'TIO' || $(options:model) == 'RSIO'",
 			},
 			{
 				type: 'textinput',
@@ -92,13 +89,15 @@ export default class instance extends InstanceBase {
 				width: 6,
 				default: '192.168.0.128',
 				regex: Regex.IP,
-				isVisible: (options) => !options.bonjour_host || !['RIO', 'TIO', 'RSIO'].includes(options.model),
+				isVisibleExpression:
+					"!$(options:bonjour_host) || ($(options:model) != 'RIO' && $(options:model) != 'TIO' && $(options:model) != 'RSIO')",
 			},
 			{
 				type: 'static-text',
 				label: '',
 				width: 6,
-				isVisible: (options) => !!options.bonjour_host || !['RIO', 'TIO', 'RSIO'].includes(options.model),
+				isVisibleExpression:
+					"!!$(options:bonjour_host) || ($(options:model) != 'RIO' && $(options:model) != 'TIO' && $(options:model) != 'RSIO')",
 			},
 			{
 				type: 'checkbox',
@@ -381,7 +380,7 @@ export default class instance extends InstanceBase {
 						y: 10,
 						width: isStereo ? 5 : 10,
 						height: 80,
-						value: { isExpression: true, value: `$(local:${localValueName})` },
+								value: { isExpression: true, value: `$(local:${localValueName})` },
 						min: -60,
 						max: 1,
 						origin: -60,
