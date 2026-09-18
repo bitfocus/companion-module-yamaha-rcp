@@ -50,7 +50,6 @@ const UpgradeScripts = [
 			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', action)
 
 			let changed = false
-			let rcpCmd = undefined
 			let newAction = JSON.parse(JSON.stringify(action))
 			let actionAddress = isAction ? action.actionId : action.feedbackId
 
@@ -69,7 +68,7 @@ const UpgradeScripts = [
 				changed = true
 			}
 
-			rcpCmd = paramFuncs.findRcpCmd(actionAddress)
+			const rcpCmd = paramFuncs.findRcpCmd(actionAddress)
 			if (rcpCmd !== undefined) {
 				if ((rcpCmd.Type == 'integer' || rcpCmd.Type == 'binary') && unwrapOption(newAction.options.Val) !== 'Toggle') {
 					if (!isExpression(newAction.options.Val)) {

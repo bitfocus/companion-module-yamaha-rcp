@@ -223,7 +223,7 @@ export default class instance extends InstanceBase {
 								}
 								break
 
-							case 'mtr':
+							case 'mtr': {
 								if (foundCmd === undefined) break
 								if (foundCmd.Pickoff) {
 									let lastSlash = curCmd.Address.lastIndexOf('/')
@@ -238,6 +238,7 @@ export default class instance extends InstanceBase {
 									this.addToDataStore(curCmd)
 									i++
 								}
+							}
 						}
 
 						varFuncs.setVar(this, curCmd)

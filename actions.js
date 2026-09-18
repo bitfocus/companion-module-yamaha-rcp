@@ -133,6 +133,7 @@ const actionFuncs = {
 
 			case 'mtr':
 				ValOpts.label = 'Level'
+			// falls through
 
 			case 'integer':
 			case 'freq':
@@ -299,7 +300,7 @@ const actionFuncs = {
 					useVariables: true,
 				},
 			],
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				let position = feedback.options.position
 				let padding = feedback.options.padding
 				let ofsX1 = 0

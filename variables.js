@@ -166,7 +166,7 @@ const varFuncs = {
 				break
 			default: {
 				let cmdName = msg.Address.slice(msg.Address.indexOf('/') + 1) // String after "MIXER:Current/"
-				let varName = ''
+				let varName
 
 				switch (cmdName) {
 					case 'Cue/InCh/On':
