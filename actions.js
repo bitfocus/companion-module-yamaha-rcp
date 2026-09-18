@@ -9,7 +9,6 @@ import varFuncs from './variables.js'
 const actionFuncs = {
 	// Create single Action/Feedback
 	createAction: (instance, rcpCmd) => {
-
 		let paramsToAdd = []
 		let actionName = rcpCmd.Address.slice(rcpCmd.Address.indexOf('/') + 1) // String after "MIXER:Current/"
 
@@ -26,7 +25,7 @@ const actionFuncs = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'X',
 				default: 1,
-				useVariables: { local: true }
+				useVariables: { local: true },
 			}
 			if (rsioChoices[actionName] !== undefined) {
 				XOpts = {
@@ -64,7 +63,11 @@ const actionFuncs = {
 				useVariables: { local: true },
 				allowCustom: true,
 			}
-			if ((globalThis.config.model == 'TF' || globalThis.config.model == 'DM3' || globalThis.config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 2000) {
+			if (
+				(globalThis.config.model == 'TF' || globalThis.config.model == 'DM3' || globalThis.config.model == 'DM7') &&
+				rcpCmd.Index >= 1000 &&
+				rcpCmd.Index < 2000
+			) {
 				YOpts = {
 					...YOpts,
 					type: 'dropdown',
@@ -109,7 +112,7 @@ const actionFuncs = {
 			default: rcpCmd.Default,
 			minChoicesForSearch: 0,
 			allowCustom: true,
-			useVariables: { local: true }
+			useVariables: { local: true },
 		}
 		switch (rcpCmd.Type) {
 			case 'bool':
@@ -144,7 +147,7 @@ const actionFuncs = {
 							type: 'textinput',
 							default: rcpCmd.Default == -32768 ? '-Inf' : rcpCmd.Default / rcpCmd.Scale,
 						}
-		
+
 						paramsToAdd.push(ValOpts)
 
 						if (rcpCmd.RW.includes('r')) {
@@ -162,12 +165,15 @@ const actionFuncs = {
 			case 'string':
 			case 'binary':
 				if (actionName.startsWith('CustomFaderBank')) ValOpts.choices = rcpNames.customChNames
-				else if (actionName.endsWith('Color')) ValOpts.choices = globalThis.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
+				else if (actionName.endsWith('Color'))
+					ValOpts.choices = globalThis.config.model == 'TF' ? rcpNames.chColorsTF : rcpNames.chColors
 				else if (actionName.endsWith('Icon')) ValOpts.choices = rcpNames.chIcons
-				
 				else if (rcpNames[actionName] !== undefined) ValOpts.choices = rcpNames[actionName]
-
-				else if ((globalThis.config.model == 'PM' || globalThis.config.model == 'DM7') && rcpCmd.Index >= 1000 && rcpCmd.Index < 1010) {
+				else if (
+					(globalThis.config.model == 'PM' || globalThis.config.model == 'DM7') &&
+					rcpCmd.Index >= 1000 &&
+					rcpCmd.Index < 1010
+				) {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '/^([1-9][0-9]{0,2})\\.[0-9][0-9]$/' }
 				} else {
 					ValOpts = { ...ValOpts, type: 'textinput', regex: '' }
@@ -195,7 +201,6 @@ const actionFuncs = {
 	},
 	// Create the Actions & Feedbacks
 	updateActions: (instance) => {
-
 		let commands = {}
 		let feedbacks = {}
 		for (const rcpCommand of globalThis.rcpCommands) {
@@ -209,7 +214,9 @@ const actionFuncs = {
 				feedbacks[valueFeedbackId] = {
 					type: 'value',
 					name: `${newAction.name} Value`,
-					options: JSON.parse(JSON.stringify(newAction.options.filter((option) => option.id === 'X' || option.id === 'Y'))),
+					options: JSON.parse(
+						JSON.stringify(newAction.options.filter((option) => option.id === 'X' || option.id === 'Y')),
+					),
 					callback: async (feedback, context) => {
 						const options = await paramFuncs.parseOptions(context, feedback.options)
 						if (options === undefined) return null
@@ -249,7 +256,6 @@ const actionFuncs = {
 				commands[actionName] = newAction // Only include commands that are writable to the console
 			}
 		}
-
 
 		feedbacks['Meter'] = {
 			type: 'advanced',
@@ -358,7 +364,7 @@ const actionFuncs = {
 					barLength: bLength,
 					barWidth: bWidth,
 					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
-					value: bVal(1 * (String(feedback.options.meterVal1))),
+					value: bVal(1 * String(feedback.options.meterVal1)),
 					offsetX: ofsX1,
 					offsetY: ofsY1,
 					opacity: 255,
@@ -375,7 +381,7 @@ const actionFuncs = {
 				if (feedback.options.meterVal2) {
 					options2 = {
 						...options1,
-						value: bVal(1 * (String(feedback.options.meterVal2))),
+						value: bVal(1 * String(feedback.options.meterVal2)),
 						offsetX: ofsX2,
 						offsetY: ofsY2,
 					}

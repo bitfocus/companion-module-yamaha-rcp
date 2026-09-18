@@ -123,7 +123,8 @@ export default class instance extends InstanceBase {
 			},
 			{
 				type: 'static-text',
-				label: '**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
+				label:
+					'**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
 				width: 12,
 			},
 		]
@@ -256,7 +257,7 @@ export default class instance extends InstanceBase {
 			(c) =>
 				c.prefix == cmdToAdd.prefix &&
 				c.Address == cmdToAdd.Address &&
-				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y))
+				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y)),
 		)
 		if (i > -1) {
 			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
@@ -277,7 +278,7 @@ export default class instance extends InstanceBase {
 		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
 		if (cmd != undefined) {
 			let i = this.cmdQueue.findIndex(
-				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y
+				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y,
 			)
 			if (i > -1) {
 				this.cmdQueue.splice(i, 1) // Got value from matching request so remove it!
@@ -319,7 +320,9 @@ export default class instance extends InstanceBase {
 
 	// Create the preset definitions
 	createPresets() {
-		var meterCmds = globalThis.rcpCommands.filter((c) => c.Action == 'mtrinfo').sort((a, b) => (a.Index == b.Index) ? 0 : (a.Index > b.Index) ? 1 : -1)
+		var meterCmds = globalThis.rcpCommands
+			.filter((c) => c.Action == 'mtrinfo')
+			.sort((a, b) => (a.Index == b.Index ? 0 : a.Index > b.Index ? 1 : -1))
 		this.rcpPresets = {}
 		const presetStructure = [
 			{
@@ -329,29 +332,30 @@ export default class instance extends InstanceBase {
 			},
 		]
 		var meterPreset = {
-				type: 'layered',
-				name: '',
-				elements: [],
-				steps: [],
-				feedbacks: [],
-				localVariables: [],
+			type: 'layered',
+			name: '',
+			elements: [],
+			steps: [],
+			feedbacks: [],
+			localVariables: [],
+		}
+
+		for (const c of meterCmds) {
+			var curPreset = JSON.parse(JSON.stringify(meterPreset))
+			// console.log(c)
+			var addrParts = c.Address.split('/')
+			var cmdName = addrParts.length > 1 ? addrParts[2] : ''
+			var pickoffIndex = c.Index < 2100 ? 1 : c.Y
+			if (c.Pickoff) {
+				cmdName = addrParts.length > 0 ? addrParts[addrParts.length - 1] : ''
 			}
-			
-			for (const c of meterCmds) {
-				var curPreset = JSON.parse(JSON.stringify(meterPreset))
-				// console.log(c)
-				var addrParts = c.Address.split('/')
-				var cmdName = (addrParts.length > 1) ? addrParts[2] : ''
-				var pickoffIndex = (c.Index < 2100) ? 1 : c.Y
-				if (c.Pickoff) {
-					cmdName = (addrParts.length > 0) ? addrParts[addrParts.length - 1] : ''
-				}
-				if (cmdName) {
-					curPreset.name = `Meter Level Indicator - ${cmdName}`
-					const valueFeedbackId = `${c.Address.replace(/:/g, '_')}_Value`
-					const localValueName = 'meter_value_1'
-					const isStereo = cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh'
-					curPreset.elements.push({
+			if (cmdName) {
+				curPreset.name = `Meter Level Indicator - ${cmdName}`
+				const valueFeedbackId = `${c.Address.replace(/:/g, '_')}_Value`
+				const localValueName = 'meter_value_1'
+				const isStereo = cmdName == 'St' || cmdName == 'StInCh' || cmdName == 'FxRtnCh'
+				curPreset.elements.push(
+					{
 						type: 'text',
 						id: 'label',
 						x: 0,
@@ -372,7 +376,7 @@ export default class instance extends InstanceBase {
 						y: 10,
 						width: isStereo ? 5 : 10,
 						height: 80,
-								value: { isExpression: true, value: `$(local:${localValueName})` },
+						value: { isExpression: true, value: `$(local:${localValueName})` },
 						min: -60,
 						max: 1,
 						origin: -60,
@@ -386,49 +390,51 @@ export default class instance extends InstanceBase {
 							{ value: -18, color: combineRgb(255, 165, 0), gradient: false },
 							{ value: 0, color: combineRgb(255, 0, 0), gradient: false },
 						],
-						})
+					},
+				)
+				curPreset.localVariables.push({
+					variableType: 'feedback',
+					variableName: localValueName,
+					feedbackId: valueFeedbackId,
+					options: { X: 1, Y: pickoffIndex },
+				})
+				if (isStereo) {
+					// Make a Stereo Meter
+					const localValueName2 = 'meter_value_2'
+					curPreset.elements.push({
+						type: 'gauge',
+						id: 'meter-2',
+						x: 90,
+						y: 10,
+						width: 5,
+						height: 80,
+						value: { isExpression: true, value: `$(local:${localValueName2})` },
+						min: -60,
+						max: 1,
+						origin: -60,
+						orientation: 'vertical',
+						roundedEnds: false,
+						fillEnabled: true,
+						fillWidth: 100,
+						multiColour: true,
+						stops: [
+							{ value: -60, color: combineRgb(0, 255, 0), gradient: false },
+							{ value: -18, color: combineRgb(255, 165, 0), gradient: false },
+							{ value: 0, color: combineRgb(255, 0, 0), gradient: false },
+						],
+					})
 					curPreset.localVariables.push({
 						variableType: 'feedback',
-						variableName: localValueName,
+						variableName: localValueName2,
 						feedbackId: valueFeedbackId,
-						options: { X: 1, Y: pickoffIndex },
+						options: { X: 2, Y: pickoffIndex },
 					})
-					if (isStereo) { // Make a Stereo Meter
-						const localValueName2 = 'meter_value_2'
-						curPreset.elements.push({
-							type: 'gauge',
-							id: 'meter-2',
-								x: 90,
-								y: 10,
-								width: 5,
-								height: 80,
-							value: { isExpression: true, value: `$(local:${localValueName2})` },
-							min: -60,
-							max: 1,
-							origin: -60,
-								orientation: 'vertical',
-								roundedEnds: false,
-								fillEnabled: true,
-								fillWidth: 100,
-							multiColour: true,
-							stops: [
-								{ value: -60, color: combineRgb(0, 255, 0), gradient: false },
-								{ value: -18, color: combineRgb(255, 165, 0), gradient: false },
-								{ value: 0, color: combineRgb(255, 0, 0), gradient: false },
-							],
-						})
-						curPreset.localVariables.push({
-							variableType: 'feedback',
-							variableName: localValueName2,
-							feedbackId: valueFeedbackId,
-							options: { X: 2, Y: pickoffIndex },
-						})
-					}
-					const presetId = `meter-${c.Address.replace(/[^a-zA-Z0-9_-]/g, '_')}-${pickoffIndex}`
-					this.rcpPresets[presetId] = curPreset
-					presetStructure[0].definitions.push(presetId)
 				}
+				const presetId = `meter-${c.Address.replace(/[^a-zA-Z0-9_-]/g, '_')}-${pickoffIndex}`
+				this.rcpPresets[presetId] = curPreset
+				presetStructure[0].definitions.push(presetId)
 			}
+		}
 
 		this.setPresetDefinitions(presetStructure, this.rcpPresets)
 	}
@@ -466,17 +472,14 @@ export default class instance extends InstanceBase {
 				actionId: aId,
 				options: { X: cX, Y: cY, Val: cV },
 			},
-			`${aId} ${cX} ${cY}` // uniqueId to stop duplicates
+			`${aId} ${cX} ${cY}`, // uniqueId to stop duplicates
 		)
 	}
 
 	sendCmd(c) {
 		if (c !== undefined) {
 			c = c.trim()
-			this.log(
-				'debug',
-				`Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${globalThis.config.host}`
-			)
+			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${globalThis.config.host}`)
 
 			if (this.socket !== undefined && this.socket.isConnected) {
 				this.socket.send(`${c}\n`) // send the message to the device

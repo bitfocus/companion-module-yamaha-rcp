@@ -45,8 +45,7 @@ const paramFuncs = {
 				fname = 'TIO Parameters-1.txt'
 				break
 			case 'RSIO':
-					fname = 'RSio Parameters-1.txt'
-	
+				fname = 'RSio Parameters-1.txt'
 		}
 
 		// Read the DataFile
@@ -214,7 +213,7 @@ const paramFuncs = {
 			cmdStart = 'event'
 			cmdName = cmdName.replace('/Bank', '') // Remove "Bank" from command
 			options.X = ''
-			options.Y = (globalThis.config.model == 'DM7') ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
+			options.Y = globalThis.config.model == 'DM7' ? `scene_${options.Y == 0 ? 'a' : 'b'}` : ''
 		}
 
 		if (rcpCmd.Index >= 2000) {
@@ -251,10 +250,8 @@ const paramFuncs = {
 		try {
 			let parsedOptions = JSON.parse(JSON.stringify(optionsToParse)) // Deep Clone
 
-			parsedOptions.X =
-				optionsToParse.X == undefined ? 0 : parseInt(String(optionsToParse.X)) - 1
-			parsedOptions.Y =
-				optionsToParse.Y == undefined ? 0 : parseInt(String(optionsToParse.Y)) - 1
+			parsedOptions.X = optionsToParse.X == undefined ? 0 : parseInt(String(optionsToParse.X)) - 1
+			parsedOptions.Y = optionsToParse.Y == undefined ? 0 : parseInt(String(optionsToParse.Y)) - 1
 
 			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Don't go any further if not Integers for X & Y
 			parsedOptions.X = Math.max(parsedOptions.X, 0)

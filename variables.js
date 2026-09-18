@@ -78,10 +78,10 @@ const varFuncs = {
 	// Get info from a connected console
 	getVars: (instance) => {
 		instance.sendCmd('devinfo productname') // Request Device Model
-		instance.sendCmd('devinfo devicename')  // Request Device Label
-		instance.sendCmd('devstatus runmode')   // Request Run Mode
+		instance.sendCmd('devinfo devicename') // Request Device Label
+		instance.sendCmd('devstatus runmode') // Request Run Mode
 		if (!['TF', 'DM3', 'DM7'].includes(globalThis.config.model)) instance.sendCmd('devstatus error') // Request error status
-		
+
 		switch (globalThis.config.model) {
 			case 'CL/QL': {
 				instance.sendCmd('sscurrent_ex MIXER:Lib/Scene') // Request Current Scene Number
@@ -119,7 +119,7 @@ const varFuncs = {
 					case 'devicename':
 						instance.setVariableValues({ deviceName: msg.Val })
 						break
-					}
+				}
 				break
 			}
 			case 'devstatus': {
@@ -232,7 +232,6 @@ const varFuncs = {
 			value[varName] = data
 			instance.setVariableValues(value)
 		} else {
-
 			const reg = /^@\(custom:([^)$]+)\)/
 			let hasCustomVar = reg.exec(cmd.Val)
 			if (hasCustomVar) {

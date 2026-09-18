@@ -9,19 +9,19 @@ const UpgradeScripts = [
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-		}),
+	}),
 
 	() => ({
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-		}),
+	}),
 
 	() => ({
 		updatedConfig: null,
 		updatedActions: [],
-			updatedFeedbacks: [],
-		}),
+		updatedFeedbacks: [],
+	}),
 
 	// Upgrade  2.x > 3.0.x, changes scene action parameter format
 	(context, props) => {
@@ -85,10 +85,10 @@ const UpgradeScripts = [
 							isAction
 								? "Action '" + newAction.actionId + "' -> '" + actionAddress
 								: "Feedback '" + newAction.feedbackId + "' -> '" + actionAddress
-						}' ...`
+						}' ...`,
 					)
 					console.log(
-						`X: ${unwrapOption(action.options.X)} -> ${unwrapOption(newAction.options.X)}, Y: ${unwrapOption(action.options.Y)} -> ${unwrapOption(newAction.options.Y)}, Val: ${unwrapOption(action.options.Val)} -> ${unwrapOption(newAction.options.Val)}\n`
+						`X: ${unwrapOption(action.options.X)} -> ${unwrapOption(newAction.options.X)}, Y: ${unwrapOption(action.options.Y)} -> ${unwrapOption(newAction.options.Y)}, Val: ${unwrapOption(action.options.Val)} -> ${unwrapOption(newAction.options.Val)}\n`,
 					)
 
 					if (isAction) {
@@ -153,10 +153,10 @@ const UpgradeScripts = [
 						isAction
 							? "Action '" + action.actionId + "' -> '" + actionAddress
 							: "Feedback '" + action.feedbackId + "' -> '" + actionAddress
-					}' ...`
+					}' ...`,
 				)
 				console.log(
-					`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`
+					`X: ${action.options.X} -> ${newAction.options.X}, Y: ${action.options.Y} -> ${newAction.options.Y}, Val: ${action.options.Val} -> ${newAction.options.Val}\n`,
 				)
 
 				if (isAction) {
@@ -181,7 +181,6 @@ const UpgradeScripts = [
 
 		return updates
 	},
-
 ]
 
 export default UpgradeScripts

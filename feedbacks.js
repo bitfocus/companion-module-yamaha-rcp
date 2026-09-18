@@ -5,7 +5,6 @@ import varFuncs from './variables.js'
 
 const feedbackFuncs = {
 	createFeedbackFromAction: (instance, action) => {
-
 		let newFeedback = JSON.parse(JSON.stringify(action)) // Clone the Action to a matching feedback
 
 		if (instance.colorCommands.includes(action.name)) {
