@@ -25,7 +25,9 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@companion-module/tools": "^3.0.2",
-		"husky": "^9.1.7"
+		"eslint": "^10.2.0",
+		"husky": "^9.1.7",
+		"prettier": "^3.9.7"
 	},
 	"dependencies": {
 		"@companion-module/base": "^2.1.3",
