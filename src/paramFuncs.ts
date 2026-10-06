@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url'
 import rcpNames from '../rcpNames.json' with { type: 'json' }
 import hpf from '../hpf.json' with { type: 'json' }
 
-const moduleDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const entryDir = path.dirname(fileURLToPath(import.meta.url))
+const moduleDir = fs.existsSync(path.join(entryDir, 'schemas')) ? entryDir : path.resolve(entryDir, '..')
 
 const paramFuncs = {
 	makeChNames: (r) => {
+		r.chNames = []
 		for (let i = 1; i <= 288; i++) {
 			r.chNames.push({ id: i, label: `CH${i}` })
 		}
@@ -256,8 +258,7 @@ const paramFuncs = {
 			if (!Number.isInteger(parsedOptions.X) || !Number.isInteger(parsedOptions.Y)) return // Stop if X or Y is not an integer
 			parsedOptions.X = Math.max(parsedOptions.X, 0)
 			parsedOptions.Y = Math.max(parsedOptions.Y, 0)
-			parsedOptions.Val = String(optionsToParse.Val)
-			parsedOptions.Val = parsedOptions.Val === undefined ? '' : parsedOptions.Val
+			parsedOptions.Val = String(optionsToParse.Val ?? '')
 
 			return parsedOptions
 		} catch (error) {

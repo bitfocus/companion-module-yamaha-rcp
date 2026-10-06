@@ -68,6 +68,7 @@ export default class instance extends InstanceBase<YamahaInstanceTypes> {
 	async destroy() {
 		clearTimeout(this.queueTimer)
 		clearInterval(this.meterTimer)
+		clearInterval(this.kaTimer)
 		this.socket?.destroy()
 		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
 	}
@@ -171,6 +172,8 @@ export default class instance extends InstanceBase<YamahaInstanceTypes> {
 
 	// Initialize TCP
 	initTCP() {
+		clearInterval(this.meterTimer)
+		clearInterval(this.kaTimer)
 		let receiveBuffer = ''
 		let receivedLines: string[] = []
 		let receivedCmds: RcpMessage[] = []
@@ -210,12 +213,7 @@ export default class instance extends InstanceBase<YamahaInstanceTypes> {
 			this.socket.on('data', (chunk) => {
 				receiveBuffer += chunk
 				receivedLines = receiveBuffer.split('\x0A') // Split by line break
-				if (receiveBuffer.endsWith('\x0A')) {
-					receiveBuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
-					receivedLines.splice(receivedLines.length - 1) // Remove it.
-				} else {
-					receiveBuffer = ''
-				}
+				receiveBuffer = receivedLines.pop() || '' // Keep an incomplete trailing line for the next chunk
 
 				for (const line of receivedLines) {
 					if (line.length == 0) {
@@ -292,7 +290,7 @@ export default class instance extends InstanceBase<YamahaInstanceTypes> {
 			this.cmdQueue.push(cmdToAdd)
 		}
 
-		if (this.queueTimer) {
+		if (this.socket?.isConnected) {
 			this.queueTimer = setTimeout(() => {
 				this.processCmdQueue()
 			}, MSG_DELAY)

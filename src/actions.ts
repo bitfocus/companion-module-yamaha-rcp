@@ -35,7 +35,7 @@ const actionFuncs = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'X',
 				default: 1,
-				useVariables: { local: true },
+				useVariables: true,
 			}
 			if (rsioChoices[actionName] !== undefined) {
 				XOpts = {
@@ -70,7 +70,7 @@ const actionFuncs = {
 				label: actionNameParts[rcpNameIdx],
 				id: 'Y',
 				default: 1,
-				useVariables: { local: true },
+				useVariables: true,
 				allowCustom: true,
 			}
 			if (
@@ -122,7 +122,7 @@ const actionFuncs = {
 			default: rcpCmd.Default,
 			minChoicesForSearch: 0,
 			allowCustom: true,
-			useVariables: { local: true },
+			useVariables: true,
 		}
 		switch (rcpCmd.Type) {
 			case 'bool':
@@ -256,6 +256,7 @@ const actionFuncs = {
 							opt.X = X
 							opt.Y = Y
 							const options = await paramFuncs.parseOptions(context, opt)
+							if (!options) continue
 							const actionCmd = options
 							actionCmd.Address = foundCmd.Address
 							actionCmd.prefix = 'set'

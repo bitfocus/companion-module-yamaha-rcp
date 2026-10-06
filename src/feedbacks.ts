@@ -27,7 +27,7 @@ const feedbackFuncs = {
 			newFeedback.options.push({
 				type: 'checkbox',
 				label: 'Auto-Create Variable (deprecated)',
-				tooltip: 'Use local variables instead - This option will be removed in a future version.',
+				tooltip: 'Deprecated. Use Companion local variables with value feedbacks for new layouts.',
 				id: 'createVariable',
 				default: false,
 			})

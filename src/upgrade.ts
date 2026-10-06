@@ -1,3 +1,4 @@
+import { FixupNumericOrVariablesValueToExpressions } from '@companion-module/base'
 import paramFuncs from './paramFuncs.js'
 
 /*
@@ -177,6 +178,65 @@ const UpgradeScripts = [
 		for (const k in props.feedbacks) {
 			checkUpgrade(props.feedbacks[k], false)
 		}
+
+		return updates
+	},
+
+	// Upgrade 3.4 -> 4.0 options to Companion's automatically parsed expression values.
+	(context, props) => {
+		console.log('\nYamaha-RCP Upgrade: Running 3.4 -> 4.0 expression upgrade.')
+		const updates = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		if (context.currentConfig == null) {
+			console.log('\nYamaha-RCP Upgrade: NO CONFIG FOUND!\n')
+			return updates
+		}
+
+		console.log('Yamaha-RCP Upgrade: Config Ok, Getting Parameters...')
+		globalThis.rcpCommands = paramFuncs.getParams(context, context.currentConfig)
+
+		const fixOptions = (item, isAction) => {
+			const itemId = isAction ? item.actionId : item.feedbackId
+			console.log('Yamaha-RCP Upgrade: Checking action/feedback: ', item)
+			const commandId = itemId?.endsWith('_Value') ? itemId.slice(0, -'_Value'.length) : itemId
+			const command = paramFuncs.findRcpCmd(commandId)
+			const options = JSON.parse(JSON.stringify(item.options || {}))
+			let changed = false
+
+			const fixOption = (key) => {
+				const option = options[key]
+				if (option === undefined || option === null) return
+
+				const wrappedOption =
+					typeof option === 'object' && 'value' in option ? option : { isExpression: false, value: option }
+				const fixedOption = FixupNumericOrVariablesValueToExpressions(wrappedOption)
+				if (JSON.stringify(fixedOption) !== JSON.stringify(option)) {
+					options[key] = fixedOption
+					changed = true
+				}
+			}
+
+			fixOption('X')
+			fixOption('Y')
+			if (command && ['integer', 'freq', 'mtr'].includes(command.Type)) fixOption('Val')
+
+			if (changed) {
+				console.log(`Yamaha-RCP Upgrade: Updating ${isAction ? 'Action' : 'Feedback'} '${itemId}' ...`)
+				console.log(
+					`X: ${JSON.stringify(item.options?.X)} -> ${JSON.stringify(options.X)}, Y: ${JSON.stringify(item.options?.Y)} -> ${JSON.stringify(options.Y)}, Val: ${JSON.stringify(item.options?.Val)} -> ${JSON.stringify(options.Val)}\n`,
+				)
+				const updatedItem = { ...item, options }
+				if (isAction) updates.updatedActions.push(updatedItem)
+				else updates.updatedFeedbacks.push(updatedItem)
+			}
+		}
+
+		for (const action of props.actions || []) fixOptions(action, true)
+		for (const feedback of props.feedbacks || []) fixOptions(feedback, false)
 
 		return updates
 	},

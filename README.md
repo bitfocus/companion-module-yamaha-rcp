@@ -1,4 +1,4 @@
-## Yamaha Remote Control Protocol v4.0.0 - for Companion v5
+## Yamaha Remote Control Protocol v4.0.1 - for Companion v5
 
 **Available for the following Yamaha Pro Audio Devices**
 
@@ -25,7 +25,7 @@ _Andrew Broughton_
 
 **REVISION HISTORY**
 
-### 4.0.0
+### 4.0.1
 
 - Upgrade to API 2.1 for compatibility with Companion v5+
 - Support DM7 & DM5 v2

@@ -2,6 +2,8 @@ node_modules
 *.code-workspace
 .vscode
 pkg.tgz
+*.tgz
+/*.js*
 package-lock.json
 pkg
 dist

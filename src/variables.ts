@@ -111,7 +111,7 @@ const varFuncs = {
 			case 'devinfo': {
 				switch (msg.Address) {
 					case 'productname':
-						if (instance.getVariableValue('modelName') == '') {
+						if (!instance.getVariableValue('modelName')) {
 							instance.log('info', `Device Model is ${msg.Val}`)
 						}
 						instance.setVariableValues({ modelName: msg.Val })
@@ -231,13 +231,6 @@ const varFuncs = {
 			const value = {}
 			value[varName] = data
 			instance.setVariableValues(value)
-		} else {
-			const reg = /^@\(custom:([^)$]+)\)/
-			const hasCustomVar = reg.exec(cmd.Val)
-			if (hasCustomVar) {
-				// Set a custom variable value using @ syntax
-				instance.setCustomVariableValue(hasCustomVar[1], data)
-			}
 		}
 	},
 }
