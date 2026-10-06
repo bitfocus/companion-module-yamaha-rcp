@@ -1,3 +1,3 @@
 module.exports = {
-	extraFiles: ['*.txt'],
+	extraFiles: ['schemas'],
 }

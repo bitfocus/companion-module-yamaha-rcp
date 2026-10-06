@@ -1,0 +1,466 @@
+// Control module for Yamaha Pro Audio digital mixers
+// Andrew Broughton <andy@checkcheckonetwo.com>
+// Aug 2025 Version 3.5.11 (for Companion v3/v4)
+
+import { InstanceBase, InstanceStatus, Regex, TCPHelper } from '@companion-module/base'
+import type { SomeCompanionConfigField } from '@companion-module/base'
+
+import paramFuncs from './paramFuncs.js'
+import actionFuncs from './actions.js'
+import { createPresets } from './presets.js'
+import varFuncs from './variables.js'
+import upgradeScripts from './upgrade.js'
+import type {
+	RcpCommand,
+	RcpMessage,
+	RcpOptions,
+	YamahaConfig,
+	YamahaInstanceTypes,
+	YamahaPresetDefinitions,
+} from './types.js'
+
+const RCP_PORT = 49280
+const MSG_DELAY = 5
+const METER_REFRESH = 10000 // 10 seconds
+const KA_INTERVAL = 10000 // 10 seconds
+
+// Instance Setup
+export default class instance extends InstanceBase<YamahaInstanceTypes> {
+	colorCommands: string[] = []
+	rcpPresets: YamahaPresetDefinitions = {}
+	dataStore: Record<string, Record<string, Record<string, number | string>>> = {}
+	cmdQueue: RcpOptions[] = []
+	meterTimer: ReturnType<typeof setInterval> | undefined
+	kaTimer: ReturnType<typeof setInterval> | undefined
+	queueTimer: ReturnType<typeof setTimeout> | undefined
+	variables: Record<string, { name: string }> = {}
+	isRecordingActions = false
+	socket?: TCPHelper
+
+	constructor(internal: unknown) {
+		super(internal)
+	}
+
+	// Startup
+	async init(cfg: YamahaConfig) {
+		this.updateStatus(InstanceStatus.Connecting)
+		globalThis.config = cfg
+		globalThis.rcpCommands = []
+		this.colorCommands = [] // Commands which have a color field
+		this.rcpPresets = {}
+		this.dataStore = {} // status, Address (using ":"), X, Y, Val
+		this.cmdQueue = [] // prefix, Address (using ":"), X, Y, Val
+		this.meterTimer = undefined
+		this.kaTimer = undefined
+		this.variables = {}
+		this.newConsole()
+	}
+
+	// Change in Configuration
+	async configUpdated(cfg: YamahaConfig) {
+		globalThis.config = cfg
+		if (globalThis.config.model) {
+			this.newConsole()
+		}
+	}
+
+	// Module deletion
+	async destroy() {
+		clearTimeout(this.queueTimer)
+		clearInterval(this.meterTimer)
+		this.socket?.destroy()
+		this.log('debug', `[${new Date().toJSON()}] destroyed ${this.id}`)
+	}
+
+	// Web UI config fields
+	getConfigFields(): SomeCompanionConfigField[] {
+		const config = [
+			{
+				type: 'dropdown',
+				id: 'model',
+				label: 'Console/PreAmp Type',
+				width: 12,
+				default: 'CL/QL',
+				choices: [
+					{ id: 'CL/QL', label: 'CL/QL Console' },
+					{ id: 'PM', label: 'Rivage PM Console' },
+					{ id: 'TF', label: 'TF Console' },
+					{ id: 'DM3', label: 'DM3 Console' },
+					{ id: 'DM7', label: 'DM7/DM5 Console' },
+					{ id: 'RIO', label: 'RIO Preamp' },
+					{ id: 'TIO', label: 'TIO Preamp' },
+					{ id: 'RSIO', label: 'RSio IO Device' },
+				],
+				disableAutoExpression: true,
+			},
+			{
+				type: 'bonjour-device',
+				id: 'bonjour_host',
+				label: 'Bonjour Address of Device',
+				width: 6,
+				default: '',
+				regex: Regex.IP,
+				isVisibleExpression: "$(options:model) == 'RIO' || $(options:model) == 'TIO' || $(options:model) == 'RSIO'",
+			},
+			{
+				type: 'textinput',
+				id: 'host',
+				label: 'IP Address of Device',
+				width: 6,
+				default: '192.168.0.128',
+				regex: Regex.IP,
+				isVisibleExpression:
+					"!$(options:bonjour_host) || ($(options:model) != 'RIO' && $(options:model) != 'TIO' && $(options:model) != 'RSIO')",
+			},
+			{
+				type: 'static-text',
+				id: 'host-spacer',
+				label: '',
+				width: 6,
+				isVisibleExpression:
+					"!!$(options:bonjour_host) || ($(options:model) != 'RIO' && $(options:model) != 'TIO' && $(options:model) != 'RSIO')",
+			},
+			{
+				type: 'checkbox',
+				id: 'metering',
+				label: 'Enable Metering?',
+				width: 3,
+				default: false,
+			},
+			{
+				type: 'number',
+				id: 'meterSpeed',
+				label: 'Metering interval (40 - 1000 ms)',
+				width: 8,
+				default: 100,
+				min: 40,
+				max: 1000,
+			},
+			{
+				type: 'checkbox',
+				id: 'keepAlive',
+				label: 'Enable KeepAlive?',
+				width: 3,
+				default: false,
+			},
+			{
+				type: 'static-text',
+				id: 'keepalive-note',
+				label:
+					'**NOTE** Do not enable KeepAlive unless you know what it means. It is generally not needed and will increase network traffic.',
+				width: 12,
+			},
+		]
+		return config as SomeCompanionConfigField[]
+	}
+
+	// Whenever the console type changes, update the info
+	newConsole() {
+		this.log('info', `Device selected: ${globalThis.config.model}`)
+		globalThis.rcpCommands = paramFuncs.getParams(this, globalThis.config)
+
+		actionFuncs.updateActions(this) // Re-do the actions once the console is chosen
+		varFuncs.initVars(this)
+		createPresets(this)
+		const isIoModel = ['RIO', 'TIO', 'RSIO'].includes(globalThis.config.model || '')
+		if (isIoModel && globalThis.config.bonjour_host) {
+			globalThis.config.host = globalThis.config.bonjour_host.split(':')[0]
+		}
+		this.initTCP()
+	}
+
+	// Initialize TCP
+	initTCP() {
+		let receiveBuffer = ''
+		let receivedLines: string[] = []
+		let receivedCmds: RcpMessage[] = []
+		let foundCmd: RcpCommand | undefined
+
+		this.socket?.destroy()
+		delete this.socket
+
+		if (globalThis.config.host) {
+			this.socket = new TCPHelper(globalThis.config.host, RCP_PORT)
+
+			this.socket.on('status_change', (status, message) => {
+				this.updateStatus(status, message)
+			})
+
+			this.socket.on('error', (err) => {
+				this.log('error', `Network error: ${err.message}`)
+			})
+
+			this.socket.on('connect', () => {
+				this.log('info', `Connected!`)
+				clearInterval(this.meterTimer)
+				clearInterval(this.kaTimer)
+				varFuncs.getVars(this)
+				this.queueTimer = undefined
+				this.processCmdQueue()
+				if (globalThis.config.metering) {
+					this.startMeters()
+					this.meterTimer = setInterval(() => this.startMeters(), METER_REFRESH)
+				}
+				if (globalThis.config.keepAlive) {
+					this.sendCmd(`scpmode keepalive ${KA_INTERVAL}`) // To possibly keep the device from closing the connection
+					this.kaTimer = setInterval(() => this.sendCmd('devstatus runmode'), KA_INTERVAL)
+				}
+			})
+
+			this.socket.on('data', (chunk) => {
+				receiveBuffer += chunk
+				receivedLines = receiveBuffer.split('\x0A') // Split by line break
+				if (receiveBuffer.endsWith('\x0A')) {
+					receiveBuffer = receivedLines[receivedLines.length - 1] // Broken line, leave it for next time...
+					receivedLines.splice(receivedLines.length - 1) // Remove it.
+				} else {
+					receiveBuffer = ''
+				}
+
+				for (const line of receivedLines) {
+					if (line.length == 0) {
+						continue
+					}
+					this.log('debug', `Received: '${line}'`)
+					receivedCmds = paramFuncs.parseData(line) // Break out the parameters
+
+					for (let i = 0; i < receivedCmds.length; i++) {
+						const curCmd = JSON.parse(JSON.stringify(receivedCmds[i])) // deep clone
+						foundCmd = paramFuncs.findRcpCmd(curCmd.Address, curCmd.Action) as RcpCommand | undefined // Find which command
+
+						switch (curCmd.Action) {
+							case 'set':
+							case 'get':
+								if (foundCmd != undefined) {
+									if (!(curCmd.Status == 'OK' && curCmd.Action == 'set')) {
+										this.addToDataStore(curCmd)
+									}
+
+									if (this.isRecordingActions) {
+										void this.addToActionRecording({ rcpCmd: foundCmd, options: curCmd })
+									}
+								}
+								break
+
+							case 'sscurrent_ex':
+							case 'sscurrentt_ex':
+								if (curCmd.Status == 'NOTIFY') {
+									this.pollConsole()
+								}
+								break
+
+							case 'mtr': {
+								if (foundCmd === undefined) break
+								if (foundCmd.Pickoff) {
+									const lastSlash = curCmd.Address.lastIndexOf('/')
+									const pickoff = curCmd.Address.slice(lastSlash + 1)
+									curCmd.Y = foundCmd.Pickoff.split('|').indexOf(pickoff)
+								}
+								curCmd.Address = foundCmd.Address
+								let i = 0
+								while (curCmd[i]) {
+									curCmd.X = i
+									curCmd.Val = parseInt(curCmd[i], 16)
+									this.addToDataStore(curCmd)
+									i++
+								}
+							}
+						}
+
+						varFuncs.setVar(this, curCmd)
+						this.processCmdQueue(curCmd)
+					}
+				}
+			})
+		}
+	}
+
+	// New Command (Action or Feedback) to Add
+	addToCmdQueue(cmd: RcpOptions) {
+		clearTimeout(this.queueTimer)
+		const cmdToAdd = JSON.parse(JSON.stringify(cmd)) // Deep Clone
+		const rcpCmd = paramFuncs.findRcpCmd(cmdToAdd.Address)
+		const i = this.cmdQueue.findIndex(
+			(c) =>
+				c.prefix == cmdToAdd.prefix &&
+				c.Address == cmdToAdd.Address &&
+				((c.X == cmdToAdd.X && c.Y == cmdToAdd.Y) || (rcpCmd.Action == 'mtrinfo' && c.Y == cmdToAdd.Y)),
+		)
+		if (i > -1) {
+			this.cmdQueue[i] = cmdToAdd // Replace queued message with new one
+		} else {
+			this.cmdQueue.push(cmdToAdd)
+		}
+
+		if (this.queueTimer) {
+			this.queueTimer = setTimeout(() => {
+				this.processCmdQueue()
+			}, MSG_DELAY)
+		}
+	}
+
+	// When a message comes in from the console, match it up and delete it, and send the next message
+	processCmdQueue(cmd?: RcpMessage) {
+		clearTimeout(this.queueTimer)
+		if (this.cmdQueue == undefined || this.cmdQueue.length == 0) return
+		if (cmd != undefined) {
+			const i = this.cmdQueue.findIndex(
+				(c) => c.prefix == 'get' && c.Address == cmd.Address && c.X == cmd.X && c.Y == cmd.Y,
+			)
+			if (i > -1) {
+				this.cmdQueue.splice(i, 1) // Got value from matching request so remove it!
+			}
+		}
+
+		if (this.cmdQueue.length > 0) {
+			// Messages still to send?
+			const nextCmd = this.cmdQueue[0] // Oldest
+
+			if (nextCmd.prefix == 'set') {
+				const nextCmdVal = paramFuncs.parseVal(this, nextCmd)
+				if (nextCmdVal == undefined) {
+					this.cmdQueue.shift()
+					this.cmdQueue.push(nextCmd)
+
+					this.queueTimer = setTimeout(() => {
+						this.processCmdQueue()
+					}, MSG_DELAY)
+
+					return
+				}
+				nextCmd.Val = nextCmdVal
+			}
+
+			const msg = paramFuncs.fmtCmd(nextCmd)
+			if (this.sendCmd(msg)) {
+				if (nextCmd.prefix == 'set') {
+					this.addToDataStore(nextCmd) // Update to latest value
+				}
+			}
+
+			this.cmdQueue.shift() // Get rid of message, whether sent or not
+			this.queueTimer = setTimeout(() => {
+				this.processCmdQueue()
+			}, MSG_DELAY)
+		}
+	}
+
+	// Track whether actions are being recorded
+	handleStartStopRecordActions(isRecording: boolean) {
+		this.isRecordingActions = isRecording
+	}
+
+	// Add a command to the Action Recorder
+	async addToActionRecording(c: { rcpCmd: RcpCommand; options: RcpMessage }) {
+		const aId = c.rcpCmd.Address.replace(/:/g, '_')
+		const cX = Number(c.options.X) + 1
+		const cY = Number(c.options.Y) + 1
+		let cV
+
+		switch (c.rcpCmd.Type) {
+			case 'integer':
+			case 'binary':
+				cV = c.options.Val == -32768 ? '-Inf' : Number(c.options.Val) / c.rcpCmd.Scale
+				break
+			case 'freq':
+				cV = Number(c.options.Val) / c.rcpCmd.Scale
+				break
+			case 'bool':
+				cV = 'Toggle'
+				break
+			case 'string':
+				cV = c.options.Val
+				break
+		}
+
+		this.recordAction(
+			{
+				actionId: aId,
+				options: { X: cX, Y: cY, Val: cV },
+			},
+			`${aId} ${cX} ${cY}`, // uniqueId to stop duplicates
+		)
+	}
+
+	sendCmd(c?: string) {
+		if (c !== undefined) {
+			c = c.trim()
+			this.log('debug', `Sending :    '${c}' to ${this.getVariableValue('modelName')} @ ${globalThis.config.host}`)
+
+			if (this.socket !== undefined && this.socket.isConnected) {
+				this.socket.send(`${c}\n`) // send the message to the device
+				return true
+			}
+			this.log('info', 'Socket not connected :(')
+		}
+		return false
+	}
+
+	// Poll the console for it's status to update buttons via feedback
+	pollConsole() {
+		this.dataStore = {}
+		this.subscribeActions()
+		this.checkAllFeedbacks()
+	}
+
+	// Add a value to the dataStore
+	addToDataStore(cmd: RcpMessage | RcpOptions) {
+		const dsAddr = cmd.Address
+		const dsX = cmd.X == undefined ? 0 : parseInt(String(cmd.X))
+		const dsY = cmd.Y == undefined ? 0 : parseInt(String(cmd.Y))
+
+		if (this.dataStore[dsAddr] == undefined) {
+			this.dataStore[dsAddr] = {}
+		}
+		if (this.dataStore[dsAddr][dsX] == undefined) {
+			this.dataStore[dsAddr][dsX] = {}
+		}
+		if (this.dataStore[dsAddr][dsX][dsY] != cmd.Val) {
+			this.dataStore[dsAddr][dsX][dsY] = cmd.Val
+			const feedbackId = dsAddr.replace(/:/g, '_')
+			this.checkFeedbacks(feedbackId, `${feedbackId}_Value`) // Update boolean and value feedbacks
+		}
+	}
+
+	// Get a value from the dataStore. If the value doesn't exist, send a request to get it.
+	getFromDataStore(cmd?: RcpMessage | RcpOptions): number | string | undefined {
+		let data = undefined
+		if (cmd == undefined) return data
+
+		if (cmd.Address !== undefined) {
+			if (
+				this.dataStore[cmd.Address] !== undefined &&
+				this.dataStore[cmd.Address][cmd.X] !== undefined &&
+				this.dataStore[cmd.Address][cmd.X][cmd.Y] !== undefined
+			) {
+				data = this.dataStore[cmd.Address][cmd.X][cmd.Y]
+				return data
+			}
+			const rcpCmd = paramFuncs.findRcpCmd(cmd.Address)
+			if (rcpCmd !== undefined && rcpCmd.RW.includes('r')) {
+				if (cmd.X === undefined || cmd.Y === undefined || cmd.Val === undefined) return data
+				this.addToCmdQueue({ Address: cmd.Address, X: cmd.X, Y: cmd.Y, Val: cmd.Val, prefix: 'get' })
+			}
+		}
+
+		return data
+	}
+
+	// Start requesting meter data
+	startMeters() {
+		const mtrFeedbacks = globalThis.rcpCommands.filter((f) => f.Type == 'mtr')
+		const fbNames = Array.from(mtrFeedbacks, (f) => f.Address)
+		fbNames.forEach((fb) => {
+			const cmd = this.dataStore[fb]
+			if (cmd) {
+				for (const key in cmd[0]) {
+					const cmdToSend: RcpOptions = { Address: fb, X: 0, Y: key, Val: '' }
+					cmdToSend.prefix = 'get'
+					this.addToCmdQueue(cmdToSend)
+				}
+			}
+		})
+	}
+}
+
+export const UpgradeScripts = upgradeScripts
