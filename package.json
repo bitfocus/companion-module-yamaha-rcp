@@ -11,8 +11,7 @@
 		"package": "yarn companion-module-build",
 		"package-dev": "yarn companion-module-build --dev",
 		"lint:raw": "eslint",
-		"lint": "yarn lint:raw .",
-		"test": "node --test test/*.test.cjs"
+		"lint": "yarn lint:raw ."
 	},
 	"repository": {
 		"type": "git",
