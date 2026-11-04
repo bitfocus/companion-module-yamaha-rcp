@@ -11,7 +11,8 @@
 		"package": "yarn companion-module-build",
 		"package:dev": "yarn companion-module-build --dev",
 		"lint:raw": "eslint",
-		"lint": "yarn lint:raw ."
+		"lint": "yarn lint:raw .",
+		"test": "node --test test/*.test.cjs"
 	},
 	"repository": {
 		"type": "git",
@@ -19,13 +20,18 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"@companion-module/tools": "^2.6.1",
-		"husky": "^9.1.7"
+		"@companion-module/tools": "^2.9.0",
+		"husky": "^9.1.7",
+		"eslint": "^8.57.1",
+		"prettier": "^2.8.8"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.14.1",
+		"@companion-module/base": "~1.15.0",
 		"companion-module-utils": "^0.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
+	"packageManager": "yarn@1.22.22",
+	"engines": {
+		"node": "^26.5"
+	}
 }
