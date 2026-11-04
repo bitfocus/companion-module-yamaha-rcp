@@ -133,3 +133,7 @@ _Andrew Broughton_
 - Use **@(internal:custom_MyCustomVar)** in the value field to update a custom variable within a feedback. Custom variable must already exist.
 - dB values are now entered as actual dB. Off is -Inf
 - Added RecallInc (Recall next Scene) and RecallDec (Recall previous Scene) functions
+
+### Runtime compatibility
+
+This stable branch uses Node 22 and pins `@companion-module/base` to the shipped 1.11.3 SDK. Mixer polling and feedbacks can write `@(custom:...)` variables through that SDK. API 1.12 removed the instance setter used by this feature, so upgrading the SDK would require a separate behavior migration. Tools 2.9 builds and packages this branch.
